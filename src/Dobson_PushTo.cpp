@@ -1,5 +1,5 @@
 // Version Component: main.cpp v1.2.0
-// Version Global System: v1.2.0
+// Version Global System: v1.2.7
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Preferences.h>
@@ -14,6 +14,8 @@
 #include "HelpPage.h"
 #include "TestPage.h"
 #include "ReleaseNotes.h"
+#include "Icons.h"
+#include "BetaSkyPage.h"
 
 Preferences prefs;
 WiFiServer skySafariServer(SKYSAFARI_PORT);
@@ -73,6 +75,9 @@ void handleConfigPage() {
 }
 void handleReleaseNotesPage() {
   webServer.send(200, "text/html", HTTP_RELEASE_NOTES_PAGE);
+}
+void handleIcons() {
+  webServer.send(200, "image/svg+xml", HTTP_ICONS);
 }
 
 void handleCatalog() {
@@ -340,6 +345,9 @@ void handleSimStep() {
 void handleStationPage() {
   webServer.send(200, "text/html", HTTP_STATION_PAGE);
 }
+void handleBetaSkyPage() {
+  webServer.send(200, "text/html", HTTP_BETA_SKY_PAGE);
+}
 
 void setup() {
   Serial.begin(115200);
@@ -366,9 +374,11 @@ void setup() {
 
   webServer.on("/", handleRoot);
   webServer.on("/station", handleStationPage);
+  webServer.on("/beta_sky", handleBetaSkyPage);
   webServer.on("/calib_page", handleCalibPage);
   webServer.on("/config", handleConfigPage);
   webServer.on("/releasenotes", handleReleaseNotesPage);
+  webServer.on("/icons.svg", handleIcons);
   webServer.on("/simu", handleSimu);
   webServer.on("/catalog", handleCatalog);
   webServer.on("/get_sites", handleGetSites);

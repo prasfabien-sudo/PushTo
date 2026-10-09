@@ -84,6 +84,28 @@ cd Dobson_PushTo
 
 - `PlatformIO: Serial Monitor`
 
+## Simulation locale sur PC
+
+Il est possible d'essayer l'interface sans ESP32 grâce au serveur de simulation Node.js inclus dans le dépôt. Il sert les pages HTML du firmware et simule les réponses des encodeurs, la configuration, les lieux et les commandes web. Les valeurs simulées sont conservées en mémoire et sont réinitialisées à l'arrêt du serveur.
+
+Prérequis : Node.js, sans bibliothèque supplémentaire.
+
+Depuis la racine du projet, lancer :
+
+```powershell
+node .\simulate_esp32.js
+```
+
+Puis ouvrir [http://127.0.0.1:8000](http://127.0.0.1:8000) dans le navigateur. Arrêter la simulation avec `Ctrl+C` dans le terminal.
+
+Cette simulation valide l'interface et les échanges HTTP, mais ne remplace pas un test du firmware sur ESP32 : elle ne reproduit ni les interruptions électriques des encodeurs, ni le Wi-Fi embarqué, ni la connexion TCP SkySafari.
+
+La barre de navigation propose un mode nuit rouge pour préserver la vision nocturne pendant l'observation. Son état est mémorisé dans le navigateur et partagé entre les pages.
+
+### Vue 3D du ciel (bêta)
+
+La page `/beta_sky`, directement accessible depuis la barre de navigation, affiche les objets du catalogue dans une vue du ciel rendue localement avec WebGL. Elle utilise les coordonnées du lieu configuré et l'heure du téléphone, propose un filtre par type et se pilote par gestes tactiles. Le point de vue suit en temps réel les encodeurs AZ/ALT ; le glissement ajoute un décalage manuel et le bouton de recentrage revient au pointage du télescope. Le pilotage par capteurs d'orientation n'est pas disponible. La page ne charge aucune bibliothèque 3D distante.
+
 ## Configuration du projet
 
 Le fichier principal de configuration PlatformIO est :
@@ -130,9 +152,14 @@ Depuis un navigateur, il est possible d'accéder aux pages suivantes :
 - `/calib_page` : calibration
 - `/config` : paramètres de configuration
 - `/simu` : simulation
+- `/beta_sky` : vue 3D interactive du ciel (bêta)
 - `/help` : aide
 - `/releasenotes` : notes de version
 - `/test` : page de test
+
+La navigation de l'interface est accessible depuis une barre fixe en bas de l'écran : Menu principal, Mise en station, Vue 3D du ciel et Aide sont directement accessibles ; les pages de calibration, configuration, simulation, tests et notes de version se trouvent dans le menu « Plus ». Le bouton de mode nuit reste accessible depuis la barre.
+
+La page **Tests système** vérifie le format et les valeurs de `/status`, la configuration des encodeurs, le contenu du catalogue astronomique, les lieux enregistrés, l'accès aux neuf pages HTML et le rejet des commandes invalides. La suite est conçue pour être non destructive : elle ne déplace pas les axes et ne modifie pas la configuration.
 
 ### 3. API serveur
 
@@ -230,6 +257,20 @@ Les traitements principaux se trouvent dans :
 
 ## Notes de version
 
+### v1.2.7 — Octobre 2026
+- La vue 3D suit en temps réel les angles AZ/ALT calculés depuis les encodeurs ; le recentrage revient au pointage du télescope.
+
+### v1.2.6 — Octobre 2026
+- Bouton du mode nuit déplacé dans les raccourcis de la vue 3D et rendu plus visible avec un contraste inversé.
+
+### v1.2.5 — Octobre 2026
+- Accès direct en bas d'écran au menu principal, à la mise en station, à la vue 3D du ciel et à l'aide ; les autres pages restent dans « Plus ».
+
+### v1.2.4 — Octobre 2026
+- Déplacement du pavé du lieu d'observation au-dessus de la position du télescope.
+- Mise à jour du catalogue sans recréer les lignes à chaque rafraîchissement, supprimant le clignotement des types et de la visibilité.
+- Retour de la vue 3D bêta au pilotage tactile uniquement ; retrait du serveur HTTPS expérimental et des commandes de capteurs.
+
 ### v1.2.0 — Octobre 2026
 - Séparation explicite entre la version globale système et les numéros de version individuels par composant (`.h` / `.cpp`).
 
@@ -239,7 +280,7 @@ Les traitements principaux se trouvent dans :
 
 ### v1.1.0 — Octobre 2026
 - Géolocalisation GPS native du smartphone (`navigator.geolocation`) avec repli automatique sur les coordonnées ESP32.
-- Affichage dynamique de la source de localisation (`📍 GPS Mobile` ou `📍 Lieu d'observation`).
+- Affichage dynamique de la source de localisation (`GPS Mobile` ou `Lieu d'observation`).
 
 ### v1.0.4 — Octobre 2026
 - Correction du calcul de précession sur l'Ascension Droite (RA) aligné sur Stellarium.

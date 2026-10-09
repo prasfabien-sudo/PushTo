@@ -1,5 +1,5 @@
-// Version Component: WebPage.h v1.2.3
-// Version Global System: v1.2.3
+// Version Component: WebPage.h v1.2.7
+// Version Global System: v1.2.7
 #ifndef WEBPAGE_H
 #define WEBPAGE_H
 
@@ -13,6 +13,8 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dobson Push-To</title>
   <style>
+    .ui-icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-icon .ui-icon { vertical-align: middle; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 15px; }
     .card { background: #1e1e1e; border-radius: 12px; padding: 15px; max-width: 650px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.5); position: relative; }
     
@@ -53,10 +55,6 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
     .btn-sm { padding: 6px 10px; font-size: 0.8em; margin: 0; display: inline-block; width: auto; }
     .btn-align { background: #4caf50; margin-top: 12px; }
 
-    /* Menu de Navigation */
-    .nav-menu { width: 100%; padding: 12px; background: #2a2a2a; color: #ffb74d; border: 1px solid #00897b; border-radius: 8px; font-size: 1em; font-weight: bold; margin: 8px 0; box-sizing: border-box; cursor: pointer; }
-    .nav-menu option { background: #1e1e1e; color: #fff; }
-
     .cat-section { margin-top: 15px; border-top: 1px solid #333; padding-top: 15px; }
     .controls-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
     .search-bar { flex: 1; min-width: 130px; padding: 8px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: #fff; }
@@ -83,15 +81,37 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
     .obj-sub { font-size: 0.8em; color: #aaa; }
     .picto-type { font-size: 1.2em; text-align: center; cursor: help; }
     .picto-vis { font-size: 1.2em; text-align: center; cursor: help; }
+    .picto-vis.visible { color: #4caf50; }
+    .picto-vis.unavailable { color: #f44336; }
+    body { padding-bottom: 100px; }
+    html[data-night-mode="true"]::after { content: ""; position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; background: rgba(255, 0, 0, 0.82); mix-blend-mode: multiply; filter: brightness(0.45); }
+    .bottom-nav { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-around; gap: 4px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: rgba(30,30,30,0.97); border-top: 1px solid #37474f; box-shadow: 0 -4px 16px rgba(0,0,0,0.4); }
+    .nav-item, .nav-more-button { flex: 1; min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: center; padding: 8px 2px; border: 0; border-radius: 8px; background: transparent; color: #b0bec5; font: inherit; text-decoration: none; cursor: pointer; }
+    .nav-item[aria-current="page"], .nav-more-button[aria-expanded="true"], .nav-more-button[aria-current="page"] { color: #ffb74d; background: #263238; }
+    .night-mode-toggle { background: #f1f3f4; color: #101418; border: 1px solid #fff; }
+    .night-mode-toggle[aria-pressed="true"] { background: #ff5252; color: #fff; }
+    .nav-icon { display: flex; font-size: 22px; line-height: 1; }
+    .nav-more { position: relative; flex: 1; min-width: 0; display: flex; }
+    .nav-more-button { width: 100%; }
+    .nav-more-menu { position: absolute; right: 0; bottom: calc(100% + 12px); width: min(230px, calc(100vw - 24px)); padding: 6px; border: 1px solid #455a64; border-radius: 12px; background: #1e1e1e; box-shadow: 0 4px 18px rgba(0,0,0,0.55); }
+    .nav-more-menu[hidden] { display: none; }
+    .nav-more-link { display: block; padding: 11px 12px; border-radius: 7px; color: #e0e0e0; text-decoration: none; font-size: 0.9em; }
+    .nav-more-link:hover, .nav-more-link[aria-current="page"] { background: #263238; color: #ffb74d; }
+    @media (min-width: 700px) { .bottom-nav { left: 50%; right: auto; width: min(500px, calc(100% - 32px)); transform: translateX(-50%); border: 1px solid #37474f; border-bottom: 0; border-radius: 14px 14px 0 0; } }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="header-row">
       <h1>Dobson Push-To</h1>
-      <a href="/releasenotes" class="version-tag" title="Voir l'historique des versions">v1.2.3</a>
+      <a href="/releasenotes" class="version-tag" title="Voir l'historique des versions">v1.2.7</a>
     </div>
     
+    <div class="geo-row">
+      <span><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-map-pin'></use></svg> Lieu d'observation :</span>
+      <span id="displaySiteName" style="color: #ffb74d; font-weight: bold;">Chargement...</span>
+    </div>
+
     <!-- Position Télescope Pleine Largeur -->
     <div class="grid">
       <div class="metric">
@@ -137,30 +157,13 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
         </div>
       </div>
       <!-- Bouton d'alignement centralisé -->
-      <button id="btnAlignActive" class="btn btn-align" onclick="alignOnCurrentTarget()" disabled>🎯 Aligner sur cette cible</button>
+      <button id="btnAlignActive" class="btn btn-align" onclick="alignOnCurrentTarget()" disabled><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-crosshair'></use></svg> Aligner sur cette cible</button>
     </div>
-
-    <!-- Menu déroulant de Navigation -->
-    <select class="nav-menu" onchange="navigateTo(this.value)">
-      <option value="" disabled selected>📑 Navigation / Pages...</option>
-      <option value="/station">🎯 Mise en Station / Alignement</option>
-      <option value="/config">⚙️ Paramètres ESP32</option>
-      <option value="/calib_page">⚙️ Étalonnage des Encodeurs</option>
-      <option value="/releasenotes">📋 Release Notes / Historique</option>
-      <option value="/help">📖 Aide Connexion SkySafari</option>
-      <option value="/test">🧪 Tests Automatisés</option>
-      <option value="/simu">🎮 Mode Simulation</option>
-    </select>
 
     <!-- Catalogue d'Objets -->
     <div class="cat-section">
       <h2 style="color:#ff9800; margin:0 0 10px 0; font-size:1.1em;">Catalogue d'Objets</h2>
       
-      <div class="geo-row">
-        <span>📍 Lieu d'observation :</span>
-        <span id="displaySiteName" style="color: #ffb74d; font-weight: bold;">Chargement...</span>
-      </div>
-
       <div class="controls-row">
         <input type="text" id="searchInput" class="search-bar" placeholder="Rechercher..." onkeyup="applyFilters()">
         
@@ -172,18 +175,18 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
           <option value="12">Mag. ≤ 12 (Grand télescope)</option>
         </select>
 
-        <button id="timeFilterBtn" class="filter-btn" onclick="toggleTimeFilter()">🕒 Visibles</button>
+        <button id="timeFilterBtn" class="filter-btn" onclick="toggleTimeFilter()"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-clock-3'></use></svg> Visibles</button>
       </div>
 
       <!-- Légende des Pictos Cliquables -->
       <div class="legend-row">
-        <span class="legend-item active" onclick="filterByType('all', this)">✨ Tous</span>
-        <span class="legend-item" onclick="filterByType('planete', this)">🪐 Planète</span>
-        <span class="legend-item" onclick="filterByType('galaxie', this)">🌌 Galaxie</span>
-        <span class="legend-item" onclick="filterByType('neb_planetaire', this)">🌀 Néb. Planétaire</span>
-        <span class="legend-item" onclick="filterByType('nebuleuse', this)">☁️ Nébuleuse</span>
-        <span class="legend-item" onclick="filterByType('amas', this)">🌟 Amas</span>
-        <span class="legend-item" onclick="filterByType('etoile', this)">🌠 Étoile</span>
+        <span class="legend-item active" onclick="filterByType('all', this)"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-sparkles'></use></svg> Tous</span>
+        <span class="legend-item" onclick="filterByType('planete', this)"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-planet'></use></svg> Planète</span>
+        <span class="legend-item" onclick="filterByType('galaxie', this)"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-orbit'></use></svg> Galaxie</span>
+        <span class="legend-item" onclick="filterByType('neb_planetaire', this)"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-orbit'></use></svg> Néb. Planétaire</span>
+        <span class="legend-item" onclick="filterByType('nebuleuse', this)"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-cloud'></use></svg> Nébuleuse</span>
+        <span class="legend-item" onclick="filterByType('amas', this)"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-star'></use></svg> Amas</span>
+        <span class="legend-item" onclick="filterByType('etoile', this)"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-star'></use></svg> Étoile</span>
       </div>
 
       <div class="table-container">
@@ -205,8 +208,27 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
     </div>
   </div>
 
+  <nav class="bottom-nav" aria-label="Navigation principale">
+    <a class="nav-item" href="/" aria-label="Menu principal" aria-current="page" title="Menu principal"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-telescope'></use></svg></span></a>
+    <a class="nav-item" href="/station" aria-label="Mise en station" title="Mise en station"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-crosshair'></use></svg></span></a>
+    <a class="nav-item" href="/beta_sky" aria-label="Vue 3D du ciel" title="Vue 3D du ciel"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-globe-2'></use></svg></span></a>
+    <a class="nav-item" href="/help" aria-label="Aide SkySafari" title="Aide SkySafari"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-book-open'></use></svg></span></a>
+    <button class="nav-more-button night-mode-toggle" id="nightModeToggle" type="button" aria-label="Activer le mode nuit" title="Activer le mode nuit" aria-pressed="false" onclick="toggleNightMode()"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-moon'></use></svg></span></button>
+    <div class="nav-more">
+      <button class="nav-more-button" type="button" aria-label="Plus" title="Plus" aria-expanded="false" aria-controls="navMoreMenu" onclick="toggleMoreMenu()"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-more-horizontal'></use></svg></span></button>
+      <div class="nav-more-menu" id="navMoreMenu" hidden>
+        <a class="nav-more-link" href="/calib_page"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-crosshair'></use></svg> Calibration</a>
+        <a class="nav-more-link" href="/config"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-settings'></use></svg> Configuration</a>
+        <a class="nav-more-link" href="/simu"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-gamepad-2'></use></svg> Simulation</a>
+        <a class="nav-more-link" href="/test"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-flask-conical'></use></svg> Tests système</a>
+        <a class="nav-more-link" href="/releasenotes"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-clipboard-list'></use></svg> Notes de version</a>
+      </div>
+    </div>
+  </nav>
+
   <script>
     let fullCatalog = [];
+    const catalogRows = new Map();
     let currentAZ = 0, currentALT = 0;
     let ticksAZ = 10000, ticksALT = 10000;
     let dirAZ = 1, dirALT = 1;
@@ -221,8 +243,27 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
     let alignRefAZ = null;
     let alignRefALT = null;
 
-    function navigateTo(url) {
-      if (url) window.location.href = url;
+    function setNightMode(enabled, persist = false) {
+      document.documentElement.dataset.nightMode = String(enabled);
+      const button = document.getElementById('nightModeToggle');
+      const label = enabled ? 'D\u00e9sactiver le mode nuit' : 'Activer le mode nuit';
+      button.setAttribute('aria-label', label);
+      button.setAttribute('aria-pressed', String(enabled));
+      button.title = label;
+      if (persist) localStorage.setItem('dobson-night-mode', String(enabled));
+    }
+
+    function toggleNightMode() {
+      setNightMode(document.documentElement.dataset.nightMode !== 'true', true);
+    }
+
+    setNightMode(localStorage.getItem('dobson-night-mode') === 'true');
+
+    function toggleMoreMenu() {
+      const menu = document.getElementById('navMoreMenu');
+      const button = document.querySelector('.nav-more-button');
+      menu.hidden = !menu.hidden;
+      button.setAttribute('aria-expanded', String(!menu.hidden));
     }
 
     function initGeolocation() {
@@ -450,26 +491,26 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
       let t = (typeStr || "").toLowerCase().trim();
       
       if (t.includes("planétaire") || t.includes("planetaire") || t.includes("pn")) {
-        return { picto: "🌀", title: "Nébuleuse Planétaire (" + typeStr + ")" };
+        return { picto: "<svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-orbit'></use></svg>", title: "Nébuleuse Planétaire (" + typeStr + ")" };
       }
       
       if (t === "planète" || t === "planete" || (t.startsWith("pla") && !t.includes("planét") && !t.includes("planet"))) {
-        return { picto: "🪐", title: "Planète" };
+        return { picto: "<svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-planet'></use></svg>", title: "Planète" };
       }
       
       if (t.includes("gal") || t.includes("gx")) {
-        return { picto: "🌌", title: "Galaxie (" + typeStr + ")" };
+        return { picto: "<svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-orbit'></use></svg>", title: "Galaxie (" + typeStr + ")" };
       }
       
       if (t.includes("neb") || t.includes("dn")) {
-        return { picto: "☁️", title: "Nébuleuse (" + typeStr + ")" };
+        return { picto: "<svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-cloud'></use></svg>", title: "Nébuleuse (" + typeStr + ")" };
       }
       
       if (t.includes("amas") || t.includes("oc") || t.includes("gc")) {
-        return { picto: "🌟", title: "Amas d'étoiles (" + typeStr + ")" };
+        return { picto: "<svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-star'></use></svg>", title: "Amas d'étoiles (" + typeStr + ")" };
       }
       
-      return { picto: "🌠", title: "Étoile / Autre (" + typeStr + ")" };
+      return { picto: "<svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-star'></use></svg>", title: "Étoile / Autre (" + typeStr + ")" };
     }
 
     function filterByType(typeKey, el) {
@@ -696,34 +737,93 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
     function renderCatalog(items) {
       const tbody = document.getElementById('catalogBody');
       if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucun objet trouvé</td></tr>';
+        catalogRows.forEach(row => row.remove());
+        let emptyRow = tbody.querySelector('[data-empty-catalog]');
+        if (!emptyRow) {
+          emptyRow = document.createElement('tr');
+          emptyRow.dataset.emptyCatalog = 'true';
+          const cell = document.createElement('td');
+          cell.colSpan = 5;
+          cell.style.textAlign = 'center';
+          cell.textContent = 'Aucun objet trouvé';
+          emptyRow.appendChild(cell);
+          tbody.appendChild(emptyRow);
+        }
         return;
       }
-      tbody.innerHTML = items.map(o => {
-        let typeInfo = getTypePicto(o.type);
-        let displayName = o.commonName ? `${o.commonName} (${o.name})` : o.name;
-        
-        return `
-        <tr>
-          <td>
-            <span class="obj-title">${o.commonName || o.name}</span>
-            ${o.commonName ? `<span class="obj-sub">${o.name}</span>` : ''}
-          </td>
-          <td style="text-align:center;">
-            <span class="picto-type" title="${typeInfo.title}">${typeInfo.picto}</span>
-          </td>
-          <td>${o.mag.toFixed(1)}</td>
-          <td style="text-align:center;">
-            ${o.altitude >= 10 
-              ? `<span class="picto-vis" title="Visible (${o.altitude.toFixed(0)}°)">🟢</span>` 
-              : `<span class="picto-vis" title="${o.timeStr}">🔴</span>`}
-          </td>
-          <td>
-            <button class="btn btn-sm" onclick="selectTarget('${displayName.replace(/'/g, "\\'")}', ${o.ra}, ${o.dec}, ${o.mag})">Cible</button>
-          </td>
-        </tr>
-      `;
-      }).join('');
+      const emptyRow = tbody.querySelector('[data-empty-catalog]');
+      if (emptyRow) emptyRow.remove();
+
+      const visibleKeys = new Set();
+      items.forEach((o, index) => {
+        const key = `${o.name}\u0000${o.type}`;
+        visibleKeys.add(key);
+        let row = catalogRows.get(key);
+        if (!row) {
+          row = document.createElement('tr');
+          const nameCell = document.createElement('td');
+          const objectName = document.createElement('span');
+          objectName.className = 'obj-title';
+          objectName.textContent = o.commonName || o.name;
+          nameCell.appendChild(objectName);
+          if (o.commonName) {
+            const catalogName = document.createElement('span');
+            catalogName.className = 'obj-sub';
+            catalogName.textContent = o.name;
+            nameCell.appendChild(catalogName);
+          }
+
+          const typeCell = document.createElement('td');
+          typeCell.style.textAlign = 'center';
+          const typeIndicator = document.createElement('span');
+          typeIndicator.className = 'picto-type';
+          const typeInfo = getTypePicto(o.type);
+          typeIndicator.title = typeInfo.title;
+          typeIndicator.innerHTML = typeInfo.picto;
+          typeCell.appendChild(typeIndicator);
+
+          const magnitudeCell = document.createElement('td');
+          magnitudeCell.textContent = o.mag.toFixed(1);
+
+          const visibilityCell = document.createElement('td');
+          visibilityCell.style.textAlign = 'center';
+          const visibilityIndicator = document.createElement('span');
+          visibilityIndicator.className = 'picto-vis';
+          visibilityCell.appendChild(visibilityIndicator);
+
+          const targetCell = document.createElement('td');
+          const targetButton = document.createElement('button');
+          targetButton.className = 'btn btn-sm';
+          targetButton.textContent = 'Cible';
+          const displayName = o.commonName ? `${o.commonName} (${o.name})` : o.name;
+          targetButton.addEventListener('click', () => selectTarget(displayName, o.ra, o.dec, o.mag));
+          targetCell.appendChild(targetButton);
+
+          row.append(nameCell, typeCell, magnitudeCell, visibilityCell, targetCell);
+          catalogRows.set(key, row);
+        }
+
+        const visibilityIndicator = row.cells[3].firstElementChild;
+        const isVisible = o.altitude >= 10;
+        const visibilityState = String(isVisible);
+        if (visibilityIndicator.dataset.visible !== visibilityState) {
+          visibilityIndicator.dataset.visible = visibilityState;
+          visibilityIndicator.classList.toggle('visible', isVisible);
+          visibilityIndicator.classList.toggle('unavailable', !isVisible);
+          visibilityIndicator.innerHTML = isVisible
+            ? "<svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-circle-check'></use></svg>"
+            : "<svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-circle-x'></use></svg>";
+        }
+        const visibilityTitle = isVisible ? `Visible (${o.altitude.toFixed(0)}°)` : o.timeStr;
+        if (visibilityIndicator.title !== visibilityTitle) visibilityIndicator.title = visibilityTitle;
+
+        const currentRow = tbody.rows[index];
+        if (currentRow !== row) tbody.insertBefore(row, currentRow || null);
+      });
+
+      catalogRows.forEach((row, key) => {
+        if (!visibleKeys.has(key)) row.remove();
+      });
     }
 
     initGeolocation();
