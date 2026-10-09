@@ -1,0 +1,169 @@
+﻿CONTEXT.md - Projet Dobson Push-To (Documentation Technique Exhaustive & Passage de Témoin)
+________________
+
+
+1. Vue d'ensemble et Objectifs du Projet
+1.1. Description du Projet
+Le projet Dobson Push-To consiste à moderniser un télescope Dobson manuel en lui ajoutant un système d'aide au pointage (Push-To) électronique basé sur un microcontrôleur ESP32. Le système calcule en temps réel les coordonnées azimutales et de hauteur via des encodeurs/compteurs et communique avec des logiciels de planétarium (comme SkySafari) ou une interface web embarquée.
+1.2. Objectifs de Développement
+* Établir un environnement de développement professionnel, pérenne et standardisé sous Visual Studio Code (VS Code) avec l'extension PlatformIO IDE.
+* Assurer une séparation stricte des responsabilités dans l'arborescence (code source, en-têtes, fichiers de configuration).
+* Mettre en place un suivi de version rigoureux via Git et un dépôt distant GitHub.
+* Garantir une maintenabilité et une évolutivité optimales pour permettre un transfert de contexte fluide entre développeurs ou agents IA.
+
+
+________________
+
+
+2. Architecture Matérielle et Logicielle
+2.1. Spécifications Matérielles
+* Microcontrôleur cible : ESP32 Dev Module (esp32dev).
+* Périphériques connectés (implicites via le code) :
+   * Module WiFi pour le serveur web embarqué et le protocole SkySafari.
+   * Compteurs/encodeurs pour l'Azimut (countAZ) et la Hauteur (countALT).
+   * Gestion des profils et préférences (Preferences.h).
+2.2. Stack Logicielle
+* IDE : Visual Studio Code (VS Code).
+* Plateforme de compilation : PlatformIO (platform = espressif32, board = esp32dev, framework = arduino).
+* Gestionnaire de versions : Git / GitHub.
+
+
+________________
+
+
+3. Arborescence Détaillée du Projet
+Le projet respecte scrupuleusement la structure normalisée de PlatformIO pour éviter toute erreur de compilation ou de résolution de chemins par l'éditeur :
+
+
+Dobson_PushTo_Visual CODE/
+
+
+├── .pio/                     # Dossier de build généré par PlatformIO (ignoré par Git)
+
+
+├── .vscode/                  # Configurations spécifiques à VS Code (partiellement ignoré)
+
+
+├── include/                  # Dossier racine obligatoire pour les fichiers d'en-tête (.h)
+
+
+│   ├── CalibPage.h
+
+
+│   ├── Calibration.h
+
+
+│   ├── Config.h
+
+
+│   ├── ConfigPage.h
+
+
+│   ├── HelpPage.h
+
+
+│   ├── ObjectsDB.h
+
+
+│   ├── ReleaseNotes.h
+
+
+│   ├── SimuPage.h
+
+
+│   ├── StationPage.h
+
+
+│   ├── TestPage.h
+
+
+│   └── WebPage.h
+
+
+├── src/                      # Dossier source contenant le point d'entrée du programme
+
+
+│   └── Dobson_PushTo.cpp     # Fichier principal (anciennement .ino, migré en .cpp)
+
+
+├── .gitignore                # Fichiers et dossiers exclus du suivi Git
+
+
+└── platformio.ini            # Fichier de configuration principal PlatformIO
+
+
+________________
+
+
+4. Historique Détaillé des Étapes Réalisées
+4.1. Résolution des Erreurs d'Arborescence Initiales
+* Problème rencontré : Au démarrage, PlatformIO renvoyait l'erreur Error: Nothing to build. Please put your source code files to the '...\src' folder car le code source était placé à la racine ou mal structuré.
+* Solution appliquée : Création explicite du dossier src/ pour y héberger le code principal, et déplacement du dossier include/ rigoureusement à la racine du projet (et non imbriqué dans src/).
+4.2. Migration du Fichier Principal (.ino vers .cpp)
+* Problème rencontré : L'extension C/C++ de VS Code (IntelliSense) ne prend pas nativement en charge les fichiers .ino, ce qui génère des alertes d'avertissement et perturbe l'autocomplétion. De plus, les inclusions de fichiers d'en-tête (#include "Calibration.h", etc.) provoquaient des erreurs de type #include errors detected (C/C++(1696)).
+* Solution appliquée :
+   * Renommage du fichier Dobson_PushTo.ino en Dobson_PushTo.cpp.
+   * Ajustement optionnel du fichier platformio.ini avec l'ajout de build_flags = -Iinclude pour garantir que l'éditeur indexe correctement le dossier d'en-tête.
+   * Rechargement de la fenêtre VS Code (Developer: Reload Window).
+4.3. Configuration du Fichier platformio.ini
+Le fichier de configuration racine est configuré de la manière suivante :
+
+
+[env:esp32dev]
+
+
+platform = espressif32
+
+
+board = esp32dev
+
+
+framework = arduino
+
+
+monitor_speed = 115200
+
+
+build_flags = -Iinclude
+4.4. Mise en Place du Suivi de Version (Git & GitHub)
+* Initialisation locale : Création du dépôt Git local dans le répertoire du projet.
+* Configuration des identités : Paramétrage de user.name et user.email pour autoriser les commits.
+* Fichier .gitignore : Exclusion des éléments superflus et lourds pour la sauvegarde :
+
+
+.pio/
+
+
+.vscode/.browse.c_cpp.db*
+
+
+.vscode/c_cpp_properties.json
+
+
+.vscode/launch.json
+
+
+.vscode/ipch
+
+
+.DS_Store
+
+
+* Premier Commit : Validation de l'ensemble des fichiers sous l'intitulé « Premier Commit ».
+* Liaison Distante : Connexion au dépôt distant GitHub (origin main) et téléversement réussi du code source.
+
+
+________________
+
+
+5. Procédures Opérationnelles et Résolution d'Incidents
+5.1. Compilation et Téléversement sur l'ESP32
+1. Brancher l'ESP32 sur un port USB de la station de travail.
+2. Dans VS Code, utiliser le panneau PlatformIO (icône de tête de taureau dans la barre latérale) ou la barre d'état inférieure :
+   * Build (coche ✓) : Vérifie la syntaxe et compile le projet.
+   * Upload (flèche ➔) : Téléverse le binaires compilé sur l'ESP32.
+   * Monitor (icône prise) : Ouvre le moniteur série à 115200 bauds pour analyser les logs de débogage en direct.
+5.2. Bonnes Pratiques pour les Futures Modifications
+* Tout nouveau fichier d'en-tête .h doit être placé dans le dossier include/.
+* Tout code logique ou fonctionnel supplémentaire doit résider dans le dossier src/ (en .cpp ou .h inclus).
+* Avant tout transfert vers un autre agent ou avant une session de développement majeure, effectuer systématiquement un git status, un git add et un commit explicite des modifications.
