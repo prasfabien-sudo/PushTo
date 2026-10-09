@@ -7,6 +7,10 @@ android {
     namespace = "fr.dobsonpushto.mobile"
     compileSdk = 35
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "fr.dobsonpushto.mobile"
         minSdk = 23

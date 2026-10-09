@@ -17,7 +17,7 @@ Cette branche ajoute l'application Android au projet ESP32 existant. Le firmware
 - Interface mobile revue : navigation courte, palette nuit/rouge, cartes et boutons cohérents.
 - Écrans d'aide, de tests et de notes de version.
 
-La vue céleste s'oriente selon le téléphone (boussole, accéléromètre/gyroscope) pour afficher les objets dans la direction visée. Le mode réalité augmentée affiche aussi l'aperçu de la caméra arrière sous les marqueurs ; l'autorisation caméra n'est demandée qu'à son activation. Le téléphone utilise le nord magnétique corrigé de la déclinaison locale et le réticule des encodeurs ESP32 reste affiché séparément.
+La vue céleste utilise une projection perspective et s'oriente selon le téléphone (boussole, accéléromètre/gyroscope) pour afficher les objets dans la direction visée. Comme sur la vue Web, elle permet de filtrer les objets, de faire glisser la vue et de zoomer par pincement ; « Recentrer » revient à la direction des capteurs. Les objets sont sélectionnables depuis la scène ou la liste des objets visibles. Le mode réalité augmentée affiche aussi l'aperçu de la caméra arrière sous les marqueurs ; l'autorisation caméra n'est demandée qu'à son activation. Le téléphone utilise le nord magnétique corrigé de la déclinaison locale et le réticule des encodeurs ESP32 reste affiché séparément.
 
 ## Architecture et matériel
 
@@ -49,6 +49,17 @@ L'APK debug est généré dans `android-app/app/build/outputs/apk/debug/app-debu
 Sinon, copie l'APK sur le téléphone et autorise son installation depuis le gestionnaire de fichiers. Au premier lancement, accorde les permissions nécessaires puis lance la recherche BLE pour connecter le module « Dobson Push-To ».
 
 Pour le firmware combiné, ouvre la racine du dépôt avec PlatformIO, puis compile et téléverse l'environnement `esp32dev`. Le profil `huge_app.csv` réserve l'espace flash requis par le firmware combiné ; téléverse le firmware par USB avec PlatformIO.
+
+### Développement sans matériel
+
+La version debug de l'application peut se connecter au simulateur ESP32 Node.js de la racine du dépôt :
+
+1. Sur l'ordinateur, démarre `node .\simulate_esp32.js` depuis la racine du dépôt. Le simulateur expose son API HTTP sur le port 8000.
+2. Démarre un émulateur Android.
+3. Dans l'application debug, depuis l'accueil, choisis **Connecter le simulateur ESP32**. L'émulateur Android joint le serveur hôte par `10.0.2.2:8000`.
+4. Dans **Simulation**, les boutons AZ/ALT déplacent les compteurs du simulateur partagé ; les changements faits par la page Web simulée sont aussi reçus par l'application.
+
+Ce raccordement HTTP est disponible uniquement dans l'APK debug ; l'APK release conserve la connexion BLE réelle. Les fonctions téléphone matérielles absentes de l'émulateur (BLE périphérique, GPS et caméra) demandent des simulations propres à l'émulateur ou un vrai appareil.
 
 ## Tests et limites
 

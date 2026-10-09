@@ -52,14 +52,26 @@ import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import org.json.JSONObject
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.io.File
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.asin
 import kotlin.math.atan2
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 class MobileMainActivity : Activity() {
@@ -79,11 +91,18 @@ class MobileMainActivity : Activity() {
     private var scanner: BluetoothLeScanner? = null
     private var scanning = false
     private var gatt: BluetoothGatt? = null
+    @Volatile private var simulatorConnected = false
+    private var simulatorConnectionButton: Button? = null
+    private var simulatorExecutor: ScheduledExecutorService? = null
+    private var simulatorPollTask: ScheduledFuture<*>? = null
+    private var simulatorWarningShown = false
+    private var homeConnectionLabel: TextView? = null
     private var activeScreen = SCREEN_HOME
     private var selectedType = "Tous"
     private var magnitudeLimit = 99.0
     private var visibleOnly = false
     private var skyDome: SkyDomeView? = null
+    private var skyVisibleObjectsRow: LinearLayout? = null
     private var skySensorStatusLabel: TextView? = null
     private var skyCameraPreview: SkyCameraPreview? = null
     private var skyArMode = false
@@ -132,6 +151,7 @@ class MobileMainActivity : Activity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.rgb(18, 18, 18)
         window.navigationBarColor = Color.rgb(18, 18, 18)
         val manager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -159,6 +179,13 @@ class MobileMainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(backgroundColor())
         }
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val systemBars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
         val header = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(18), dp(14), dp(18), dp(10))
@@ -170,7 +197,7 @@ class MobileMainActivity : Activity() {
         }
         brand.addView(text("DOBSON PUSH-TO", 18f, accentColor(), true))
         brand.addView(text("Pilotage astronomique", 11f, secondaryText(), false))
-        header.addView(brand, LinearLayout.LayoutParams(0, dp(48), 1f))
+        header.addView(brand, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(header)
 
         statusLabel = text("BLUETOOTH · déconnecté", 12f, secondaryText(), true)
@@ -252,6 +279,7 @@ class MobileMainActivity : Activity() {
         guidanceView = null
         skySafariStatusLabel = null
         skyDome = null
+        skyVisibleObjectsRow = null
         skySensorStatusLabel = null
         skyCameraPreview = null
         gpsStatusLabel = null
@@ -310,6 +338,7 @@ class MobileMainActivity : Activity() {
         liveAltLabel = value("Altitude : --")
         liveTicksLabel = text("Ticks AZ : --   ·   Ticks ALT : --", 14f, secondaryText(), false)
         val connection = text("Bluetooth : déconnecté", 14f, secondaryText(), false)
+        homeConnectionLabel = connection
         screenContainer.addView(liveAzLabel)
         screenContainer.addView(liveAltLabel)
         screenContainer.addView(liveTicksLabel)
@@ -360,6 +389,23 @@ class MobileMainActivity : Activity() {
         screenContainer.addView(button("Déconnecter le télescope").apply {
             setOnClickListener { disconnect() }
         })
+        if (BuildConfig.DEBUG) {
+            simulatorConnectionButton = button(
+                if (simulatorConnected) "Déconnecter le simulateur ESP32" else "Connecter le simulateur ESP32"
+            ).apply {
+                setOnClickListener {
+                    if (simulatorConnected) disconnect()
+                    else connectToEsp32Simulator()
+                }
+            }
+            screenContainer.addView(simulatorConnectionButton)
+            screenContainer.addView(text(
+                "Pour simuler l'ESP32, lance node .\\simulate_esp32.js sur l'ordinateur hôte (port 8000).",
+                12f,
+                secondaryText(),
+                false
+            ))
+        }
         screenContainer.addView(LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             tag = DEVICE_LIST_TAG
@@ -540,7 +586,7 @@ class MobileMainActivity : Activity() {
     }
 
     private fun showSkyDome() {
-        section(if (skyArMode) "Réalité augmentée · ciel" else "Vue céleste immersive")
+        section(if (skyArMode) "Réalité augmentée · ciel" else "Vue 3D du ciel")
         val current = model.snapshot()
         val dome = SkyDomeView(this).apply {
             layoutParams = FrameLayout.LayoutParams(-1, -1)
@@ -558,14 +604,15 @@ class MobileMainActivity : Activity() {
             sensorConnected = model.connected
             lastTelemetryAt = model.lastTelemetryAt
             selectedObject = model.activeTarget
-            onObjectSelected = {
-                model.selectTarget(it)
-                refreshLiveData()
-            }
         }
         skyDome = dome
+        dome.onObjectSelected = {
+            model.selectTarget(it)
+            refreshLiveData()
+        }
+        dome.onVisibleObjectsChanged = ::updateSkyObjectChips
         val scene = FrameLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(-1, dp(430)).apply { bottomMargin = dp(8) }
+            layoutParams = LinearLayout.LayoutParams(-1, dp(430)).apply { bottomMargin = dp(6) }
             setBackgroundColor(if (model.nightMode) Color.rgb(18, 2, 7) else Color.rgb(4, 9, 20))
         }
         if (skyArMode) {
@@ -580,6 +627,41 @@ class MobileMainActivity : Activity() {
         }
         scene.addView(dome, FrameLayout.LayoutParams(-1, -1))
         screenContainer.addView(scene)
+
+        val sceneControls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val objectFilter = spinner(
+            listOf("Tous les objets", "Galaxies", "Nébuleuses", "Amas d'étoiles", "Étoiles"),
+            "Tous les objets"
+        ).apply {
+            contentDescription = "Filtrer les objets visibles dans la vue 3D"
+            onItemSelectedListener = simpleSelection { dome.objectTypeFilter = it }
+        }
+        sceneControls.addView(objectFilter, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+            marginEnd = dp(6)
+        })
+        sceneControls.addView(button("Recentrer").apply {
+            setOnClickListener { dome.recenterPhoneView() }
+        }, LinearLayout.LayoutParams(-2, dp(48)))
+        screenContainer.addView(sceneControls)
+        screenContainer.addView(text(
+            "Glisse pour explorer · pince pour zoomer · le centre suit les capteurs du téléphone.",
+            12f,
+            secondaryText(),
+            false
+        ))
+        section("Objets visibles dans le champ")
+        val visibleObjectsScroll = android.widget.HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) }
+        }
+        skyVisibleObjectsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        visibleObjectsScroll.addView(skyVisibleObjectsRow)
+        screenContainer.addView(visibleObjectsScroll)
 
         skySensorStatusLabel = value("Initialisation des capteurs d'orientation…")
         screenContainer.addView(skySensorStatusLabel)
@@ -597,7 +679,7 @@ class MobileMainActivity : Activity() {
             }
         })
         screenContainer.addView(text(
-            "Pointe l'arrière du téléphone vers le ciel : la boussole et l'inclinomètre placent les objets dans le champ. Touche un objet pour le sélectionner.",
+            "Pointe l'arrière du téléphone vers le ciel. Touche un objet dans la vue ou dans la liste pour le sélectionner.",
             13f,
             secondaryText(),
             false
@@ -628,6 +710,33 @@ class MobileMainActivity : Activity() {
             requestMissing(arrayOf(Manifest.permission.CAMERA), REQUEST_CAMERA_PERMISSION) {
                 skyCameraPreview?.start()
             }
+        }
+    }
+
+    private fun updateSkyObjectChips(visibleObjects: List<SkyObject>) {
+        val row = skyVisibleObjectsRow ?: return
+        row.removeAllViews()
+        if (visibleObjects.isEmpty()) {
+            row.addView(text("Aucun objet visible au-dessus de l'horizon.", 12f, secondaryText(), false))
+            return
+        }
+        visibleObjects.take(40).forEach { item ->
+            val chip = TextView(this).apply {
+                text = item.commonName.ifBlank { item.name }
+                textSize = 12f
+                setTextColor(primaryText())
+                contentDescription = "${item.commonName.ifBlank { item.name }} · ${item.type} · magnitude %.1f".format(item.magnitude)
+                setPadding(dp(9), dp(6), dp(9), dp(6))
+                background = roundedBackground(cardColor(), dp(6), borderColor())
+                setOnClickListener {
+                    model.selectTarget(item)
+                    skyDome?.selectedObject = item
+                    refreshLiveData()
+                }
+            }
+            row.addView(chip, LinearLayout.LayoutParams(-2, -2).apply {
+                marginEnd = dp(6)
+            })
         }
     }
 
@@ -1278,9 +1387,13 @@ class MobileMainActivity : Activity() {
     }
 
     private fun showSimulation() {
-        section("Simulation locale des encodeurs")
+        section(if (simulatorConnected) "Simulation des encodeurs ESP32" else "Simulation locale des encodeurs")
         screenContainer.addView(text(
-            "Ces déplacements sont simulés dans l'application uniquement ; ils ne modifient pas les capteurs ni l'ESP32.",
+            if (simulatorConnected) {
+                "Les déplacements modifient le simulateur ESP32 partagé avec l'interface Web."
+            } else {
+                "Ces déplacements sont simulés dans l'application uniquement ; ils ne modifient pas les capteurs ni l'ESP32."
+            },
             14f,
             secondaryText(),
             false
@@ -1293,8 +1406,12 @@ class MobileMainActivity : Activity() {
                 pair.forEach { amount ->
                     row.addView(button("%+.1f°".format(amount)).apply {
                         setOnClickListener {
-                            model.stepSimulation(axis, amount)
-                            refreshLiveData()
+                            if (simulatorConnected) {
+                                sendSimulatorStep(axis, amount)
+                            } else {
+                                model.stepSimulation(axis, amount)
+                                refreshLiveData()
+                            }
                         }
                     }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { marginEnd = dp(5) })
                 }
@@ -1302,7 +1419,11 @@ class MobileMainActivity : Activity() {
             }
         }
         screenContainer.addView(button("Remettre les deux axes simulés à zéro").apply {
-            setOnClickListener { model.resetSimulation(); refreshLiveData() }
+            setOnClickListener {
+                model.resetSimulation()
+                if (simulatorConnected) sendSimulatorReset()
+                else refreshLiveData()
+            }
         })
     }
 
@@ -1407,11 +1528,14 @@ class MobileMainActivity : Activity() {
     private fun refreshLiveData() {
         if (!::statusLabel.isInitialized) return
         val snapshot = model.snapshot()
-        if (!model.connected) {
-            statusLabel.text = "Bluetooth déconnecté · position figée au dernier échantillon"
-        } else {
-            statusLabel.text = "Bluetooth connecté · télémétrie reçue"
+        val connectionStatus = when {
+            simulatorConnected && model.connected -> "Simulateur ESP32 connecté · télémétrie reçue"
+            simulatorConnected -> "Simulateur ESP32 inaccessible · vérifie le serveur local"
+            model.connected -> "Bluetooth connecté · télémétrie reçue"
+            else -> "Bluetooth déconnecté · position figée au dernier échantillon"
         }
+        statusLabel.text = connectionStatus
+        homeConnectionLabel?.text = connectionStatus
         liveAzLabel?.text = "Azimut : %.1f°".format(snapshot.azDegrees)
         liveAltLabel?.text = "Altitude : %.1f°".format(snapshot.altDegrees)
         liveTicksLabel?.text = "Ticks AZ : ${snapshot.azTicks}   ·   Ticks ALT : ${snapshot.altTicks}"
@@ -1589,6 +1713,102 @@ class MobileMainActivity : Activity() {
         }
     }
 
+    private fun connectToEsp32Simulator() {
+        if (!BuildConfig.DEBUG) return
+        disconnect()
+        model.resetSimulation()
+        simulatorWarningShown = false
+        simulatorConnected = true
+        simulatorConnectionButton?.text = "Déconnecter le simulateur ESP32"
+        model.connected = false
+        statusLabel.text = "Connexion au simulateur ESP32…"
+        refreshLiveData()
+        val executor = Executors.newSingleThreadScheduledExecutor { task ->
+            Thread(task, "dobson-esp32-simulator").apply { isDaemon = true }
+        }
+        simulatorExecutor = executor
+        simulatorPollTask = executor.scheduleAtFixedRate(
+            ::pollEsp32Simulator,
+            0,
+            SIMULATOR_POLL_INTERVAL_MS,
+            TimeUnit.MILLISECONDS
+        )
+    }
+
+    private fun pollEsp32Simulator() {
+        try {
+            val status = JSONObject(simulatorGet("/status"))
+            val azTicks = status.getInt("rawAZ")
+            val altTicks = status.getInt("rawALT")
+            val ticksAz = status.getDouble("ticksAZ")
+            val ticksAlt = status.getDouble("ticksALT")
+            if (!ticksAz.isFinite() || ticksAz <= 0.0 || !ticksAlt.isFinite() || ticksAlt <= 0.0) {
+                throw IOException("Résolution d'encodeur invalide dans le simulateur.")
+            }
+            handler.post {
+                if (!simulatorConnected) return@post
+                simulatorWarningShown = false
+                model.ticksPerRevAz = ticksAz
+                model.ticksPerRevAlt = ticksAlt
+                model.acceptTelemetry(azTicks, altTicks)
+                model.connected = true
+                refreshLiveData()
+            }
+        } catch (error: Exception) {
+            handler.post {
+                if (!simulatorConnected) return@post
+                model.connected = false
+                refreshLiveData()
+                if (!simulatorWarningShown) {
+                    simulatorWarningShown = true
+                    toast("Simulateur ESP32 inaccessible : ${error.message ?: "vérifie qu'il est lancé sur le port 8000"}.")
+                }
+            }
+        }
+    }
+
+    private fun sendSimulatorStep(axis: String, degrees: Double) {
+        val resolution = if (axis == "AZ") model.ticksPerRevAz else model.ticksPerRevAlt
+        val delta = (degrees / 360.0 * resolution).roundToInt()
+        sendSimulatorCommand("/simstep?axis=${axis.lowercase(Locale.ROOT)}&delta=$delta")
+    }
+
+    private fun sendSimulatorReset() {
+        sendSimulatorCommand("/simstep?axis=reset&delta=0")
+    }
+
+    private fun sendSimulatorCommand(path: String) {
+        val executor = simulatorExecutor
+        if (!simulatorConnected || executor == null) return
+        executor.execute {
+            try {
+                simulatorGet(path)
+            } catch (error: Exception) {
+                handler.post {
+                    if (simulatorConnected) {
+                        toast("Commande au simulateur ESP32 échouée : ${error.message ?: "erreur réseau"}.")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun simulatorGet(path: String): String {
+        val connection = URL("$SIMULATOR_BASE_URL$path").openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod = "GET"
+            connection.connectTimeout = SIMULATOR_TIMEOUT_MS
+            connection.readTimeout = SIMULATOR_TIMEOUT_MS
+            val responseCode = connection.responseCode
+            if (responseCode !in 200..299) {
+                throw IOException("Le serveur a répondu HTTP $responseCode.")
+            }
+            return connection.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
@@ -1681,12 +1901,21 @@ class MobileMainActivity : Activity() {
     }
 
     private fun disconnect() {
-        val current = gatt ?: return
-        try {
-            current.disconnect()
-            current.close()
-        } catch (error: SecurityException) {
-            toast("Permission Bluetooth manquante : ${error.message ?: "accès refusé"}.")
+        simulatorConnected = false
+        simulatorConnectionButton?.text = "Connecter le simulateur ESP32"
+        simulatorPollTask?.cancel(true)
+        simulatorPollTask = null
+        simulatorExecutor?.shutdownNow()
+        simulatorExecutor = null
+        simulatorWarningShown = false
+        val current = gatt
+        if (current != null) {
+            try {
+                current.disconnect()
+                current.close()
+            } catch (error: SecurityException) {
+                toast("Permission Bluetooth manquante : ${error.message ?: "accès refusé"}.")
+            }
         }
         gatt = null
         model.connected = false
@@ -2015,6 +2244,9 @@ class MobileMainActivity : Activity() {
         private const val SCREEN_CONFIG = "config"
         private const val SCREEN_CALIBRATION = "calibration"
         private const val SCREEN_SIMULATION = "simulation"
+        private const val SIMULATOR_BASE_URL = "http://10.0.2.2:8000"
+        private const val SIMULATOR_POLL_INTERVAL_MS = 250L
+        private const val SIMULATOR_TIMEOUT_MS = 1500
         private const val SCREEN_SKYSAFARI = "skysafari"
         private const val SCREEN_PLATE_SOLVER = "plate-solver"
         private const val SCREEN_HELP = "help"

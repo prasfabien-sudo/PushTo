@@ -101,6 +101,8 @@ Puis ouvrir [http://127.0.0.1:8000](http://127.0.0.1:8000) dans le navigateur. A
 
 Cette simulation valide l'interface et les échanges HTTP, mais ne remplace pas un test du firmware sur ESP32 : elle ne reproduit ni les interruptions électriques des encodeurs, ni le Wi-Fi embarqué, ni la connexion TCP SkySafari.
 
+Sur la branche `mobile-web-ble`, l'APK Android debug peut aussi se connecter à ce simulateur via `10.0.2.2:8000`. Lance le serveur Node.js sur le PC, démarre un émulateur Android puis, depuis l'accueil de l'application, choisis « Connecter le simulateur ESP32 ». Les commandes de simulation AZ/ALT de l'application pilotent alors le même état que la page Web simulée. Cette passerelle n'est incluse que dans le build debug ; la connexion BLE de l'APK release reste inchangée.
+
 La barre de navigation propose un mode nuit rouge pour préserver la vision nocturne pendant l'observation. Son état est mémorisé dans le navigateur et partagé entre les pages.
 
 ### Vue 3D du ciel (bêta)

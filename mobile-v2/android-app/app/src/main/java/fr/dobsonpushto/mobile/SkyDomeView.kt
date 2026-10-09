@@ -4,11 +4,15 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RadialGradient
 import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.Typeface
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
-import kotlin.math.abs
+import android.view.ViewConfiguration
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tan
@@ -59,6 +63,11 @@ class SkyDomeView(context: Context) : View(context) {
             field = value
             invalidate()
         }
+    var objectTypeFilter = "Tous les objets"
+        set(value) {
+            field = value
+            invalidate()
+        }
     var cameraOverlay = false
         set(value) {
             field = value
@@ -79,6 +88,7 @@ class SkyDomeView(context: Context) : View(context) {
             field = value
             invalidate()
         }
+    var onVisibleObjectsChanged: ((List<SkyObject>) -> Unit)? = null
     var selectedObject: SkyObject? = null
     var onObjectSelected: ((SkyObject) -> Unit)? = null
 
@@ -86,6 +96,44 @@ class SkyDomeView(context: Context) : View(context) {
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
     private val hitRegions = mutableListOf<Pair<RectF, SkyObject>>()
     private val density get() = resources.displayMetrics.density
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private var fieldOfViewDegrees = DEFAULT_FIELD_OF_VIEW_DEGREES
+    private var dragAzimuth = 0.0
+    private var dragAltitude = 0.0
+    private var downX = 0f
+    private var downY = 0f
+    private var lastX = 0f
+    private var lastY = 0f
+    private var dragging = false
+    private var scaling = false
+    private var lastVisibleObjects: List<SkyObject>? = null
+    private val scaleDetector = ScaleGestureDetector(context,
+        object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                fieldOfViewDegrees = (fieldOfViewDegrees / detector.scaleFactor)
+                    .coerceIn(MIN_FIELD_OF_VIEW_DEGREES, MAX_FIELD_OF_VIEW_DEGREES)
+                scaling = true
+                invalidate()
+                return true
+            }
+        })
+
+    private data class FieldProjection(
+        val centerX: Float,
+        val centerY: Float,
+        val halfWidth: Float,
+        val halfHeight: Float,
+        val aspect: Float,
+        val tanHalfFov: Float,
+        val forwardX: Double,
+        val forwardY: Double,
+        val forwardZ: Double,
+        val rightX: Double,
+        val rightZ: Double,
+        val upX: Double,
+        val upY: Double,
+        val upZ: Double
+    )
 
     init {
         contentDescription = "Champ céleste orienté selon les capteurs du téléphone, avec caméra en réalité augmentée."
@@ -230,14 +278,56 @@ class SkyDomeView(context: Context) : View(context) {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action != MotionEvent.ACTION_UP) return true
-        val selected = hitRegions.asReversed().firstOrNull { (bounds, _) ->
-            bounds.contains(event.x, event.y)
-        }?.second ?: return performClick()
-        selectedObject = selected
-        onObjectSelected?.invoke(selected)
-        invalidate()
-        performClick()
+        scaleDetector.onTouchEvent(event)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.x
+                downY = event.y
+                lastX = event.x
+                lastY = event.y
+                dragging = false
+                scaling = false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (scaleDetector.isInProgress || event.pointerCount > 1) {
+                    scaling = true
+                    return true
+                }
+                val totalX = event.x - downX
+                val totalY = event.y - downY
+                if (!dragging && totalX * totalX + totalY * totalY > touchSlop * touchSlop) {
+                    dragging = true
+                }
+                if (dragging) {
+                    dragAzimuth = Astronomy.positiveModulo(
+                        dragAzimuth - (event.x - lastX).toDouble() / width.coerceAtLeast(1) *
+                            fieldOfViewDegrees * 2.0,
+                        360.0
+                    )
+                    dragAltitude = (dragAltitude + (event.y - lastY).toDouble() / height.coerceAtLeast(1) *
+                        fieldOfViewDegrees * 2.0).coerceIn(-80.0, 80.0)
+                    invalidate()
+                }
+                lastX = event.x
+                lastY = event.y
+            }
+            MotionEvent.ACTION_UP -> {
+                if (!dragging && !scaling) {
+                    hitRegions.asReversed().firstOrNull { (bounds, _) ->
+                        bounds.contains(event.x, event.y)
+                    }?.second?.let { selected ->
+                        selectedObject = selected
+                        onObjectSelected?.invoke(selected)
+                        invalidate()
+                    }
+                    performClick()
+                }
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                dragging = false
+                scaling = false
+            }
+        }
         return true
     }
 
@@ -246,101 +336,289 @@ class SkyDomeView(context: Context) : View(context) {
         return true
     }
 
-    private fun drawPhoneSky(canvas: Canvas) {
-        val background = if (nightMode) Color.rgb(18, 2, 7) else Color.rgb(4, 9, 20)
-        val grid = if (nightMode) Color.rgb(145, 48, 58) else Color.rgb(93, 126, 169)
-        val accent = if (nightMode) Color.rgb(255, 105, 118) else Color.rgb(255, 206, 115)
-        val labels = if (nightMode) Color.rgb(255, 203, 205) else Color.rgb(223, 235, 255)
-        val star = if (nightMode) Color.rgb(255, 180, 186) else Color.rgb(238, 244, 255)
-        if (!cameraOverlay) canvas.drawColor(background)
+    fun recenterPhoneView() {
+        dragAzimuth = 0.0
+        dragAltitude = 0.0
+        fieldOfViewDegrees = DEFAULT_FIELD_OF_VIEW_DEGREES
+        invalidate()
+    }
 
-        val left = width * 0.08f
-        val right = width * 0.92f
-        val top = height * 0.12f
-        val bottom = height * 0.86f
+    private fun drawPhoneSky(canvas: Canvas) {
+        val background = if (nightMode) Color.rgb(18, 2, 7) else Color.rgb(5, 8, 14)
+        val grid = if (nightMode) Color.rgb(130, 35, 48) else Color.rgb(59, 79, 105)
+        val accent = if (nightMode) Color.rgb(255, 105, 118) else Color.rgb(255, 193, 104)
+        val labels = if (nightMode) Color.rgb(255, 203, 205) else Color.rgb(220, 228, 240)
+        val left = width * 0.025f
+        val right = width * 0.975f
+        val top = height * 0.025f
+        val bottom = height * 0.975f
         val centerX = (left + right) * 0.5f
         val centerY = (top + bottom) * 0.5f
         val halfWidth = (right - left) * 0.5f
         val halfHeight = (bottom - top) * 0.5f
-
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = density
-        paint.color = if (cameraOverlay) Color.argb(175, Color.red(grid), Color.green(grid), Color.blue(grid)) else grid
-        canvas.drawRoundRect(left, top, right, bottom, 18f * density, 18f * density, paint)
-        for (fraction in listOf(-0.5f, 0.0f, 0.5f)) {
-            val y = centerY + halfHeight * fraction
-            canvas.drawLine(left, y, right, y, paint)
-            val x = centerX + halfWidth * fraction
-            canvas.drawLine(x, top, x, bottom, paint)
+        val scene = RectF(left, top, right, bottom)
+        if (!cameraOverlay) {
+            paint.shader = RadialGradient(
+                centerX,
+                bottom,
+                height * 1.15f,
+                intArrayOf(Color.rgb(24, 35, 50), Color.rgb(12, 18, 28), background),
+                null,
+                Shader.TileMode.CLAMP
+            )
+            canvas.drawRoundRect(scene, 14f * density, 14f * density, paint)
+            paint.shader = null
+        } else {
+            paint.style = Paint.Style.FILL
+            paint.color = Color.argb(48, 0, 0, 0)
+            canvas.drawRoundRect(scene, 14f * density, 14f * density, paint)
         }
+        val clipSave = canvas.save()
+        canvas.clipRect(scene)
 
-        val horizontalFov = HORIZONTAL_FIELD_OF_VIEW_DEGREES
-        val verticalFov = VERTICAL_FIELD_OF_VIEW_DEGREES
+        val lookAzimuth = Astronomy.positiveModulo(phoneAzimuth + dragAzimuth, 360.0)
+        val lookAltitude = (phoneAltitude + dragAltitude).coerceIn(-80.0, 88.0)
+        val tanHalfFov = tan(Math.toRadians(fieldOfViewDegrees)).toFloat()
+        val azimuthRadians = Math.toRadians(lookAzimuth)
+        val altitudeRadians = Math.toRadians(lookAltitude)
+        val sinAzimuth = sin(azimuthRadians)
+        val cosAzimuth = cos(azimuthRadians)
+        val sinAltitude = sin(altitudeRadians)
+        val cosAltitude = cos(altitudeRadians)
+        val projection = FieldProjection(
+            centerX = centerX,
+            centerY = centerY,
+            halfWidth = halfWidth,
+            halfHeight = halfHeight,
+            aspect = width.toFloat() / height.coerceAtLeast(1),
+            tanHalfFov = tanHalfFov,
+            forwardX = sinAzimuth * cosAltitude,
+            forwardY = sinAltitude,
+            forwardZ = cosAzimuth * cosAltitude,
+            rightX = cosAzimuth,
+            rightZ = -sinAzimuth,
+            upX = -sinAzimuth * sinAltitude,
+            upY = cosAltitude,
+            upZ = -cosAzimuth * sinAltitude
+        )
+
         hitRegions.clear()
         val now = System.currentTimeMillis()
+        val visibleObjects = mutableListOf<Triple<SkyObject, Pair<Float, Float>, Double>>()
         objects.forEach { item ->
+            if (!matchesObjectFilter(item)) return@forEach
             val (ra, dec) = Astronomy.precess(item.ra, item.dec, now)
             val coordinates = Astronomy.toHorizontal(ra, dec, latitude, longitude, now)
-            val deltaAz = Astronomy.angularDifference(coordinates.azimuth, phoneAzimuth)
-            val deltaAlt = coordinates.altitude - phoneAltitude
-            if (coordinates.altitude < 0.0 ||
-                abs(deltaAz) >= horizontalFov * 0.5 ||
-                abs(deltaAlt) >= verticalFov * 0.5
-            ) return@forEach
-
-            val projectedX = tan(Math.toRadians(deltaAz)) / tan(Math.toRadians(horizontalFov * 0.5))
-            val projectedY = tan(Math.toRadians(deltaAlt)) / tan(Math.toRadians(verticalFov * 0.5))
-            val x = centerX + halfWidth * projectedX.toFloat()
-            val y = centerY - halfHeight * projectedY.toFloat()
-            val isSelected = selectedObject?.name == item.name
-            val radius = (5.0 - item.magnitude.coerceIn(-4.0, 10.0) * 0.2)
-                .coerceIn(2.5, 7.0) * density
-            paint.style = Paint.Style.FILL
-            paint.color = if (isSelected) accent else star
-            canvas.drawCircle(x, y, radius.toFloat(), paint)
-            if (item.magnitude <= 3.0 || isSelected) {
-                textPaint.color = labels
-                textPaint.textSize = 10f * density
-                textPaint.typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-                canvas.drawText(item.commonName.ifBlank { item.name }, x, y - 10f * density, textPaint)
-            }
-            val hitRadius = 18f * density
-            hitRegions.add(RectF(x - hitRadius, y - hitRadius, x + hitRadius, y + hitRadius) to item)
+            if (coordinates.altitude < 0.0) return@forEach
+            val point = projectToPhoneField(projection, coordinates.azimuth, coordinates.altitude)
+                ?: return@forEach
+            if (point.first !in left..right || point.second !in top..bottom) return@forEach
+            visibleObjects.add(Triple(item, point, coordinates.altitude))
+        }
+        val visible = visibleObjects.map { it.first }.take(MAX_VISIBLE_OBJECTS)
+        if (visible != lastVisibleObjects) {
+            lastVisibleObjects = visible
+            onVisibleObjectsChanged?.invoke(visible)
         }
 
-        drawReticle(canvas, centerX, centerY, accent, 16f)
-        val telescopeXy = projectInPhoneField(
-            centerX,
-            centerY,
-            halfWidth,
-            halfHeight,
-            azimuth,
-            altitude
-        )
-        if (telescopeXy != null) drawReticle(canvas, telescopeXy.first, telescopeXy.second, Color.rgb(100, 230, 165), 11f)
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 1f * density
+        paint.color = Color.argb(if (cameraOverlay) 170 else 210, Color.red(grid), Color.green(grid), Color.blue(grid))
+        drawGridLine(canvas, projection, 0.0, 360.0, 2.0, altitudeLine = true)
+        listOf(30.0, 60.0).forEach { elevation ->
+            drawGridLine(canvas, projection, elevation, 360.0, 2.0, altitudeLine = true)
+        }
+        for (bearing in 0 until 360 step 45) {
+            drawGridLine(canvas, projection, bearing.toDouble(), 88.0, 2.0, altitudeLine = false)
+        }
 
-        textPaint.color = labels
-        textPaint.textSize = 12f * density
-        textPaint.typeface = Typeface.DEFAULT
-        val direction = if (phoneSensorActive) "Capteurs du téléphone" else "Orientation du téléphone"
-        canvas.drawText(
-            "AZ ${phoneAzimuth.toInt()}°  ·  ALT ${phoneAltitude.toInt()}°  ·  champ ${horizontalFov.toInt()}°",
-            centerX,
-            25f * density,
-            textPaint
+        val labelBackground = if (nightMode) Color.argb(210, 36, 8, 15) else Color.argb(210, 5, 8, 14)
+        val placedLabels = mutableListOf<RectF>()
+        visibleObjects.sortedBy { it.first.magnitude }.forEach { (item, point, _) ->
+            val typeColor = objectColor(item.type)
+            val isSelected = selectedObject?.name == item.name
+            val color = if (isSelected) accent else typeColor
+            val radius = (4.2 - item.magnitude.coerceIn(-4.0, 10.0) * 0.22)
+                .coerceIn(2.2, 6.0).toFloat() * density
+            paint.style = Paint.Style.FILL
+            paint.color = Color.argb(46, Color.red(color), Color.green(color), Color.blue(color))
+            canvas.drawCircle(point.first, point.second, radius * 2.7f, paint)
+            paint.color = color
+            canvas.drawCircle(point.first, point.second, radius, paint)
+            if (item.magnitude <= 8.0 || isSelected) {
+                val label = item.commonName.ifBlank { item.name }
+                textPaint.textSize = 9f * density
+                textPaint.typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                val labelWidth = textPaint.measureText(label)
+                val labelRect = RectF(
+                    point.first - labelWidth * 0.5f - 4f * density,
+                    point.second - 22f * density,
+                    point.first + labelWidth * 0.5f + 4f * density,
+                    point.second - 7f * density
+                )
+                val isInsideScene = labelRect.left >= left + 4f * density &&
+                    labelRect.right <= right - 4f * density &&
+                    labelRect.top >= top + 24f * density
+                if (isInsideScene && placedLabels.none { RectF.intersects(it, labelRect) }) {
+                    paint.color = labelBackground
+                    canvas.drawRoundRect(labelRect, 4f * density, 4f * density, paint)
+                    textPaint.color = if (isSelected) accent else labels
+                    canvas.drawText(label, point.first, point.second - 11f * density, textPaint)
+                    placedLabels.add(labelRect)
+                }
+            }
+            val hitRadius = 18f * density
+            hitRegions.add(
+                RectF(
+                    point.first - hitRadius,
+                    point.second - hitRadius,
+                    point.first + hitRadius,
+                    point.second + hitRadius
+                ) to item
+            )
+        }
+
+        drawReticle(canvas, centerX, centerY, accent, 9f)
+        val telescopePoint = projectToPhoneField(projection, azimuth, altitude)
+        if (telescopePoint != null && telescopePoint.first in left..right && telescopePoint.second in top..bottom) {
+            drawReticle(canvas, telescopePoint.first, telescopePoint.second, Color.rgb(100, 230, 165), 8f)
+        }
+
+        val telemetryFresh = sensorConnected && now - lastTelemetryAt < 2_000L
+        val directionLabel = if (phoneSensorActive) "Capteurs" else "Orientation"
+        drawHudLabel(
+            canvas,
+            "$directionLabel AZ %.0f° · ALT %.0f°".format(lookAzimuth, lookAltitude),
+            left + 8f * density,
+            top + 8f * density,
+            alignLeft = true,
+            color = labels
         )
-        textPaint.color = if (phoneSensorActive) accent else Color.rgb(255, 175, 95)
-        textPaint.textSize = 11f * density
-        canvas.drawText(
-            if (sensorConnected && now - lastTelemetryAt < 2_000L) {
-                "$direction · ESP32 connecté"
+        drawHudLabel(canvas, "N", centerX, top + 8f * density, alignLeft = false, color = labels)
+        drawHudLabel(
+            canvas,
+            "Vue AZ %.0f° · ALT %.0f° · %.0f°".format(lookAzimuth, lookAltitude, fieldOfViewDegrees * 2),
+            left + 8f * density,
+            bottom - 8f * density,
+            alignLeft = true,
+            color = labels
+        )
+        drawHudLabel(
+            canvas,
+            if (telemetryFresh) "ESP32 · DIRECT" else "Horizon",
+            right - 8f * density,
+            bottom - 8f * density,
+            alignLeft = false,
+            color = if (telemetryFresh) Color.rgb(129, 225, 171) else labels
+        )
+        canvas.restoreToCount(clipSave)
+
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 1f * density
+        paint.color = if (cameraOverlay) Color.argb(190, Color.red(grid), Color.green(grid), Color.blue(grid)) else grid
+        canvas.drawRoundRect(scene, 14f * density, 14f * density, paint)
+        paint.style = Paint.Style.FILL
+    }
+
+    private fun drawGridLine(
+        canvas: Canvas,
+        projection: FieldProjection,
+        fixedCoordinate: Double,
+        maximum: Double,
+        step: Double,
+        altitudeLine: Boolean
+    ) {
+        val path = Path()
+        var drawing = false
+        var value = 0.0
+        while (value <= maximum) {
+            val azimuth = if (altitudeLine) value else fixedCoordinate
+            val altitude = if (altitudeLine) fixedCoordinate else value
+            val point = projectToPhoneField(projection, azimuth, altitude)
+            if (point == null) {
+                drawing = false
             } else {
-                "$direction · encodeurs ESP32 hors ligne"
-            },
-            centerX,
-            height - 14f * density,
-            textPaint
+                if (drawing) path.lineTo(point.first, point.second) else path.moveTo(point.first, point.second)
+                drawing = true
+            }
+            value += step
+        }
+        canvas.drawPath(path, paint)
+    }
+
+    private fun drawHudLabel(
+        canvas: Canvas,
+        label: String,
+        x: Float,
+        baseline: Float,
+        alignLeft: Boolean,
+        color: Int
+    ) {
+        textPaint.textAlign = if (alignLeft) Paint.Align.LEFT else Paint.Align.RIGHT
+        textPaint.textSize = 9f * density
+        textPaint.typeface = Typeface.DEFAULT
+        val measured = textPaint.measureText(label)
+        val horizontalPadding = 6f * density
+        val verticalPadding = 4f * density
+        val rectLeft = if (alignLeft) x - horizontalPadding else x - measured - horizontalPadding
+        val rectRight = if (alignLeft) x + measured + horizontalPadding else x + horizontalPadding
+        val rect = RectF(
+            rectLeft,
+            baseline - textPaint.textSize - verticalPadding,
+            rectRight,
+            baseline + verticalPadding
         )
+        paint.style = Paint.Style.FILL
+        paint.color = Color.argb(190, 5, 8, 14)
+        canvas.drawRoundRect(rect, 5f * density, 5f * density, paint)
+        textPaint.color = color
+        canvas.drawText(label, x, baseline, textPaint)
+        textPaint.textAlign = Paint.Align.CENTER
+    }
+
+    private fun objectColor(type: String): Int {
+        val value = type.lowercase()
+        return when {
+            value.contains("plan") -> if (nightMode) Color.rgb(255, 170, 180) else Color.rgb(110, 199, 255)
+            value.contains("gal") -> if (nightMode) Color.rgb(255, 170, 180) else Color.rgb(214, 171, 255)
+            value.contains("neb") -> if (nightMode) Color.rgb(255, 170, 180) else Color.rgb(255, 145, 122)
+            value.contains("amas") || value.contains("glob") ->
+                if (nightMode) Color.rgb(255, 170, 180) else Color.rgb(255, 207, 107)
+            else -> if (nightMode) Color.rgb(255, 180, 186) else Color.rgb(228, 238, 255)
+        }
+    }
+
+    private fun matchesObjectFilter(item: SkyObject): Boolean {
+        val type = item.type.lowercase()
+        return when (objectTypeFilter) {
+            "Galaxies" -> type.contains("gal")
+            "Nébuleuses" -> type.contains("neb")
+            "Amas d'étoiles" -> type.contains("amas") || type.contains("glob")
+            "Étoiles" -> !type.contains("plan") && !type.contains("gal") &&
+                !type.contains("neb") && !type.contains("amas") && !type.contains("glob")
+            else -> true
+        }
+    }
+
+    private fun projectToPhoneField(
+        projection: FieldProjection,
+        objectAzimuth: Double,
+        objectAltitude: Double
+    ): Pair<Float, Float>? {
+        val azimuth = Math.toRadians(objectAzimuth)
+        val altitude = Math.toRadians(objectAltitude)
+        val cosAltitude = cos(altitude)
+        val x = sin(azimuth) * cosAltitude
+        val y = sin(altitude)
+        val z = cos(azimuth) * cosAltitude
+        val depth = x * projection.forwardX + y * projection.forwardY + z * projection.forwardZ
+        if (depth <= 0.01) return null
+        val screenX = (x * projection.rightX + z * projection.rightZ) /
+            (depth * projection.tanHalfFov * projection.aspect)
+        val screenY = (x * projection.upX + y * projection.upY + z * projection.upZ) /
+            (depth * projection.tanHalfFov)
+        return (projection.centerX + projection.halfWidth * screenX.toFloat()) to
+            (projection.centerY - projection.halfHeight * screenY.toFloat())
     }
 
     private fun drawReticle(canvas: Canvas, x: Float, y: Float, color: Int, sizeDp: Float) {
@@ -351,26 +629,6 @@ class SkyDomeView(context: Context) : View(context) {
         canvas.drawCircle(x, y, size, paint)
         canvas.drawLine(x - size * 1.7f, y, x + size * 1.7f, y, paint)
         canvas.drawLine(x, y - size * 1.7f, x, y + size * 1.7f, paint)
-    }
-
-    private fun projectInPhoneField(
-        centerX: Float,
-        centerY: Float,
-        halfWidth: Float,
-        halfHeight: Float,
-        objectAzimuth: Double,
-        objectAltitude: Double
-    ): Pair<Float, Float>? {
-        val deltaAz = Astronomy.angularDifference(objectAzimuth, phoneAzimuth)
-        val deltaAlt = objectAltitude - phoneAltitude
-        if (abs(deltaAz) >= HORIZONTAL_FIELD_OF_VIEW_DEGREES * 0.5 ||
-            abs(deltaAlt) >= VERTICAL_FIELD_OF_VIEW_DEGREES * 0.5
-        ) return null
-        val x = centerX + halfWidth *
-            (tan(Math.toRadians(deltaAz)) / tan(Math.toRadians(HORIZONTAL_FIELD_OF_VIEW_DEGREES * 0.5))).toFloat()
-        val y = centerY - halfHeight *
-            (tan(Math.toRadians(deltaAlt)) / tan(Math.toRadians(VERTICAL_FIELD_OF_VIEW_DEGREES * 0.5))).toFloat()
-        return x to y
     }
 
     private fun project(
@@ -388,7 +646,9 @@ class SkyDomeView(context: Context) : View(context) {
     }
 
     companion object {
-        private const val HORIZONTAL_FIELD_OF_VIEW_DEGREES = 90.0
-        private const val VERTICAL_FIELD_OF_VIEW_DEGREES = 62.0
+        private const val DEFAULT_FIELD_OF_VIEW_DEGREES = 34.0
+        private const val MIN_FIELD_OF_VIEW_DEGREES = 12.0
+        private const val MAX_FIELD_OF_VIEW_DEGREES = 60.0
+        private const val MAX_VISIBLE_OBJECTS = 40
     }
 }
