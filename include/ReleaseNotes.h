@@ -1,5 +1,5 @@
-// Version Component: ReleaseNotes.h v1.2.7
-// Version Global System: v1.2.7
+// Version Component: ReleaseNotes.h v1.3.0
+// Version Global System: v1.3.0
 #ifndef RELEASENOTES_H
 #define RELEASENOTES_H
 
@@ -56,7 +56,18 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
   <div class="card">
     <div class="header-row">
       <h1><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-clipboard-list'></use></svg> Release Notes</h1>
-      <span class="version-tag">v1.2.7</span>
+      <span class="version-tag">v1.3.0</span>
+    </div>
+
+    <!-- v1.3.0 -->
+    <div class="release-item minor">
+      <div class="release-header">
+        <span class="release-version">v1.3.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Ajout du service Bluetooth LE à côté du Wi-Fi : l'application mobile et l'interface Web/SkySafari utilisent le même firmware ESP32.</li>
+      </ul>
     </div>
 
     <!-- v1.2.7 -->

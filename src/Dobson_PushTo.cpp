@@ -1,8 +1,12 @@
-// Version Component: main.cpp v1.2.0
-// Version Global System: v1.2.7
+// Version Component: main.cpp v1.3.0
+// Version Global System: v1.3.0
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Preferences.h>
+#include <BLE2902.h>
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
 #include "Config.h"
 #include "Calibration.h"
 #include "ObjectsDB.h"
@@ -21,8 +25,24 @@ Preferences prefs;
 WiFiServer skySafariServer(SKYSAFARI_PORT);
 WebServer webServer(WEB_PORT);
 
+constexpr char BLE_DEVICE_NAME[] = "Dobson Push-To";
+constexpr char BLE_SERVICE_UUID[] = "77b7a000-79c4-4baf-9b33-7f6a9d3d0001";
+constexpr char BLE_TELEMETRY_UUID[] = "77b7a001-79c4-4baf-9b33-7f6a9d3d0001";
+constexpr uint32_t BLE_TELEMETRY_INTERVAL_MS = 250;
+
+struct __attribute__((packed)) BleTelemetry {
+  int32_t azTicks;
+  int32_t altTicks;
+  float azDegrees;
+  float altDegrees;
+};
+static_assert(sizeof(BleTelemetry) == 16, "BLE telemetry must remain 16 bytes");
+
 volatile long countAZ = 0;
 volatile long countALT = 0;
+portMUX_TYPE encoderMux = portMUX_INITIALIZER_UNLOCKED;
+BLECharacteristic* bleTelemetryCharacteristic = nullptr;
+uint32_t lastBleTelemetryMs = 0;
 
 float ticksPerRevAZ = 10000.0;
 float ticksPerRevALT = 10000.0;
@@ -41,13 +61,67 @@ long star1_countAZ = 0, star1_countALT = 0;
 bool star1_set = false;
 
 void IRAM_ATTR isrAZ() {
+  portENTER_CRITICAL_ISR(&encoderMux);
   if (digitalRead(AZ_A_PIN) == digitalRead(AZ_B_PIN)) countAZ += dirAZ;
   else countAZ -= dirAZ;
+  portEXIT_CRITICAL_ISR(&encoderMux);
 }
 
 void IRAM_ATTR isrALT() {
+  portENTER_CRITICAL_ISR(&encoderMux);
   if (digitalRead(ALT_A_PIN) == digitalRead(ALT_B_PIN)) countALT += dirALT;
   else countALT -= dirALT;
+  portEXIT_CRITICAL_ISR(&encoderMux);
+}
+
+class BleServerCallbacks final : public BLEServerCallbacks {
+  void onDisconnect(BLEServer*) override {
+    BLEDevice::startAdvertising();
+    Serial.println("[BLE] Client déconnecté, annonce redémarrée");
+  }
+};
+
+void startBluetooth() {
+  BLEDevice::init(BLE_DEVICE_NAME);
+  BLEServer* server = BLEDevice::createServer();
+  server->setCallbacks(new BleServerCallbacks());
+
+  BLEService* service = server->createService(BLE_SERVICE_UUID);
+  bleTelemetryCharacteristic = service->createCharacteristic(
+      BLE_TELEMETRY_UUID,
+      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+  bleTelemetryCharacteristic->addDescriptor(new BLE2902());
+
+  BleTelemetry initialTelemetry{0, 0, 0.0F, 0.0F};
+  bleTelemetryCharacteristic->setValue(
+      reinterpret_cast<uint8_t*>(&initialTelemetry), sizeof(initialTelemetry));
+
+  service->start();
+  BLEAdvertising* advertising = BLEDevice::getAdvertising();
+  advertising->addServiceUUID(BLE_SERVICE_UUID);
+  advertising->setScanResponse(true);
+  BLEDevice::startAdvertising();
+  Serial.println("[BLE] Service de télémétrie prêt : Dobson Push-To");
+}
+
+void publishBleTelemetry() {
+  if (bleTelemetryCharacteristic == nullptr) return;
+
+  long azTicks;
+  long altTicks;
+  portENTER_CRITICAL(&encoderMux);
+  azTicks = countAZ;
+  altTicks = countALT;
+  portEXIT_CRITICAL(&encoderMux);
+
+  BleTelemetry telemetry{
+      static_cast<int32_t>(azTicks),
+      static_cast<int32_t>(altTicks),
+      static_cast<float>(azTicks) * 360.0F / ticksPerRevAZ,
+      static_cast<float>(altTicks) * 360.0F / ticksPerRevALT};
+  bleTelemetryCharacteristic->setValue(
+      reinterpret_cast<uint8_t*>(&telemetry), sizeof(telemetry));
+  bleTelemetryCharacteristic->notify();
 }
 
 void loadSettingsFromPreferences() {
@@ -398,6 +472,8 @@ void setup() {
   skySafariServer.begin();
   skySafariServer.setNoDelay(true);
   Serial.printf("[SKYSAFARI] Serveur TCP ecoute sur le port %d.\n", SKYSAFARI_PORT);
+
+  startBluetooth();
 }
 
 void sendEncoderData(WiFiClient& client) {
@@ -416,6 +492,12 @@ WiFiClient activeClient;
 
 void loop() {
   webServer.handleClient();
+
+  const uint32_t now = millis();
+  if (now - lastBleTelemetryMs >= BLE_TELEMETRY_INTERVAL_MS) {
+    lastBleTelemetryMs = now;
+    publishBleTelemetry();
+  }
 
   if (skySafariServer.hasClient()) {
     if (!activeClient || !activeClient.connected()) {

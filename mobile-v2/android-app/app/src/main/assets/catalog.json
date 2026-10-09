@@ -1,0 +1,1002 @@
+[
+  {
+    "name": "M1",
+    "commonName": "Nebuleuse du Crabe",
+    "type": "Nebuleuse",
+    "ra": 5.575,
+    "dec": 22.01,
+    "mag": 8.4
+  },
+  {
+    "name": "M2",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 21.558,
+    "dec": -0.82,
+    "mag": 6.5
+  },
+  {
+    "name": "M3",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 13.703,
+    "dec": 28.38,
+    "mag": 6.2
+  },
+  {
+    "name": "M4",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 16.393,
+    "dec": -26.53,
+    "mag": 5.6
+  },
+  {
+    "name": "M5",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 15.309,
+    "dec": 2.08,
+    "mag": 5.6
+  },
+  {
+    "name": "M6",
+    "commonName": "Amas du Papillon",
+    "type": "Amas Ouvert",
+    "ra": 17.668,
+    "dec": -32.22,
+    "mag": 4.2
+  },
+  {
+    "name": "M7",
+    "commonName": "Amas de Ptolemee",
+    "type": "Amas Ouvert",
+    "ra": 17.898,
+    "dec": -34.82,
+    "mag": 3.3
+  },
+  {
+    "name": "M8",
+    "commonName": "Nebuleuse de la Lagune",
+    "type": "Nebuleuse",
+    "ra": 18.063,
+    "dec": -24.38,
+    "mag": 6
+  },
+  {
+    "name": "M9",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 17.318,
+    "dec": -18.52,
+    "mag": 7.7
+  },
+  {
+    "name": "M10",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 16.952,
+    "dec": -4.1,
+    "mag": 6.4
+  },
+  {
+    "name": "M11",
+    "commonName": "Amas du Canard Sauvage",
+    "type": "Amas Ouvert",
+    "ra": 18.852,
+    "dec": -6.27,
+    "mag": 6.3
+  },
+  {
+    "name": "M12",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 16.787,
+    "dec": -1.95,
+    "mag": 6.7
+  },
+  {
+    "name": "M13",
+    "commonName": "Grand Amas d'Hercule",
+    "type": "Amas Globulaire",
+    "ra": 16.688,
+    "dec": 36.46,
+    "mag": 5.8
+  },
+  {
+    "name": "M14",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 17.627,
+    "dec": -3.25,
+    "mag": 7.6
+  },
+  {
+    "name": "M15",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 21.5,
+    "dec": 12.17,
+    "mag": 6.2
+  },
+  {
+    "name": "M16",
+    "commonName": "Nebuleuse de l'Aigle",
+    "type": "Nebuleuse",
+    "ra": 18.313,
+    "dec": -13.78,
+    "mag": 6
+  },
+  {
+    "name": "M17",
+    "commonName": "Nebuleuse Omega",
+    "type": "Nebuleuse",
+    "ra": 18.347,
+    "dec": -16.18,
+    "mag": 6
+  },
+  {
+    "name": "M18",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 18.332,
+    "dec": -17.13,
+    "mag": 7.5
+  },
+  {
+    "name": "M19",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 17.043,
+    "dec": -26.27,
+    "mag": 6.8
+  },
+  {
+    "name": "M20",
+    "commonName": "Nebuleuse Trifide",
+    "type": "Nebuleuse",
+    "ra": 18.043,
+    "dec": -23.03,
+    "mag": 6.3
+  },
+  {
+    "name": "M21",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 18.077,
+    "dec": -22.5,
+    "mag": 6.5
+  },
+  {
+    "name": "M22",
+    "commonName": "Grand Amas du Sagittaire",
+    "type": "Amas Globulaire",
+    "ra": 18.607,
+    "dec": -23.9,
+    "mag": 5.1
+  },
+  {
+    "name": "M23",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 17.948,
+    "dec": -19.02,
+    "mag": 5.5
+  },
+  {
+    "name": "M24",
+    "commonName": "Nuage du Sagittaire",
+    "type": "Nuage Stellaire",
+    "ra": 18.282,
+    "dec": -18.55,
+    "mag": 4.6
+  },
+  {
+    "name": "M25",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 18.527,
+    "dec": -19.12,
+    "mag": 4.6
+  },
+  {
+    "name": "M26",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 18.753,
+    "dec": -9.4,
+    "mag": 8
+  },
+  {
+    "name": "M27",
+    "commonName": "Nebuleuse Dumbbell",
+    "type": "Nebuleuse Planetaire",
+    "ra": 19.993,
+    "dec": 22.72,
+    "mag": 7.4
+  },
+  {
+    "name": "M28",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 18.41,
+    "dec": -24.87,
+    "mag": 6.8
+  },
+  {
+    "name": "M29",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 20.4,
+    "dec": 38.52,
+    "mag": 7.1
+  },
+  {
+    "name": "M30",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 21.678,
+    "dec": -23.18,
+    "mag": 7.2
+  },
+  {
+    "name": "M31",
+    "commonName": "Galaxie d'Andromede",
+    "type": "Galaxie",
+    "ra": 0.712,
+    "dec": 41.27,
+    "mag": 3.4
+  },
+  {
+    "name": "M32",
+    "commonName": "Satellite d'Andromede",
+    "type": "Galaxie",
+    "ra": 0.712,
+    "dec": 40.87,
+    "mag": 8.1
+  },
+  {
+    "name": "M33",
+    "commonName": "Galaxie du Triangle",
+    "type": "Galaxie",
+    "ra": 1.564,
+    "dec": 30.66,
+    "mag": 5.7
+  },
+  {
+    "name": "M34",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 2.7,
+    "dec": 42.78,
+    "mag": 5.5
+  },
+  {
+    "name": "M35",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 6.148,
+    "dec": 24.33,
+    "mag": 5.3
+  },
+  {
+    "name": "M36",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 5.602,
+    "dec": 34.13,
+    "mag": 6.3
+  },
+  {
+    "name": "M37",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 5.873,
+    "dec": 32.55,
+    "mag": 5.6
+  },
+  {
+    "name": "M38",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 5.478,
+    "dec": 35.83,
+    "mag": 6.4
+  },
+  {
+    "name": "M39",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 21.537,
+    "dec": 48.43,
+    "mag": 4.6
+  },
+  {
+    "name": "M40",
+    "commonName": "Winnecke 4",
+    "type": "Etoile Double",
+    "ra": 12.37,
+    "dec": 58.08,
+    "mag": 8.4
+  },
+  {
+    "name": "M41",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 6.783,
+    "dec": -20.73,
+    "mag": 4.5
+  },
+  {
+    "name": "M42",
+    "commonName": "Nebuleuse d'Orion",
+    "type": "Nebuleuse",
+    "ra": 5.59,
+    "dec": -5.39,
+    "mag": 4
+  },
+  {
+    "name": "M43",
+    "commonName": "Nebuleuse de Mairan",
+    "type": "Nebuleuse",
+    "ra": 5.593,
+    "dec": -5.27,
+    "mag": 9
+  },
+  {
+    "name": "M44",
+    "commonName": "L'Ache / La Creche",
+    "type": "Amas Ouvert",
+    "ra": 8.668,
+    "dec": 19.67,
+    "mag": 3.7
+  },
+  {
+    "name": "M45",
+    "commonName": "Les Pleiades",
+    "type": "Amas Ouvert",
+    "ra": 3.783,
+    "dec": 24.12,
+    "mag": 1.6
+  },
+  {
+    "name": "M46",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 7.697,
+    "dec": -14.82,
+    "mag": 6.1
+  },
+  {
+    "name": "M47",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 7.61,
+    "dec": -14.5,
+    "mag": 4.2
+  },
+  {
+    "name": "M48",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 8.23,
+    "dec": -5.8,
+    "mag": 5.5
+  },
+  {
+    "name": "M49",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.497,
+    "dec": 8,
+    "mag": 8.4
+  },
+  {
+    "name": "M50",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 7.053,
+    "dec": -8.33,
+    "mag": 5.9
+  },
+  {
+    "name": "M51",
+    "commonName": "Galaxie des Tourbillons",
+    "type": "Galaxie",
+    "ra": 13.498,
+    "dec": 47.2,
+    "mag": 8.4
+  },
+  {
+    "name": "M52",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 23.403,
+    "dec": 61.58,
+    "mag": 7.3
+  },
+  {
+    "name": "M53",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 13.215,
+    "dec": 18.17,
+    "mag": 7.6
+  },
+  {
+    "name": "M54",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 18.917,
+    "dec": -30.48,
+    "mag": 7.6
+  },
+  {
+    "name": "M55",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 19.667,
+    "dec": -30.96,
+    "mag": 6.3
+  },
+  {
+    "name": "M56",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 19.277,
+    "dec": 30.18,
+    "mag": 8.3
+  },
+  {
+    "name": "M57",
+    "commonName": "Nebuleuse de l'Anneau",
+    "type": "Nebuleuse Planetaire",
+    "ra": 18.893,
+    "dec": 33.03,
+    "mag": 8.8
+  },
+  {
+    "name": "M58",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.628,
+    "dec": 11.82,
+    "mag": 9.7
+  },
+  {
+    "name": "M59",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.7,
+    "dec": 11.65,
+    "mag": 9.6
+  },
+  {
+    "name": "M60",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.728,
+    "dec": 11.55,
+    "mag": 8.8
+  },
+  {
+    "name": "M61",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.365,
+    "dec": 4.47,
+    "mag": 9.7
+  },
+  {
+    "name": "M62",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 17.02,
+    "dec": -30.12,
+    "mag": 6.5
+  },
+  {
+    "name": "M63",
+    "commonName": "Galaxie du Tournesol",
+    "type": "Galaxie",
+    "ra": 13.263,
+    "dec": 42.03,
+    "mag": 8.6
+  },
+  {
+    "name": "M64",
+    "commonName": "Galaxie de l'Oeil Noir",
+    "type": "Galaxie",
+    "ra": 12.945,
+    "dec": 21.68,
+    "mag": 8.5
+  },
+  {
+    "name": "M65",
+    "commonName": "Triplet du Lion (1/3)",
+    "type": "Galaxie",
+    "ra": 11.315,
+    "dec": 13.09,
+    "mag": 9.3
+  },
+  {
+    "name": "M66",
+    "commonName": "Triplet du Lion (2/3)",
+    "type": "Galaxie",
+    "ra": 11.337,
+    "dec": 12.99,
+    "mag": 8.9
+  },
+  {
+    "name": "M67",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 8.857,
+    "dec": 11.82,
+    "mag": 6.1
+  },
+  {
+    "name": "M68",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 12.655,
+    "dec": -26.75,
+    "mag": 7.8
+  },
+  {
+    "name": "M69",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 18.523,
+    "dec": -32.35,
+    "mag": 7.6
+  },
+  {
+    "name": "M70",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 18.72,
+    "dec": -32.28,
+    "mag": 7.9
+  },
+  {
+    "name": "M71",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 19.897,
+    "dec": 18.78,
+    "mag": 8.2
+  },
+  {
+    "name": "M72",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 20.89,
+    "dec": -12.53,
+    "mag": 9.3
+  },
+  {
+    "name": "M73",
+    "commonName": "",
+    "type": "Asterisme",
+    "ra": 20.982,
+    "dec": -12.63,
+    "mag": 9
+  },
+  {
+    "name": "M74",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 1.612,
+    "dec": 15.78,
+    "mag": 9.4
+  },
+  {
+    "name": "M75",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 20.102,
+    "dec": -21.92,
+    "mag": 8.5
+  },
+  {
+    "name": "M76",
+    "commonName": "Petit Haltere",
+    "type": "Nebuleuse Planetaire",
+    "ra": 1.705,
+    "dec": 51.57,
+    "mag": 10.1
+  },
+  {
+    "name": "M77",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 2.712,
+    "dec": -0.01,
+    "mag": 8.9
+  },
+  {
+    "name": "M78",
+    "commonName": "",
+    "type": "Nebuleuse",
+    "ra": 5.778,
+    "dec": 0.08,
+    "mag": 8.3
+  },
+  {
+    "name": "M79",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 5.402,
+    "dec": -24.52,
+    "mag": 7.7
+  },
+  {
+    "name": "M80",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 16.283,
+    "dec": -22.97,
+    "mag": 7.3
+  },
+  {
+    "name": "M81",
+    "commonName": "Galaxie de Bode",
+    "type": "Galaxie",
+    "ra": 9.927,
+    "dec": 69.07,
+    "mag": 6.9
+  },
+  {
+    "name": "M82",
+    "commonName": "Galaxie du Cigare",
+    "type": "Galaxie",
+    "ra": 9.932,
+    "dec": 69.68,
+    "mag": 8.4
+  },
+  {
+    "name": "M83",
+    "commonName": "Austral Pinwheel",
+    "type": "Galaxie",
+    "ra": 13.612,
+    "dec": -29.87,
+    "mag": 7.5
+  },
+  {
+    "name": "M84",
+    "commonName": "Chaine de Markarian",
+    "type": "Galaxie",
+    "ra": 12.42,
+    "dec": 12.88,
+    "mag": 9.1
+  },
+  {
+    "name": "M85",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.423,
+    "dec": 18.19,
+    "mag": 9.1
+  },
+  {
+    "name": "M86",
+    "commonName": "Chaine de Markarian",
+    "type": "Galaxie",
+    "ra": 12.437,
+    "dec": 12.94,
+    "mag": 8.9
+  },
+  {
+    "name": "M87",
+    "commonName": "Virgo A",
+    "type": "Galaxie",
+    "ra": 12.513,
+    "dec": 12.39,
+    "mag": 8.6
+  },
+  {
+    "name": "M88",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.533,
+    "dec": 14.42,
+    "mag": 9.6
+  },
+  {
+    "name": "M89",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.593,
+    "dec": 12.55,
+    "mag": 9.8
+  },
+  {
+    "name": "M90",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.613,
+    "dec": 13.16,
+    "mag": 9.5
+  },
+  {
+    "name": "M91",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.59,
+    "dec": 14.5,
+    "mag": 10.2
+  },
+  {
+    "name": "M92",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 17.285,
+    "dec": 43.13,
+    "mag": 6.4
+  },
+  {
+    "name": "M93",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 7.742,
+    "dec": -23.87,
+    "mag": 6
+  },
+  {
+    "name": "M94",
+    "commonName": "Oeil de Croco",
+    "type": "Galaxie",
+    "ra": 12.848,
+    "dec": 41.12,
+    "mag": 8.2
+  },
+  {
+    "name": "M95",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 10.733,
+    "dec": 11.7,
+    "mag": 9.7
+  },
+  {
+    "name": "M96",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 10.778,
+    "dec": 11.82,
+    "mag": 9.2
+  },
+  {
+    "name": "M97",
+    "commonName": "Nebuleuse du Hibou",
+    "type": "Nebuleuse Planetaire",
+    "ra": 11.247,
+    "dec": 55.02,
+    "mag": 9.9
+  },
+  {
+    "name": "M98",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.23,
+    "dec": 14.9,
+    "mag": 10.1
+  },
+  {
+    "name": "M99",
+    "commonName": "Galaxie du Moulinet",
+    "type": "Galaxie",
+    "ra": 12.313,
+    "dec": 14.42,
+    "mag": 9.9
+  },
+  {
+    "name": "M100",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.382,
+    "dec": 15.82,
+    "mag": 9.3
+  },
+  {
+    "name": "M101",
+    "commonName": "Galaxie du Moulinet",
+    "type": "Galaxie",
+    "ra": 14.053,
+    "dec": 54.35,
+    "mag": 7.9
+  },
+  {
+    "name": "M102",
+    "commonName": "Galaxie du Eus",
+    "type": "Galaxie",
+    "ra": 15.11,
+    "dec": 55.77,
+    "mag": 9.9
+  },
+  {
+    "name": "M103",
+    "commonName": "",
+    "type": "Amas Ouvert",
+    "ra": 1.553,
+    "dec": 60.7,
+    "mag": 7.4
+  },
+  {
+    "name": "M104",
+    "commonName": "Galaxie du Sombrero",
+    "type": "Galaxie",
+    "ra": 12.667,
+    "dec": -11.62,
+    "mag": 8
+  },
+  {
+    "name": "M105",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 10.797,
+    "dec": 12.58,
+    "mag": 9.3
+  },
+  {
+    "name": "M106",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 12.317,
+    "dec": 47.3,
+    "mag": 8.4
+  },
+  {
+    "name": "M107",
+    "commonName": "",
+    "type": "Amas Globulaire",
+    "ra": 16.542,
+    "dec": -13.05,
+    "mag": 7.9
+  },
+  {
+    "name": "M108",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 11.192,
+    "dec": 55.67,
+    "mag": 10
+  },
+  {
+    "name": "M109",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 11.96,
+    "dec": 53.38,
+    "mag": 9.8
+  },
+  {
+    "name": "M110",
+    "commonName": "Satellite d'Andromede",
+    "type": "Galaxie",
+    "ra": 0.672,
+    "dec": 41.69,
+    "mag": 8.5
+  },
+  {
+    "name": "NGC869",
+    "commonName": "Amas Double Perseus (h)",
+    "type": "Amas Ouvert",
+    "ra": 2.317,
+    "dec": 57.13,
+    "mag": 5.3
+  },
+  {
+    "name": "NGC884",
+    "commonName": "Amas Double Perseus (chi)",
+    "type": "Amas Ouvert",
+    "ra": 2.373,
+    "dec": 57.15,
+    "mag": 6.1
+  },
+  {
+    "name": "NGC891",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 2.377,
+    "dec": 42.35,
+    "mag": 9.9
+  },
+  {
+    "name": "NGC1499",
+    "commonName": "Nebuleuse Californie",
+    "type": "Nebuleuse",
+    "ra": 4.055,
+    "dec": 36.62,
+    "mag": 6
+  },
+  {
+    "name": "NGC2261",
+    "commonName": "Nebuleuse Variable de Hubble",
+    "type": "Nebuleuse",
+    "ra": 6.653,
+    "dec": 8.73,
+    "mag": 9
+  },
+  {
+    "name": "NGC2392",
+    "commonName": "Nebuleuse de l'Esquimau",
+    "type": "Nebuleuse Planetaire",
+    "ra": 7.487,
+    "dec": 20.91,
+    "mag": 9.1
+  },
+  {
+    "name": "NGC2403",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 7.612,
+    "dec": 65.6,
+    "mag": 8.9
+  },
+  {
+    "name": "NGC4565",
+    "commonName": "Galaxie de l'Aiguille",
+    "type": "Galaxie",
+    "ra": 12.607,
+    "dec": 25.98,
+    "mag": 9.6
+  },
+  {
+    "name": "NGC6543",
+    "commonName": "Nebuleuse Oeil de Chat",
+    "type": "Nebuleuse Planetaire",
+    "ra": 17.977,
+    "dec": 66.63,
+    "mag": 8.1
+  },
+  {
+    "name": "NGC6888",
+    "commonName": "Nebuleuse du Croissant",
+    "type": "Nebuleuse",
+    "ra": 20.2,
+    "dec": 38.35,
+    "mag": 7.4
+  },
+  {
+    "name": "NGC6960",
+    "commonName": "Dentelles du Cygne (Ouest)",
+    "type": "Nebuleuse",
+    "ra": 20.758,
+    "dec": 30.72,
+    "mag": 7
+  },
+  {
+    "name": "NGC6992",
+    "commonName": "Dentelles du Cygne (Est)",
+    "type": "Nebuleuse",
+    "ra": 20.94,
+    "dec": 31.72,
+    "mag": 7
+  },
+  {
+    "name": "NGC7000",
+    "commonName": "Nebuleuse Amerique du Nord",
+    "type": "Nebuleuse",
+    "ra": 20.98,
+    "dec": 44.33,
+    "mag": 7
+  },
+  {
+    "name": "NGC7331",
+    "commonName": "",
+    "type": "Galaxie",
+    "ra": 22.618,
+    "dec": 34.42,
+    "mag": 9.5
+  },
+  {
+    "name": "NGC7635",
+    "commonName": "Nebuleuse de la Bulle",
+    "type": "Nebuleuse",
+    "ra": 23.345,
+    "dec": 61.2,
+    "mag": 8.5
+  }
+]

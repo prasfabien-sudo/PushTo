@@ -20,6 +20,7 @@ Le système est conçu pour :
 - Point d'accès Wi‑Fi embarqué : `Dobson_PushTo`
 - Serveur web local sur le port 80
 - Serveur SkySafari sur le port 4030
+- Service Bluetooth LE simultané pour l'application Android mobile
 - Gestion des encodeurs AZ/ALT avec interruptions matérielles
 - Calibration des ticks par révolution
 - Inversion de sens de rotation configurable
@@ -36,7 +37,7 @@ Le système est conçu pour :
 - Framework : Arduino / PlatformIO
 - Encodeurs : 2 axes (Azimut et Altitude)
 - Interface réseau : Wi‑Fi embarqué
-- Démonstration / contrôle : navigateur web local ou logiciel de planétarium compatible SkySafari
+- Contrôle : navigateur web local, application Android par BLE ou logiciel de planétarium compatible SkySafari
 
 ## Configuration matérielle
 
@@ -121,7 +122,10 @@ board = esp32dev
 framework = arduino
 monitor_speed = 115200
 build_flags = -Iinclude
+board_build.partitions = huge_app.csv
 ```
+
+La partition `huge_app.csv` réserve un espace applicatif plus grand, nécessaire au firmware combinant les interfaces Web, SkySafari et BLE. La zone NVS des préférences conserve son adresse et sa taille, donc les réglages ESP32 existants sont conservés lors du téléversement.
 
 ## Utilisation
 
@@ -134,7 +138,8 @@ build_flags = -Iinclude
 - configure les broches des encodeurs,
 - active les interruptions,
 - démarre le point d'accès Wi‑Fi,
-- ouvre les serveurs web et SkySafari.
+- ouvre les serveurs web et SkySafari,
+- démarre le service Bluetooth LE pour l'application mobile.
 
 ### 2. Accès web
 
@@ -156,6 +161,8 @@ Depuis un navigateur, il est possible d'accéder aux pages suivantes :
 - `/help` : aide
 - `/releasenotes` : notes de version
 - `/test` : page de test
+
+L'application Android se connecte en Bluetooth LE au périphérique `Dobson Push-To`. Le Wi‑Fi et le BLE fonctionnent simultanément sur le même ESP32 : il n'est pas nécessaire de changer de firmware pour passer du site web à l'application.
 
 La navigation de l'interface est accessible depuis une barre fixe en bas de l'écran : Menu principal, Mise en station, Vue 3D du ciel et Aide sont directement accessibles ; les pages de calibration, configuration, simulation, tests et notes de version se trouvent dans le menu « Plus ». Le bouton de mode nuit reste accessible depuis la barre.
 
@@ -217,7 +224,10 @@ Dobson_PushTo/
 │   ├── TestPage.h
 │   └── WebPage.h
 ├── src/
-│   └── Dobson_PushTo.cpp    # Point d'entrée principal
+│   └── Dobson_PushTo.cpp    # Firmware Web, SkySafari et BLE
+├── mobile-v2/
+│   ├── README.md            # Documentation de l'application Android
+│   └── android-app/         # Application Android native
 ├── platformio.ini           # Configuration PlatformIO
 ├── .gitignore
 ├── README.md
@@ -238,6 +248,7 @@ Le code est structuré en plusieurs blocs :
 Les traitements principaux se trouvent dans :
 
 - `src/Dobson_PushTo.cpp`
+- `mobile-v2/android-app/app/src/main/`
 - `include/Calibration.h`
 - `include/ObjectsDB.h`
 
@@ -256,6 +267,9 @@ Les traitements principaux se trouvent dans :
 - extension du contrôle depuis une page web plus avancée.
 
 ## Notes de version
+
+### v1.3.0 — Octobre 2026
+- Ajout du service Bluetooth LE au firmware Web/SkySafari : l'application mobile et les interfaces existantes fonctionnent en parallèle sur le même ESP32.
 
 ### v1.2.7 — Octobre 2026
 - La vue 3D suit en temps réel les angles AZ/ALT calculés depuis les encodeurs ; le recentrage revient au pointage du télescope.

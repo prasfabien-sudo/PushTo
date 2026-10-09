@@ -1,5 +1,5 @@
 // Version Component: WebPage.h v1.2.7
-// Version Global System: v1.2.7
+// Version Global System: v1.3.0
 #ifndef WEBPAGE_H
 #define WEBPAGE_H
 
@@ -104,7 +104,7 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
   <div class="card">
     <div class="header-row">
       <h1>Dobson Push-To</h1>
-      <a href="/releasenotes" class="version-tag" title="Voir l'historique des versions">v1.2.7</a>
+      <a href="/releasenotes" class="version-tag" title="Voir l'historique des versions">v1.3.0</a>
     </div>
     
     <div class="geo-row">
