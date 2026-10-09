@@ -228,6 +228,37 @@ Les traitements principaux se trouvent dans :
 - ajout d'une base de données étendue d'objets célestes,
 - extension du contrôle depuis une page web plus avancée.
 
+## Notes de version
+
+### v1.2.0 — Octobre 2026
+- Séparation explicite entre la version globale système et les numéros de version individuels par composant (`.h` / `.cpp`).
+
+### v1.1.1 — Octobre 2026
+- Création du composant dédié aux notes de version (`ReleaseNotes.h`).
+- Intégration du lien Release Notes dans le menu de navigation et sur le tag de version principal.
+
+### v1.1.0 — Octobre 2026
+- Géolocalisation GPS native du smartphone (`navigator.geolocation`) avec repli automatique sur les coordonnées ESP32.
+- Affichage dynamique de la source de localisation (`📍 GPS Mobile` ou `📍 Lieu d'observation`).
+
+### v1.0.4 — Octobre 2026
+- Correction du calcul de précession sur l'Ascension Droite (RA) aligné sur Stellarium.
+
+### v1.0.3 — Octobre 2026
+- Correction de réfraction atmosphérique appliquée à l'altitude apparente.
+- Précession astronomique IAU76 appliquée aux coordonnées RA/DEC J2000.
+
+### v1.0.2 — Octobre 2026
+- Formatage précisé des coordonnées RA/DEC (HH:MM:SS / DD:MM:SS).
+
+### v1.0.1 — Octobre 2026
+- Affichage du tag de version sémantique en haut à droite de l'interface.
+
+### v1.0.0 — Octobre 2026
+- Refonte complète de l'interface Web principale avec double jauge de guidage (AZ/ALT).
+- Intégration du catalogue enrichi `ObjectsDB.h` avec éphémérides des planètes.
+- Calcul de LST en UTC strict et filtrage d'objets par type/proximité.
+
 ## Licence
 
 Ce projet est fourni à titre éducatif et de démonstration. Vérifiez la licence exacte avant toute diffusion publique ou commerciale.
