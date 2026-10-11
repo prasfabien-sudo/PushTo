@@ -1,4 +1,4 @@
-// Version Component: ReleaseNotes.h v1.2.10
+// Version Component: ReleaseNotes.h v1.2.11
 // Version Global System: v1.2.7
 #ifndef RELEASENOTES_H
 #define RELEASENOTES_H
@@ -56,7 +56,20 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
   <div class="card">
     <div class="header-row">
       <h1><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-clipboard-list'></use></svg> Release Notes</h1>
-      <span class="version-tag">v1.2.7</span>
+      <span class="version-tag">v5.2.0</span>
+    </div>
+
+    <!-- v5.2.0 (Vue 3D - Spectres & Polaris) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.2.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Variation des couleurs des étoiles selon leur type spectral (des nuances bleues/blanches chaudes aux orange/rouges froides).</li>
+        <li><span class="badge badge-feat">Feat</span> Gestion fine et proportionnelle de la taille des étoiles selon leur magnitude.</li>
+        <li><span class="badge badge-feat">Feat</span> Marquage spécial et permanent de l'Étoile Polaire (Polaris), visible en permanence même lorsque les noms d'objets sont désactivés.</li>
+      </ul>
     </div>
 
     <!-- v1.3.14 (Vue 3D & AR) -->
@@ -66,11 +79,11 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
         <span class="release-date">Octobre 2026</span>
       </div>
       <ul>
-        <li><span class="badge badge-feat">Feat</span> Assistant d'alignement AR en temps réel intégré au statut pour synchroniser la vue et les encodeurs.</li>
-        <li><span class="badge badge-feat">Feat</span> Modale d'informations détaillées au clic (taille apparente, distance, type, magnitude, coordonnées AD/Dec).</li>
-        <li><span class="badge badge-feat">Feat</span> Renforcement des lignes de constellations et affichage dynamique de leurs noms au centre des figures.</li>
-        <li><span class="badge badge-feat">Feat</span> Bouton de bascule pour afficher ou masquer les noms (ON/OFF).</li>
-        <li><span class="badge badge-fix">Fix</span> Suppression du pavé de liste sous la carte pour maximiser l'espace d'affichage de la sphère 3D.</li>
+        <li><span class="badge badge-feat">Feat</span> Assistant d'alignement AR en temps réel intégré au statut pour synchroniser la vue et les encodeurs[cite: 5].</li>
+        <li><span class="badge badge-feat">Feat</span> Modale d'informations détaillées au clic (taille apparente, distance, type, magnitude, coordonnées AD/Dec)[cite: 5].</li>
+        <li><span class="badge badge-feat">Feat</span> Renforcement des lignes de constellations et affichage dynamique de leurs noms au centre des figures[cite: 5].</li>
+        <li><span class="badge badge-feat">Feat</span> Bouton de bascule pour afficher ou masquer les noms (ON/OFF)[cite: 5].</li>
+        <li><span class="badge badge-fix">Fix</span> Suppression du pavé de liste sous la carte pour maximiser l'espace d'affichage de la sphère 3D[cite: 5].</li>
       </ul>
     </div>
 
@@ -81,7 +94,7 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
         <span class="release-date">Octobre 2026</span>
       </div>
       <ul>
-        <li><span class="badge badge-fix">Fix</span> La vue 3D suit désormais en temps réel les angles AZ/ALT calculés depuis les encodeurs ; le recentrage revient au pointage du télescope[cite: 2].</li>
+        <li><span class="badge badge-fix">Fix</span> La vue 3D suit désormais en temps réel les angles AZ/ALT calculés depuis les encodeurs ; le recentrage revient au pointage du télescope[cite: 2, 5].</li>
       </ul>
     </div>
 
@@ -92,30 +105,7 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
         <span class="release-date">Octobre 2026</span>
       </div>
       <ul>
-        <li><span class="badge badge-fix">Fix</span> Bouton du mode nuit déplacé dans les raccourcis de la vue 3D et rendu plus visible avec un contraste inversé[cite: 2].</li>
-      </ul>
-    </div>
-
-    <!-- v1.2.5 -->
-    <div class="release-item minor">
-      <div class="release-header">
-        <span class="release-version">v1.2.5</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-feat">Feat</span> Accès direct en bas d'écran au menu principal, à la mise en station, à la vue 3D du ciel et à l'aide[cite: 2].</li>
-      </ul>
-    </div>
-
-    <!-- v1.2.4 -->
-    <div class="release-item">
-      <div class="release-header">
-        <span class="release-version">v1.2.4</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-feat">Feat</span> Déplacement du pavé du lieu d'observation au-dessus de la position du télescope[cite: 2].</li>
-        <li><span class="badge badge-fix">Fix</span> Mise à jour du catalogue sans recréer les lignes à chaque rafraîchissement[cite: 2].</li>
+        <li><span class="badge badge-fix">Fix</span> Bouton du mode nuit déplacé dans les raccourcis de la vue 3D et rendu plus visible avec un contraste inversé[cite: 2, 5].</li>
       </ul>
     </div>
 

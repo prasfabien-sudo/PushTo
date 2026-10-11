@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.1.1
+// Version Component: BetaSkyPage.h v5.2.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -35,6 +35,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .scene-center { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(255,255,255,.7); border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; }
     
     .object-label { position: absolute; z-index: 1; padding: 2px 5px; border-radius: 4px; color: #f4e6be; background: rgba(5,8,12,0.75); font-size: .68rem; white-space: nowrap; text-shadow: 0 1px 3px #000; transform: translate(-50%,-120%); pointer-events: none; transition: opacity 0.2s; }
+    .object-label.polaris { color: #ffb74d; background: rgba(30,35,45,0.9); border: 1px solid rgba(255,183,77,0.5); font-weight: bold; z-index: 3; }
     .constellation-label { position: absolute; z-index: 1; color: #7cb9e8; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.85; }
 
     .controls { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
@@ -102,7 +103,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <button id="toggleNamesBtn" type="button">Noms : ON</button>
       <button id="centerButton" type="button">Recentrer</button>
     </div>
-    <p class="scene-help">Glissez pour tourner, pincez pour zoomer. Cliquez sur un objet pour voir ses détails et l'aide à l'alignement.</p>
+    <p class="scene-help">Glissez pour tourner, pincez pour zoomer. Polaris est marquée en permanence.</p>
   </main>
 
   <!-- Modale d'information objet -->
@@ -191,7 +192,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       { name: "Grande Ourse", refStar: "Alioth" },
       { name: "Petite Ourse", refStar: "Polaris" },
       { name: "Cassiopée", refStar: "Navi" },
-      { name: "Cygne", refStar: "Sadr" },
+      { name: "Cygne", refScan: "Sadr", refStar: "Sadr" },
       { name: "Lyre", refStar: "Vega" },
       { name: "Orion", refStar: "Alnilam" }
     ];
@@ -344,12 +345,25 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return program;
     }
 
-    function objectColor(type) {
-      const value = (type || '').toLowerCase();
-      if (value.includes('plan')) return [0.43, 0.78, 1.0];
-      if (value.includes('gal')) return [0.84, 0.67, 1.0];
-      if (value.includes('neb')) return [1.0, 0.57, 0.48];
-      if (value.includes('amas') || value.includes('glob')) return [1.0, 0.82, 0.42];
+    // Gestion avancée des couleurs spectrales et types d'objets
+    function objectColor(object) {
+      const type = (object.type || '').toUpperCase();
+      const name = (object.name || '').toUpperCase();
+
+      if (name === 'POLARIS') return [1.0, 0.95, 0.75]; // Éclat particulier pour la Polaire
+      if (type.includes('PLAN')) return [0.43, 0.78, 1.0];
+      if (type.includes('GAL')) return [0.84, 0.67, 1.0];
+      if (type.includes('NEB')) return [1.0, 0.57, 0.48];
+      if (type.includes('AMAS') || type.includes('GLOB')) return [1.0, 0.82, 0.42];
+
+      // Classification spectrale des étoiles (O, B, A, F, G, K, M)
+      if (type.includes('O') || type.includes('B')) return [0.60, 0.78, 1.0]; // Bleu / Blanc chaud
+      if (type.includes('A')) return [0.90, 0.94, 1.0]; // Blanc pur
+      if (type.includes('F')) return [1.0, 1.0, 0.85]; // Jaune-blanc
+      if (type.includes('G')) return [1.0, 0.95, 0.60]; // Jaune (solaire)
+      if (type.includes('K')) return [1.0, 0.75, 0.40]; // Orange
+      if (type.includes('M')) return [1.0, 0.50, 0.30]; // Orange-rouge / Rouge froid
+
       return [0.91, 0.94, 1.0];
     }
 
@@ -465,8 +479,13 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         if (Math.abs(screenX) > 1 || Math.abs(screenY) > 1) continue;
         
         positions.push(...horizontal.position);
-        colors.push(...objectColor(object.type));
-        sizes.push(Math.max(4, Math.min(12, 11 - Math.max(0, object.mag - 2) * 0.55)));
+        colors.push(...objectColor(object));
+        
+        // Calcul dynamique de la taille selon la magnitude (avec mise en valeur de Polaris)
+        let starSize = Math.max(4, Math.min(15, (6.5 - object.mag) * 2.0 + 3));
+        if (object.name === "Polaris") starSize = 18;
+        sizes.push(starSize);
+
         lastScreenObjects.push({ object, screenX, screenY });
       }
 
@@ -490,7 +509,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       gl.vertexAttrib1f(sizeLocation, 1);
       gl.drawArrays(gl.LINES, 0, gridVertices.length / 3);
 
-      // Lignes de constellations renforcées (plus lumineuses)
+      // Lignes de constellations
       if (lineVertices.length > 0) {
         gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineVertices), gl.DYNAMIC_DRAW);
@@ -518,17 +537,27 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       viewReadout.textContent = `Vue AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
 
-      // Noms des objets
+      // Noms des objets et marquage spécial permanent de Polaris
       const labels = document.createDocumentFragment();
-      if (showNames) {
-        for (const { object, screenX, screenY } of lastScreenObjects.filter(e => e.object.mag <= 7.5).sort((a,b) => a.object.mag - b.object.mag).slice(0, 16)) {
-          const label = document.createElement('span');
-          label.className = 'object-label';
-          label.style.left = `${(screenX + 1) * 50}%`;
-          label.style.top = `${(1 - screenY) * 50}%`;
-          label.textContent = object.commonName || object.name;
-          labels.appendChild(label);
+      for (const item of lastScreenObjects) {
+        const isPolaris = (item.object.name === "Polaris");
+        // Polaris s'affiche TOUJOURS, les autres dépendent de showNames et de la magnitude
+        if (!isPolaris && (!showNames || item.object.mag > 7.5)) continue;
+        if (isPolaris && !showNames) {
+          // Si les noms sont masqués, on affiche quand même Polaris de manière spécifique
+        } else if (!isPolaris && !showNames) {
+          continue;
         }
+
+        // Limiter le nombre de labels affichés simultanément pour garder de la fluidité
+        if (!isPolaris && lastScreenObjects.filter(e => e.object.mag <= 7.5).indexOf(item) > 16) continue;
+
+        const label = document.createElement('span');
+        label.className = isPolaris ? 'object-label polaris' : 'object-label';
+        label.style.left = `${(item.screenX + 1) * 50}%`;
+        label.style.top = `${(1 - item.screenY) * 50}%`;
+        label.textContent = isPolaris ? `★ ${item.object.commonName || item.object.name} (Polaire)` : (item.object.commonName || item.object.name);
+        labels.appendChild(label);
       }
       labelsElement.replaceChildren(labels);
 

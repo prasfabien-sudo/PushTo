@@ -20,11 +20,17 @@ Aficher le pole Nord / Sud
 Faire fonctionner le mode plein écran
 A tester: J'aimerai que le mode réalité augmenté soit capable en temps réel de proposer un alignement
 Corriger bug d'afficahge des constellation (ex : Orion)
-Faire varier l'affichag des étoiles en fonction la magnitude et de la couleur pour que cela ressemble au ciel réel
-Ajouter une ligne plus épaisse pour séparer le pole nord et le pole sud et bien marquer l'étoile Polaris (meme quand on masque son nom)
 Lorsque je passe en vue paysage, j'aimerai passer en plein écran
 Dans la vue 3D je voudrais un mode réalité augmenté, qui utilise la camera.
 
+Ligne de l'équateur céleste tracée dynamiquement en temps réel pour séparer les hémisphères nord et sud.
+Moteur stellarium
+
+utilisation du gyrroscope
+Mise en route auto du gyroscope quand on bouge le pc
+
+afficher plus de constellation
+gérer l'hemisphere sud
 
 a tester
 ------------
