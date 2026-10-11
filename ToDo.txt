@@ -1,8 +1,13 @@
+Pour tester:
+-----------
+lancer dans le terminal : node simulate_esp32.js
+se connecter à : http://127.0.0.1:8000/
+
+
 
 Général
 -------
-Revoir l'ordre des menus (mode 3D, puis mode encodeurs, puis le reste)
-Faire défiler les raccourcis plutot que les 3 petits points
+
 Voir si possible d'avoir une base d'objet hébergé localement sur le téléphone pour pouvoir avoir une grosse base ou alors faire appel à un service sur le web?
 J'aimerai ajouter les principales étoiles visibles, notamment celle qui constitue le constellations
 Voir si possible d'avoir une base d'objet hébergé localement sur le téléphone pour pouvoir avoir une grosse base ou alors faire appel à un service sur le web?
@@ -24,13 +29,13 @@ Lorsque je passe en vue paysage, j'aimerai passer en plein écran
 Dans la vue 3D je voudrais un mode réalité augmenté, qui utilise la camera.
 
 Ligne de l'équateur céleste tracée dynamiquement en temps réel pour séparer les hémisphères nord et sud.
-Moteur stellarium
+
 
 utilisation du gyrroscope
 Mise en route auto du gyroscope quand on bouge le pc
 
-afficher plus de constellation
-gérer l'hemisphere sud
+
+gérer l'hemisphere sud (a voir si vraiment c'est nécessaire car ca met systématiquement le bazar)
 
 gérer la couleur du ciel en fonction de l'heure
 
