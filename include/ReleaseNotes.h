@@ -1,4 +1,4 @@
-// Version Component: ReleaseNotes.h v1.2.7
+// Version Component: ReleaseNotes.h v1.2.10
 // Version Global System: v1.2.7
 #ifndef RELEASENOTES_H
 #define RELEASENOTES_H
@@ -59,6 +59,21 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
       <span class="version-tag">v1.2.7</span>
     </div>
 
+    <!-- v1.3.14 (Vue 3D & AR) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v1.3.14</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Assistant d'alignement AR en temps réel intégré au statut pour synchroniser la vue et les encodeurs.</li>
+        <li><span class="badge badge-feat">Feat</span> Modale d'informations détaillées au clic (taille apparente, distance, type, magnitude, coordonnées AD/Dec).</li>
+        <li><span class="badge badge-feat">Feat</span> Renforcement des lignes de constellations et affichage dynamique de leurs noms au centre des figures.</li>
+        <li><span class="badge badge-feat">Feat</span> Bouton de bascule pour afficher ou masquer les noms (ON/OFF).</li>
+        <li><span class="badge badge-fix">Fix</span> Suppression du pavé de liste sous la carte pour maximiser l'espace d'affichage de la sphère 3D.</li>
+      </ul>
+    </div>
+
     <!-- v1.2.7 -->
     <div class="release-item">
       <div class="release-header">
@@ -66,7 +81,7 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
         <span class="release-date">Octobre 2026</span>
       </div>
       <ul>
-        <li><span class="badge badge-fix">Fix</span> La vue 3D suit désormais en temps réel les angles AZ/ALT calculés depuis les encodeurs ; le recentrage revient au pointage du télescope.</li>
+        <li><span class="badge badge-fix">Fix</span> La vue 3D suit désormais en temps réel les angles AZ/ALT calculés depuis les encodeurs ; le recentrage revient au pointage du télescope[cite: 2].</li>
       </ul>
     </div>
 
@@ -77,7 +92,7 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
         <span class="release-date">Octobre 2026</span>
       </div>
       <ul>
-        <li><span class="badge badge-fix">Fix</span> Bouton du mode nuit déplacé dans les raccourcis de la vue 3D et rendu plus visible avec un contraste inversé.</li>
+        <li><span class="badge badge-fix">Fix</span> Bouton du mode nuit déplacé dans les raccourcis de la vue 3D et rendu plus visible avec un contraste inversé[cite: 2].</li>
       </ul>
     </div>
 
@@ -88,7 +103,7 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
         <span class="release-date">Octobre 2026</span>
       </div>
       <ul>
-        <li><span class="badge badge-feat">Feat</span> Accès direct en bas d'écran au menu principal, à la mise en station, à la vue 3D du ciel et à l'aide ; les autres pages restent dans « Plus ».</li>
+        <li><span class="badge badge-feat">Feat</span> Accès direct en bas d'écran au menu principal, à la mise en station, à la vue 3D du ciel et à l'aide[cite: 2].</li>
       </ul>
     </div>
 
@@ -99,102 +114,8 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
         <span class="release-date">Octobre 2026</span>
       </div>
       <ul>
-        <li><span class="badge badge-feat">Feat</span> Déplacement du pavé du lieu d'observation au-dessus de la position du télescope.</li>
-        <li><span class="badge badge-fix">Fix</span> Mise à jour du catalogue sans recréer les lignes à chaque rafraîchissement, supprimant le clignotement des types et de la visibilité.</li>
-        <li><span class="badge badge-fix">Fix</span> Retour de la vue 3D bêta au pilotage tactile uniquement ; retrait du serveur HTTPS expérimental et des commandes de capteurs.</li>
-      </ul>
-    </div>
-
-    <!-- v1.2.0 -->
-    <div class="release-item minor">
-      <div class="release-header">
-        <span class="release-version">v1.2.0</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-feat">Feat</span> Séparation explicite entre la version globale système (affichée) et les numéros de version individuels par composant (`.h`/`.cpp`).</li>
-      </ul>
-    </div>
-
-    <!-- v1.1.1 -->
-    <div class="release-item">
-      <div class="release-header">
-        <span class="release-version">v1.1.1</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-feat">Feat</span> Création du composant dédié aux notes de version (`ReleaseNotes.h`).</li>
-        <li><span class="badge badge-feat">Feat</span> Intégration du lien Release Notes dans le menu de navigation et sur le tag de version principal.</li>
-      </ul>
-    </div>
-
-    <!-- v1.1.0 -->
-    <div class="release-item minor">
-      <div class="release-header">
-        <span class="release-version">v1.1.0</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-feat">Feat</span> Géolocalisation GPS native du smartphone (`navigator.geolocation`) avec repli automatique sur les coordonnées ESP32.</li>
-        <li><span class="badge badge-feat">Feat</span> Affichage dynamique de la source de localisation (`<svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-map-pin'></use></svg> GPS Mobile` ou `<svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-map-pin'></use></svg> Lieu d'observation`).</li>
-      </ul>
-    </div>
-
-    <!-- v1.0.4 -->
-    <div class="release-item">
-      <div class="release-header">
-        <span class="release-version">v1.0.4</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-fix">Fix</span> Correction du calcul de précession sur l'Ascension Droite (RA) aligné sur Stellarium.</li>
-      </ul>
-    </div>
-
-    <!-- v1.0.3 -->
-    <div class="release-item">
-      <div class="release-header">
-        <span class="release-version">v1.0.3</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-fix">Fix</span> Correction de réfraction atmosphérique appliquée à l'altitude apparente.</li>
-        <li><span class="badge badge-fix">Fix</span> Précession astronomique IAU76 appliquée aux coordonnées RA/DEC J2000.</li>
-      </ul>
-    </div>
-
-    <!-- v1.0.2 -->
-    <div class="release-item">
-      <div class="release-header">
-        <span class="release-version">v1.0.2</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-fix">Fix</span> Formatage précisé des coordonnées RA/DEC (HH:MM:SS / DD:MM:SS).</li>
-      </ul>
-    </div>
-
-    <!-- v1.0.1 -->
-    <div class="release-item">
-      <div class="release-header">
-        <span class="release-version">v1.0.1</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-feat">Feat</span> Affichage du tag de version sémantique en haut à droite de l'interface.</li>
-      </ul>
-    </div>
-
-    <!-- v1.0.0 -->
-    <div class="release-item minor">
-      <div class="release-header">
-        <span class="release-version">v1.0.0</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-feat">Feat</span> Refonte complète de l'interface Web principale avec double jauge de guidage (AZ/ALT).</li>
-        <li><span class="badge badge-feat">Feat</span> Intégration du catalogue enrichi `ObjectsDB.h` avec éphémérides des planètes.</li>
-        <li><span class="badge badge-feat">Feat</span> Calcul de LST en UTC strict et filtrage d'objets par type/proximité.</li>
+        <li><span class="badge badge-feat">Feat</span> Déplacement du pavé du lieu d'observation au-dessus de la position du télescope[cite: 2].</li>
+        <li><span class="badge badge-fix">Fix</span> Mise à jour du catalogue sans recréer les lignes à chaque rafraîchissement[cite: 2].</li>
       </ul>
     </div>
 
@@ -206,7 +127,7 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
     <a class="nav-item" href="/help" aria-label="Aide SkySafari" title="Aide SkySafari"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-book-open'></use></svg></span></a>
     <button class="nav-more-button night-mode-toggle" id="nightModeToggle" type="button" aria-label="Activer le mode nuit" title="Activer le mode nuit" aria-pressed="false" onclick="toggleNightMode()"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-moon'></use></svg></span></button>
     <div class="nav-more">
-      <button class="nav-more-button" type="button" aria-label="Plus" title="Plus" aria-current="page" aria-expanded="false" aria-controls="navMoreMenu" onclick="toggleMoreMenu()"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-more-horizontal'></use></svg></span></button>
+      <button class="nav-more-button" type="button" aria-label="Plus" title="Plus" aria-current="page" aria-expanded="false" aria-controls="navMoreMenu" onclick="toggleMoreMenu()"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-more-horizontal'></use></svg></span></a>
       <div class="nav-more-menu" id="navMoreMenu" hidden>
         <a class="nav-more-link" href="/calib_page"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-crosshair'></use></svg> Calibration</a>
         <a class="nav-more-link" href="/config"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-settings'></use></svg> Configuration</a>

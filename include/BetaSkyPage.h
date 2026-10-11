@@ -1,3 +1,5 @@
+// Version Component: BetaSkyPage.h v5.1.1
+// Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
 
@@ -20,8 +22,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .beta { padding: 3px 7px; border: 1px solid #74531e; border-radius: 999px; color: #ffc66d; font-size: .7rem; letter-spacing: .08em; }
     .sky-status { min-height: 20px; margin: 0 2px 8px; color: #aab3c2; font-size: .82rem; }
     .sky-status.error { color: #ff7777; }
-    .scene { position: relative; height: min(62vh, 520px); min-height: 300px; overflow: hidden; border: 1px solid #273142; border-radius: 14px; background: radial-gradient(ellipse at 50% 100%, #1b2638 0, #0d1420 47%, #05070b 100%); touch-action: none; }
-    canvas { display: block; width: 100%; height: 100%; }
+    .sky-status.align-ok { color: #69ff84; }
+    .scene { position: relative; height: min(65vh, 540px); min-height: 320px; overflow: hidden; border: 1px solid #273142; border-radius: 14px; background: radial-gradient(ellipse at 50% 100%, #1b2638 0, #0d1420 47%, #05070b 100%); touch-action: none; }
+    canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+    canvas:active { cursor: grabbing; }
     .scene-label { position: absolute; color: #acb8c8; font-size: .72rem; text-shadow: 0 1px 4px #000; pointer-events: none; }
     .scene-label.north { top: 10px; left: 50%; transform: translateX(-50%); }
     .scene-label.telescope { top: 10px; left: 10px; }
@@ -29,19 +33,29 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .scene-label.view { left: 10px; bottom: 10px; }
     .scene-label.horizon { right: 10px; bottom: 10px; }
     .scene-center { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(255,255,255,.7); border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; }
-    .object-label { position: absolute; z-index: 1; padding: 2px 4px; border-radius: 4px; color: #f4e6be; background: rgba(5,8,12,.64); font-size: .66rem; white-space: nowrap; text-shadow: 0 1px 3px #000; transform: translate(-50%,-120%); pointer-events: none; }
-    .controls { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+    
+    .object-label { position: absolute; z-index: 1; padding: 2px 5px; border-radius: 4px; color: #f4e6be; background: rgba(5,8,12,0.75); font-size: .68rem; white-space: nowrap; text-shadow: 0 1px 3px #000; transform: translate(-50%,-120%); pointer-events: none; transition: opacity 0.2s; }
+    .constellation-label { position: absolute; z-index: 1; color: #7cb9e8; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.85; }
+
+    .controls { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
     button, select { min-height: 44px; border: 1px solid #344256; border-radius: 9px; background: #151b25; color: #e6eaf2; font: inherit; }
     button { padding: 8px 10px; cursor: pointer; }
     button:active { background: #253247; }
     select { width: 100%; padding: 8px 10px; }
     .scene-help { margin: 9px 2px; color: #929cac; font-size: .78rem; line-height: 1.45; }
-    .object-list { margin-top: 12px; padding: 10px 12px; border: 1px solid #222d3b; border-radius: 10px; background: #10151d; }
-    .object-list h2 { margin: 0 0 7px; font-size: .9rem; color: #d5dbe6; }
-    #visibleObjects { display: flex; flex-wrap: wrap; gap: 6px; }
-    .object-chip { padding: 4px 7px; border-radius: 6px; background: #1b2533; color: #d8e4f3; font-size: .75rem; }
-    .object-chip.dim { color: #8b94a2; }
-    body { padding-bottom: 90px; }
+
+    /* Modale d'information objet */
+    .object-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .object-modal[hidden] { display: none; }
+    .modal-content { width: min(100%, 380px); background: #151b25; border: 1px solid #344256; border-radius: 14px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.7); }
+    .modal-content h2 { margin: 0 0 4px; font-size: 1.1rem; color: #ffb74d; }
+    .modal-sub { color: #8b94a2; font-size: .85rem; margin-bottom: 12px; }
+    .modal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
+    .modal-stat { background: #10151d; padding: 8px 10px; border-radius: 8px; border: 1px solid #222d3b; }
+    .modal-stat-label { font-size: .7rem; color: #8b94a2; display: block; }
+    .modal-stat-value { font-size: .95rem; font-weight: bold; color: #f1f3f8; }
+    .modal-close { width: 100%; background: #263238; border: 1px solid #455a64; color: #fff; font-weight: bold; }
+
     html[data-night-mode="true"]::after { content: ""; position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; background: rgba(255, 0, 0, 0.82); mix-blend-mode: multiply; filter: brightness(0.45); }
     .bottom-nav { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-around; gap: 4px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: rgba(18,20,25,.98); border-top: 1px solid #37474f; }
     .nav-item, .nav-more-button { flex: 1; min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: center; padding: 8px 2px; border: 0; border-radius: 8px; background: transparent; color: #b0bec5; text-decoration: none; cursor: pointer; }
@@ -75,6 +89,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <span class="scene-label horizon">Horizon</span>
       <span class="scene-center" aria-hidden="true"></span>
       <div id="objectLabels" aria-hidden="true"></div>
+      <div id="constellationLabels" aria-hidden="true"></div>
     </div>
     <div class="controls">
       <select id="typeFilter" aria-label="Filtrer les objets">
@@ -84,14 +99,38 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         <option value="amas">Amas d'étoiles</option>
         <option value="etoile">Étoiles</option>
       </select>
-      <button id="centerButton" type="button">Recentrer la vue</button>
+      <button id="toggleNamesBtn" type="button">Noms : ON</button>
+      <button id="centerButton" type="button">Recentrer</button>
     </div>
-    <p class="scene-help">Faites glisser la vue pour regarder autour du ciel et pincez pour zoomer.</p>
-    <section class="object-list" aria-live="polite">
-      <h2>Objets visibles dans la vue</h2>
-      <div id="visibleObjects">Chargement du catalogue...</div>
-    </section>
+    <p class="scene-help">Glissez pour tourner, pincez pour zoomer. Cliquez sur un objet pour voir ses détails et l'aide à l'alignement.</p>
   </main>
+
+  <!-- Modale d'information objet -->
+  <div class="object-modal" id="objectModal" hidden>
+    <div class="modal-content">
+      <h2 id="modalTitle">Nom de l'objet</h2>
+      <div class="modal-sub" id="modalSub">Constellation · Type</div>
+      <div class="modal-grid">
+        <div class="modal-stat">
+          <span class="modal-stat-label">Magnitude</span>
+          <span class="modal-stat-value" id="modalMag">-</span>
+        </div>
+        <div class="modal-stat">
+          <span class="modal-stat-label">Distance</span>
+          <span class="modal-stat-value" id="modalDist">-</span>
+        </div>
+        <div class="modal-stat">
+          <span class="modal-stat-label">Taille apparente</span>
+          <span class="modal-stat-value" id="modalSize">-</span>
+        </div>
+        <div class="modal-stat">
+          <span class="modal-stat-label">Coordonnées AD/Dec</span>
+          <span class="modal-stat-value" id="modalCoords" style="font-size:0.8rem">-</span>
+        </div>
+      </div>
+      <button class="modal-close" type="button" onclick="closeModal()">Fermer</button>
+    </div>
+  </div>
 
   <nav class="bottom-nav" aria-label="Navigation principale">
     <a class="nav-item" href="/" aria-label="Menu principal" title="Menu principal"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-telescope"></use></svg></span></a>
@@ -116,10 +155,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const gl = canvas.getContext('webgl', { antialias: true, alpha: true });
     const statusElement = document.getElementById('skyStatus');
     const filterElement = document.getElementById('typeFilter');
-    const visibleElement = document.getElementById('visibleObjects');
     const labelsElement = document.getElementById('objectLabels');
+    const constLabelsElement = document.getElementById('constellationLabels');
     const viewReadout = document.getElementById('viewReadout');
     const telescopeReadout = document.getElementById('telescopeReadout');
+    const toggleNamesBtn = document.getElementById('toggleNamesBtn');
+    
     let objects = [];
     let latitude = 45.89;
     let longitude = 6.05;
@@ -129,13 +170,54 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let touchElevation = 0;
     let animationFrame = 0;
     let lastRenderAt = 0;
-    let lastListRefresh = 0;
     let fieldOfView = 34;
     let encoderRequestInFlight = false;
+    let showNames = true;
+    let lastScreenObjects = [];
 
-    function setStatus(message, error = false) {
+    const CONSTELLATION_LINES = [
+      ["Dubhe", "Merak"], ["Merak", "Phecda"], ["Phecda", "Megrez"], 
+      ["Megrez", "Dubhe"], ["Megrez", "Alioth"], ["Alioth", "Mizar"], ["Mizar", "Alkaid"],
+      ["Polaris", "Yildun"], ["Yildun", "Zeta UMi"], ["Zeta UMi", "Epsilon UMi"],
+      ["Epsilon UMi", "Pherkad"], ["Pherkad", "Kochab"],
+      ["Caph", "Shedar"], ["Shedar", "Navi"], ["Navi", "Ruchbah"], ["Ruchbah", "Segin"],
+      ["Deneb", "Sadr"], ["Sadr", "Albireo"], ["Fawaris", "Sadr"], ["Sadr", "Gienah"],
+      ["Vega", "Sheliak"], ["Sheliak", "Sulafat"], ["Sulafat", "γ Lyr"], ["γ Lyr", "Vega"],
+      ["Rigel", "Betelgeuse"], ["Betelgeuse", "Bellatrix"], ["Bellatrix", "Rigel"],
+      ["Alnitak", "Alnilam"], ["Alnilam", "Mintaka"], ["Saiph", "Rigel"], ["Betelgeuse", "Meissa"]
+    ];
+
+    const CONSTELLATION_CENTERS = [
+      { name: "Grande Ourse", refStar: "Alioth" },
+      { name: "Petite Ourse", refStar: "Polaris" },
+      { name: "Cassiopée", refStar: "Navi" },
+      { name: "Cygne", refStar: "Sadr" },
+      { name: "Lyre", refStar: "Vega" },
+      { name: "Orion", refStar: "Alnilam" }
+    ];
+
+    function setStatus(message, type = '') {
       statusElement.textContent = message;
-      statusElement.classList.toggle('error', error);
+      statusElement.className = 'sky-status ' + type;
+    }
+
+    function getEnrichedDetails(obj) {
+      let dist = "Indéterminée";
+      let size = "15'";
+      const name = (obj.name || "").toUpperCase();
+      const type = (obj.type || "").toLowerCase();
+
+      if (name.includes("M31")) { dist = "2.5 millions al"; size = "3.0° × 1.0°"; }
+      else if (name.includes("M45")) { dist = "440 al"; size = "110'"; }
+      else if (name.includes("M42")) { dist = "1 340 al"; size = "65' × 60'"; }
+      else if (name.includes("M13")) { dist = "22 200 al"; size = "20'"; }
+      else if (name.includes("M57")) { dist = "2 300 al"; size = "1.4' × 1.0'"; }
+      else if (type.includes("galaxie")) { dist = "15 - 50 millions al"; size = "8' × 5'"; }
+      else if (type.includes("nebuleuse")) { dist = "2 000 - 5 000 al"; size = "30'"; }
+      else if (type.includes("amas")) { dist = "5 000 - 15 000 al"; size = "15'"; }
+      else { dist = "10 - 500 al (Étoile)"; size = "Ponctuel"; }
+
+      return { dist, size };
     }
 
     function applyEncoderStatus(status) {
@@ -147,15 +229,23 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const dirALT = Number(status.dirALT);
       if (![rawAZ, rawALT, ticksAZ, ticksALT, dirAZ, dirALT].every(Number.isFinite)
         || ticksAZ <= 0 || ticksALT <= 0 || ![1, -1].includes(dirAZ) || ![1, -1].includes(dirALT)) {
-        throw new Error('Les données des encodeurs sont invalides.');
+        throw new Error('Données encodeurs invalides.');
       }
 
       const azimuth = ((rawAZ * dirAZ / ticksAZ * 360) % 360 + 360) % 360;
       const altitudeCircle = ((rawALT * dirALT / ticksALT * 360) % 360 + 360) % 360;
       heading = azimuth;
       elevation = altitudeCircle > 180 ? altitudeCircle - 360 : altitudeCircle;
+      
       telescopeReadout.textContent = `Télescope AZ ${azimuth.toFixed(1)}° · ALT ${elevation.toFixed(1)}°`;
       telescopeReadout.classList.remove('error');
+
+      const diffAz = Math.abs(heading - ((heading + touchHeading + 360) % 360));
+      if (diffAz < 1.5 && Math.abs(elevation - (elevation + touchElevation)) < 1.5) {
+        setStatus("Alignement AR OK : La vue correspond exactement au pointage télescope.", "align-ok");
+      } else {
+        setStatus("Mode AR actif : Ajustez le cadrage ou utilisez Recentrer pour synchroniser.", "");
+      }
     }
 
     async function pollEncoderStatus() {
@@ -163,10 +253,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       encoderRequestInFlight = true;
       try {
         const response = await fetch('/status', { cache: 'no-store' });
-        if (!response.ok) throw new Error(`/status répond HTTP ${response.status}.`);
+        if (!response.ok) throw new Error(`/status HTTP ${response.status}`);
         applyEncoderStatus(await response.json());
       } catch (error) {
-        telescopeReadout.textContent = `Encodeurs indisponibles : ${error.message}`;
+        telescopeReadout.textContent = `Encodeurs hors ligne`;
         telescopeReadout.classList.add('error');
       } finally {
         encoderRequestInFlight = false;
@@ -176,7 +266,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     function setNightMode(enabled, persist = false) {
       document.documentElement.dataset.nightMode = String(enabled);
       const button = document.getElementById('nightModeToggle');
-      const label = enabled ? 'Désactiver le mode nuit' : 'Activer le mode nuit';
+      const label = enabled ? 'Désactiver mode nuit' : 'Activer mode nuit';
       button.setAttribute('aria-label', label);
       button.setAttribute('aria-pressed', String(enabled));
       button.title = label;
@@ -195,15 +285,16 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     }
 
     setNightMode(localStorage.getItem('dobson-night-mode') === 'true');
+
     function compileShader(type, source) {
       const shader = gl.createShader(type);
-      if (!shader) throw new Error('Création du shader impossible.');
+      if (!shader) throw new Error('Création shader impossible.');
       gl.shaderSource(shader, source);
       gl.compileShader(shader);
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        const message = gl.getShaderInfoLog(shader) || 'Erreur inconnue';
+        const msg = gl.getShaderInfoLog(shader);
         gl.deleteShader(shader);
-        throw new Error(`Compilation WebGL impossible : ${message}`);
+        throw new Error(`Erreur WebGL : ${msg}`);
       }
       return shader;
     }
@@ -238,24 +329,18 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         varying vec3 vColor;
         void main() {
           if (uGrid > 0.5) {
-            gl_FragColor = vec4(vColor, 0.7);
+            gl_FragColor = vec4(vColor, 0.85);
             return;
           }
           vec2 point = gl_PointCoord - vec2(0.5);
-          float edge = 1.0 - smoothstep(0.32, 0.5, length(point));
+          float edge = 1.0 - smoothstep(0.3, 0.5, length(point));
           if (edge < 0.05) discard;
           gl_FragColor = vec4(vColor, edge);
         }`);
       const program = gl.createProgram();
-      if (!program) throw new Error('Création du programme WebGL impossible.');
       gl.attachShader(program, vertex);
       gl.attachShader(program, fragment);
       gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        const message = gl.getProgramInfoLog(program) || 'Erreur inconnue';
-        gl.deleteProgram(program);
-        throw new Error(`Initialisation WebGL impossible : ${message}`);
-      }
       return program;
     }
 
@@ -272,11 +357,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const type = (object.type || '').toLowerCase();
       const filter = filterElement.value;
       if (filter === 'all') return true;
-      if (filter === 'planete') return type.includes('plan') && !type.includes('neb');
       if (filter === 'galaxie') return type.includes('gal');
       if (filter === 'nebuleuse') return type.includes('neb');
       if (filter === 'amas') return type.includes('amas') || type.includes('glob');
-      return !type.includes('plan') && !type.includes('gal') && !type.includes('neb') && !type.includes('amas') && !type.includes('glob');
+      return !type.includes('gal') && !type.includes('neb') && !type.includes('amas') && !type.includes('glob');
     }
 
     function horizontalPosition(object, siderealDegrees, latRadians) {
@@ -310,18 +394,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const alt = altitude * Math.PI / 180;
         vertices.push(Math.sin(az) * Math.cos(alt), Math.sin(alt), Math.cos(az) * Math.cos(alt));
       };
-      for (let az = 0; az < 360; az += 2) {
-        add(az, 0); add(az + 2, 0);
-      }
+      for (let az = 0; az < 360; az += 2) { add(az, 0); add(az + 2, 0); }
       for (const altitude of [30, 60]) {
-        for (let az = 0; az < 360; az += 2) {
-          add(az, altitude); add(az + 2, altitude);
-        }
+        for (let az = 0; az < 360; az += 2) { add(az, altitude); add(az + 2, altitude); }
       }
       for (let azimuth = 0; azimuth < 360; azimuth += 45) {
-        for (let altitude = 0; altitude < 88; altitude += 2) {
-          add(azimuth, altitude); add(azimuth, altitude + 2);
-        }
+        for (let altitude = 0; altitude < 88; altitude += 2) { add(azimuth, altitude); add(azimuth, altitude + 2); }
       }
       return new Float32Array(vertices);
     }
@@ -357,10 +435,25 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const tanHalfFov = Math.tan(fieldOfView * Math.PI / 180);
       const sidereal = siderealDegrees(new Date());
       const latRadians = latitude * Math.PI / 180;
+
+      const objectMap = new Map();
+      for (const object of objects) {
+        const horizontal = horizontalPosition(object, sidereal, latRadians);
+        objectMap.set(object.name, horizontal.position);
+      }
+
+      const lineVertices = [];
+      for (const [starA, starB] of CONSTELLATION_LINES) {
+        const posA = objectMap.get(starA);
+        const posB = objectMap.get(starB);
+        if (posA && posB) lineVertices.push(...posA, ...posB);
+      }
+
       const positions = [];
       const colors = [];
       const sizes = [];
-      const visibleObjects = [];
+      lastScreenObjects = [];
+
       for (const object of objects) {
         if (!matchesFilter(object)) continue;
         const horizontal = horizontalPosition(object, sidereal, latRadians);
@@ -370,11 +463,13 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const screenX = (horizontal.position[0] * right[0] + horizontal.position[1] * right[1] + horizontal.position[2] * right[2]) / (depth * tanHalfFov * aspect);
         const screenY = (horizontal.position[0] * up[0] + horizontal.position[1] * up[1] + horizontal.position[2] * up[2]) / (depth * tanHalfFov);
         if (Math.abs(screenX) > 1 || Math.abs(screenY) > 1) continue;
+        
         positions.push(...horizontal.position);
         colors.push(...objectColor(object.type));
-        sizes.push(Math.max(3, Math.min(11, 10 - Math.max(0, object.mag - 2) * 0.55)));
-        visibleObjects.push({ object, altitude: horizontal.altitude, screenX, screenY });
+        sizes.push(Math.max(4, Math.min(12, 11 - Math.max(0, object.mag - 2) * 0.55)));
+        lastScreenObjects.push({ object, screenX, screenY });
       }
+
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.useProgram(program);
@@ -383,6 +478,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       gl.uniform3fv(forwardLocation, forward);
       gl.uniform1f(tanHalfFovLocation, tanHalfFov);
       gl.uniform1f(aspectLocation, aspect);
+
+      // Grille
       gl.uniform1f(gridLocation, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, gridBuffer);
       gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
@@ -392,6 +489,17 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       gl.vertexAttrib3f(colorLocation, 0.23, 0.31, 0.42);
       gl.vertexAttrib1f(sizeLocation, 1);
       gl.drawArrays(gl.LINES, 0, gridVertices.length / 3);
+
+      // Lignes de constellations renforcées (plus lumineuses)
+      if (lineVertices.length > 0) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineVertices), gl.DYNAMIC_DRAW);
+        gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+        gl.vertexAttrib3f(colorLocation, 0.55, 0.82, 1.0); 
+        gl.drawArrays(gl.LINES, 0, lineVertices.length / 3);
+      }
+
+      // Étoiles
       gl.uniform1f(gridLocation, 0);
       if (positions.length) {
         gl.bindBuffer(gl.ARRAY_BUFFER, objectBuffer);
@@ -407,58 +515,53 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         gl.enableVertexAttribArray(sizeLocation);
         gl.drawArrays(gl.POINTS, 0, sizes.length);
       }
+
       viewReadout.textContent = `Vue AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
+
+      // Noms des objets
       const labels = document.createDocumentFragment();
-      for (const { object, screenX, screenY } of visibleObjects.filter(entry => entry.object.mag <= 8).sort((a, b) => a.object.mag - b.object.mag).slice(0, 14)) {
-        const label = document.createElement('span');
-        label.className = 'object-label';
-        label.style.left = `${(screenX + 1) * 50}%`;
-        label.style.top = `${(1 - screenY) * 50}%`;
-        label.textContent = object.commonName || object.name;
-        labels.appendChild(label);
+      if (showNames) {
+        for (const { object, screenX, screenY } of lastScreenObjects.filter(e => e.object.mag <= 7.5).sort((a,b) => a.object.mag - b.object.mag).slice(0, 16)) {
+          const label = document.createElement('span');
+          label.className = 'object-label';
+          label.style.left = `${(screenX + 1) * 50}%`;
+          label.style.top = `${(1 - screenY) * 50}%`;
+          label.textContent = object.commonName || object.name;
+          labels.appendChild(label);
+        }
       }
       labelsElement.replaceChildren(labels);
-      if (now - lastListRefresh >= 900 || lastListRefresh === 0) {
-        const fragment = document.createDocumentFragment();
-        for (const { object, altitude } of visibleObjects.slice(0, 40)) {
-          const chip = document.createElement('span');
-          chip.className = `object-chip ${object.mag > 8 ? 'dim' : ''}`;
-          chip.title = `${object.type} · mag ${object.mag.toFixed(1)} · alt ${Math.round(altitude)}°`;
-          chip.textContent = object.commonName || object.name;
-          fragment.appendChild(chip);
+
+      // Noms des constellations
+      const constLabels = document.createDocumentFragment();
+      if (showNames) {
+        for (const c of CONSTELLATION_CENTERS) {
+          const pos = objectMap.get(c.refStar);
+          if (pos) {
+            const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
+            if (depth > 0.01) {
+              const screenX = (pos[0] * right[0] + pos[1] * right[1] + pos[2] * right[2]) / (depth * tanHalfFov * aspect);
+              const screenY = (pos[0] * up[0] + pos[1] * up[1] + pos[2] * up[2]) / (depth * tanHalfFov);
+              if (Math.abs(screenX) <= 1 && Math.abs(screenY) <= 1) {
+                const cl = document.createElement('span');
+                cl.className = 'constellation-label';
+                cl.style.left = `${(screenX + 1) * 50}%`;
+                cl.style.top = `${(1 - screenY) * 50}%`;
+                cl.textContent = c.name;
+                constLabels.appendChild(cl);
+              }
+            }
+          }
         }
-        if (!visibleObjects.length) {
-          const empty = document.createElement('span');
-          empty.className = 'object-chip dim';
-          empty.textContent = 'Aucun objet au-dessus de l’horizon dans ce filtre.';
-          fragment.appendChild(empty);
-        }
-        visibleElement.replaceChildren(fragment);
-        lastListRefresh = now;
       }
+      constLabelsElement.replaceChildren(constLabels);
     }
 
-    let program;
-    let gridBuffer;
-    let objectBuffer;
-    let colorBuffer;
-    let sizeBuffer;
-    let positionLocation;
-    let colorLocation;
-    let sizeLocation;
-    let rightLocation;
-    let upLocation;
-    let forwardLocation;
-    let tanHalfFovLocation;
-    let aspectLocation;
-    let gridLocation;
-    let gridVertices;
+    let program, gridBuffer, lineBuffer, objectBuffer, colorBuffer, sizeBuffer;
+    let positionLocation, colorLocation, sizeLocation, rightLocation, upLocation, forwardLocation, tanHalfFovLocation, aspectLocation, gridLocation, gridVertices;
 
     async function initialize() {
-      if (!gl) {
-        setStatus('Ce navigateur ne prend pas en charge WebGL.', true);
-        return;
-      }
+      if (!gl) { setStatus('WebGL non supporté.', true); return; }
       try {
         program = createProgram();
         positionLocation = gl.getAttribLocation(program, 'aPosition');
@@ -470,30 +573,64 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         tanHalfFovLocation = gl.getUniformLocation(program, 'uTanHalfFov');
         aspectLocation = gl.getUniformLocation(program, 'uAspect');
         gridLocation = gl.getUniformLocation(program, 'uGrid');
+        
         gridBuffer = gl.createBuffer();
+        lineBuffer = gl.createBuffer();
         objectBuffer = gl.createBuffer();
         colorBuffer = gl.createBuffer();
         sizeBuffer = gl.createBuffer();
-        if (!gridBuffer || !objectBuffer || !colorBuffer || !sizeBuffer) throw new Error('Allocation des buffers WebGL impossible.');
+        
         gridVertices = makeGrid();
         gl.bindBuffer(gl.ARRAY_BUFFER, gridBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, gridVertices, gl.STATIC_DRAW);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        const [catalogResponse, statusResponse] = await Promise.all([fetch('/catalog'), fetch('/status')]);
-        if (!catalogResponse.ok || !statusResponse.ok) throw new Error('Impossible de charger le catalogue ou la configuration.');
-        objects = await catalogResponse.json();
-        const status = await statusResponse.json();
+
+        const [catalogRes, statusRes] = await Promise.all([fetch('/catalog'), fetch('/status')]);
+        objects = await catalogRes.json();
+        const status = await statusRes.json();
         applyEncoderStatus(status);
         latitude = Number(status.lat ?? latitude);
         longitude = Number(status.lon ?? longitude);
-        if (!Array.isArray(objects) || objects.length === 0) throw new Error('Le catalogue ne contient aucun objet.');
-        setStatus(`${objects.length} objets chargés · lieu : ${status.siteName || 'position configurée'} (${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°).`);
+        
+        setStatus(`${objects.length} objets chargés. Prêt.`, "align-ok");
         window.setInterval(pollEncoderStatus, 250);
         render();
       } catch (error) {
-        setStatus(error.message || 'Erreur lors de l’initialisation de la vue 3D.', true);
+        setStatus(error.message, true);
       }
+    }
+
+    canvas.addEventListener('click', event => {
+      const rect = canvas.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+
+      let closestObj = null;
+      let minDst = 0.08;
+
+      for (const item of lastScreenObjects) {
+        const dst = Math.hypot(item.screenX - x, item.screenY - y);
+        if (dst < minDst) {
+          minDst = dst;
+          closestObj = item.object;
+        }
+      }
+
+      if (closestObj) {
+        const details = getEnrichedDetails(closestObj);
+        document.getElementById('modalTitle').textContent = closestObj.commonName ? `${closestObj.name} (${closestObj.commonName})` : closestObj.name;
+        document.getElementById('modalSub').textContent = `${closestObj.type || 'Objet céleste'}`;
+        document.getElementById('modalMag').textContent = closestObj.mag.toFixed(1);
+        document.getElementById('modalDist').textContent = details.dist;
+        document.getElementById('modalSize').textContent = details.size;
+        document.getElementById('modalCoords').textContent = `AD ${closestObj.ra}h · Dec ${closestObj.dec}°`;
+        document.getElementById('objectModal').hidden = false;
+      }
+    });
+
+    function closeModal() {
+      document.getElementById('objectModal').hidden = true;
     }
 
     let dragPoint = null;
@@ -503,6 +640,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const [first, second] = [...activePointers.values()];
       return first && second ? Math.hypot(first.x - second.x, first.y - second.y) : null;
     };
+    
     const scene = document.getElementById('scene');
     scene.addEventListener('pointerdown', event => {
       activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -527,8 +665,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const releasePointer = event => {
       activePointers.delete(event.pointerId);
       pinchDistance = null;
-      const remaining = activePointers.values().next().value;
-      dragPoint = remaining || null;
+      dragPoint = activePointers.values().next().value || null;
     };
     scene.addEventListener('pointerup', releasePointer);
     scene.addEventListener('pointercancel', releasePointer);
@@ -536,14 +673,19 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       event.preventDefault();
       fieldOfView = Math.max(12, Math.min(60, fieldOfView + Math.sign(event.deltaY) * 2));
     }, { passive: false });
-    filterElement.addEventListener('change', () => { visibleElement.textContent = 'Mise à jour de la vue...'; });
+
+    toggleNamesBtn.addEventListener('click', () => {
+      showNames = !showNames;
+      toggleNamesBtn.textContent = showNames ? "Noms : ON" : "Noms : OFF";
+    });
+
     document.getElementById('centerButton').addEventListener('click', () => {
       touchHeading = 0;
       touchElevation = 0;
       fieldOfView = 34;
     });
+
     window.addEventListener('resize', resizeCanvas);
-    window.addEventListener('pagehide', () => cancelAnimationFrame(animationFrame), { once: true });
     initialize();
   </script>
 </body>

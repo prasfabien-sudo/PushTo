@@ -18,10 +18,13 @@ Lorsque je passe en vue paysage, la vue avec le gyroscope ne fonctionne plus cor
 Dans la vue 3, Le visuel du raccourci vers le mode nuit n'est pas beau. La lune n'est pas centrée et le bouton à une forme étiré. Le probleme ne se pos pas sur les autres vue. 
 Aficher le pole Nord / Sud
 Faire fonctionner le mode plein écran
-Enrichir les informations sur les objets (y compris les constellations) pour avoir leur taille, la distance, etc
 A tester: J'aimerai que le mode réalité augmenté soit capable en temps réel de proposer un alignement
 Corriger bug d'afficahge des constellation (ex : Orion)
 Faire varier l'affichag des étoiles en fonction la magnitude et de la couleur pour que cela ressemble au ciel réel
 Ajouter une ligne plus épaisse pour séparer le pole nord et le pole sud et bien marquer l'étoile Polaris (meme quand on masque son nom)
 Lorsque je passe en vue paysage, j'aimerai passer en plein écran
 Dans la vue 3D je voudrais un mode réalité augmenté, qui utilise la camera.
+
+
+a tester
+------------
