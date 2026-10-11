@@ -23,11 +23,12 @@ Corriger bug d'afficahge des constellation (ex : Orion)
 Ligne de l'équateur céleste tracée dynamiquement en temps réel pour séparer les hémisphères nord et sud.
 
 
-utilisation du gyrroscope
 Mise en route auto du gyroscope quand on bouge le pc
 
 
 gérer l'hemisphere sud (a voir si vraiment c'est nécessaire car ca met systématiquement le bazar)
+
+platesolving (astronometry)
 
 
 optimisation

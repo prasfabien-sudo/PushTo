@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.22.0
+// Version Component: BetaSkyPage.h v5.24.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -103,7 +103,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-globe-2"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.22</span>
+      <span class="beta">PLANÉTARIUM v5.24</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     <div class="scene" id="scene">
@@ -152,7 +152,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <button id="realignBtn" type="button" title="Réaligner l'orientation capteur">Réaligner</button>
       <button id="manualFullscreenBtn" type="button">Plein écran</button>
     </div>
-    <p class="scene-help">Anti-saut azimutal actif.</p>
+    <p class="scene-help">Support Pixel / Android Absolute Orientation actif.</p>
   </main>
 
   <div class="object-modal" id="objectModal" hidden>
@@ -191,7 +191,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     <a class="nav-item" href="/simu" title="Simulation"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-gamepad-2"></use></svg></span></a>
     <a class="nav-item" href="/test" title="Tests système"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-flask-conical"></use></svg></span></a>
     <a class="nav-item" href="/releasenotes" title="Notes de version"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-clipboard-list"></use></svg></span></a>
-    <button class="nav-item night-mode-toggle" id="nightModeToggle" type="button" aria-label="Activer le mode nuit" title="Activer le mode nuit" aria-pressed="false" onclick="toggleNightMode()"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-moon"></use></svg></span></button>
+    <button class="nav-item night-mode-toggle" id="nightModeToggle" type="button" aria-label="Activer le mode nuit" title="Activer le mode nuit" aria-pressed="false" onclick="toggleNightMode()"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-moon"></use></svg></span></a>
   </nav>
 
   <script>
@@ -231,8 +231,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let arActive = false;
     let gyroActive = false;
     let compassInitialized = false;
-    let gyroOffsetHeading = 0;
-    let gyroOffsetElevation = 0;
     let rawGyroHeading = 0;
     let rawGyroElevation = 0;
 
@@ -281,12 +279,20 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           } catch (e) { console.error(e); }
         }
         compassInitialized = false;
-        window.addEventListener('deviceorientation', handleOrientation, true);
+        
+        // Utilisation en priorité de deviceorientationabsolute pour Android / Pixel 7a
+        if ('ondeviceorientationabsolute' in window) {
+          window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+        } else {
+          window.addEventListener('deviceorientation', handleOrientation, true);
+        }
+
         gyroActive = true;
         toggleGyroBtn.textContent = "Capteurs AR : ON";
         toggleGyroBtn.classList.add('active');
         resizeCanvas();
       } else {
+        window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
         window.removeEventListener('deviceorientation', handleOrientation, true);
         gyroActive = false;
         toggleGyroBtn.textContent = "Capteurs AR : OFF";
@@ -294,7 +300,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
     });
 
-    // Gestionnaire anti-saut azimutal (continuité circulaire 0-360°)
+    // Gestionnaire optimisé pour le Pixel 7a et Android absolu
     function handleOrientation(event) {
       if (!gyroActive) return;
 
@@ -305,6 +311,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       let compassHeading = null;
       if (typeof event.webkitCompassHeading !== 'undefined' && event.webkitCompassHeading !== null) {
         compassHeading = event.webkitCompassHeading;
+      } else if (event.absolute && event.alpha !== null) {
+        // Sur Android/Pixel avec deviceorientationabsolute, alpha indique directement le nord absolu
+        compassHeading = event.alpha;
       }
 
       let cA = Math.cos(alpha), sA = Math.sin(alpha);
@@ -323,14 +332,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       let calculatedElevation = -Math.asin(Math.max(-1, Math.min(1, vz))) * 180 / Math.PI;
 
       if (!compassInitialized) {
-        gyroOffsetHeading = calculatedAzimuth;
-        gyroOffsetElevation = calculatedElevation;
         rawGyroHeading = calculatedAzimuth;
         compassInitialized = true;
-        setStatus("Capteurs stabilisés (Anti-saut actif).", "align-ok");
+        setStatus("Capteur absolu (Pixel 7a) initialisé sur le Nord.", "align-ok");
       }
 
-      // Calcul de la différence azimutale gérant proprement le passage de 0/360°
       let diffAz = calculatedAzimuth - rawGyroHeading;
       if (diffAz > 180) diffAz -= 360;
       if (diffAz < -180) diffAz += 360;
@@ -338,10 +344,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       rawGyroElevation = calculatedElevation;
 
-      let targetH = (rawGyroHeading - gyroOffsetHeading + 360) % 360;
-      let targetE = Math.max(-5, Math.min(89, rawGyroElevation - gyroOffsetElevation));
+      let targetH = rawGyroHeading;
+      let targetE = Math.max(-5, Math.min(89, rawGyroElevation));
 
-      // Lissage exponentiel sans discontinuité
       let dH = targetH - touchHeading;
       if (dH > 180) dH -= 360;
       if (dH < -180) dH += 360;
@@ -1037,8 +1042,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       touchHeading = 0;
       touchElevation = 0;
       fieldOfView = 34;
-      gyroOffsetHeading = rawGyroHeading;
-      gyroOffsetElevation = rawGyroElevation;
+      rawGyroHeading = 0;
     });
 
     window.addEventListener('resize', resizeCanvas);

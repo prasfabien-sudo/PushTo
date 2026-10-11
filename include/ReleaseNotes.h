@@ -56,6 +56,17 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
       <span class="version-tag">v5.5.1</span>
     </div>
 
+    <!-- v5.24.0 (Vue 3D - Vue 3D avec orientation automatique au nord (sur Pixel )) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.24.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Utilisation de tous les capteurs internes du Pixel pour aligner automatiquement sur le nord magnétique</li>
+      </ul>
+    </div>
+
     <!-- v5.5.1 (Vue 3D - Filtre magnitude & Plein écran auto) -->
     <div class="release-item">
       <div class="release-header">
