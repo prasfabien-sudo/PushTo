@@ -7,18 +7,13 @@ se connecter à : http://127.0.0.1:8000/
 
 Général
 -------
-
+sortir le menu de toutes les pages afin de pouvoir le modifier plus facilement
 Voir si possible d'avoir une base d'objet hébergé localement sur le téléphone pour pouvoir avoir une grosse base ou alors faire appel à un service sur le web?
-J'aimerai ajouter les principales étoiles visibles, notamment celle qui constitue le constellations
-Voir si possible d'avoir une base d'objet hébergé localement sur le téléphone pour pouvoir avoir une grosse base ou alors faire appel à un service sur le web?
-J'aimerai ajouter les principales étoiles visibles, notamment celle qui constitue le constellations
 
 
 VUE 3D
 -------
-J'aimerai comme sur la page principale (webPage) pouvoir afficher les objets en fonction de leur magnitude
 J'aimerai pouvoir afficher les constellations de manière optionnelle (tout en gardant les autres objet affiché)
-lorsque je passe en paysage je voudrais que la vue plein écran s'active tout seule et quand je repasse en mode portrait je voudrais qu'elle se désactive. Je veux garder le bouton plein écran uniquement en mode portrait.
 Lorsque je passe en vue paysage, la vue avec le gyroscope ne fonctionne plus correctement. Je vais a 90 degré sur la droite et la vue semble bloquée.
 Dans la vue 3, Le visuel du raccourci vers le mode nuit n'est pas beau. La lune n'est pas centrée et le bouton à une forme étiré. Le probleme ne se pos pas sur les autres vue. 
 Aficher le pole Nord / Sud
@@ -42,3 +37,4 @@ gérer la couleur du ciel en fonction de l'heure
 
 a tester
 ------------
+

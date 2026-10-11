@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.4.1
+// Version Component: BetaSkyPage.h v5.5.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -15,15 +15,16 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <title>Vue 3D du ciel — Planétarium</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 12px 12px 90px; min-height: 100vh; background: #08090c; color: #d8dce6; font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .sky-card { width: min(100%, 760px); margin: 0 auto; }
+    body { margin: 0; padding: 12px 12px 90px; min-height: 100vh; background: #08090c; color: #d8dce6; font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; transition: all 0.3s; }
+    .sky-card { width: min(100%, 760px); margin: 0 auto; transition: all 0.3s; }
     .sky-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 2px 2px 10px; }
     h1 { margin: 0; font-size: 1.15rem; color: #f1f3f8; }
     .beta { padding: 3px 7px; border: 1px solid #74531e; border-radius: 999px; color: #ffc66d; font-size: .7rem; letter-spacing: .08em; }
     .sky-status { min-height: 20px; margin: 0 2px 8px; color: #aab3c2; font-size: .82rem; }
     .sky-status.error { color: #ff7777; }
     .sky-status.align-ok { color: #69ff84; }
-    .scene { position: relative; height: min(60vh, 500px); min-height: 300px; overflow: hidden; border: 1px solid #273142; border-radius: 14px; background: radial-gradient(ellipse at 50% 100%, #1b2638 0, #0d1420 47%, #05070b 100%); touch-action: none; }
+    
+    .scene { position: relative; height: min(60vh, 500px); min-height: 300px; overflow: hidden; border: 1px solid #273142; border-radius: 14px; background: radial-gradient(ellipse at 50% 100%, #1b2638 0, #0d1420 47%, #05070b 100%); touch-action: none; transition: height 0.3s; }
     canvas { display: block; width: 100%; height: 100%; cursor: grab; }
     canvas:active { cursor: grabbing; }
     .scene-label { position: absolute; color: #acb8c8; font-size: .72rem; text-shadow: 0 1px 4px #000; pointer-events: none; }
@@ -38,13 +39,29 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .object-label.polaris { color: #ffb74d; background: rgba(30,35,45,0.9); border: 1px solid rgba(255,183,77,0.5); font-weight: bold; z-index: 3; }
     .constellation-label { position: absolute; z-index: 1; color: #7cb9e8; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.85; }
 
-    .controls { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
-    .time-control-box { grid-column: span 3; display: flex; gap: 6px; align-items: center; background: #151b25; padding: 6px 10px; border: 1px solid #344256; border-radius: 9px; }
+    .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+    .time-control-box { grid-column: span 4; display: flex; gap: 6px; align-items: center; background: #151b25; padding: 6px 10px; border: 1px solid #344256; border-radius: 9px; }
     button, select, input { min-height: 44px; border: 1px solid #344256; border-radius: 9px; background: #151b25; color: #e6eaf2; font: inherit; }
     button { padding: 8px 10px; cursor: pointer; }
     button:active { background: #253247; }
     select, input[type="datetime-local"] { width: 100%; padding: 8px 10px; background: #10151d; }
     .scene-help { margin: 9px 2px; color: #929cac; font-size: .78rem; line-height: 1.45; }
+
+    /* Mode Paysage / Plein écran automatique */
+    body.landscape-fullscreen { padding: 0 !important; background: #000; overflow: hidden; }
+    body.landscape-fullscreen .sky-heading,
+    body.landscape-fullscreen .sky-status,
+    body.landscape-fullscreen .controls,
+    body.landscape-fullscreen .scene-help,
+    body.landscape-fullscreen .bottom-nav { display: none !important; }
+    body.landscape-fullscreen .sky-card { width: 100% !important; max-width: none !important; margin: 0; }
+    body.landscape-fullscreen .scene { height: 100vh !important; border: none; border-radius: 0; }
+
+    /* Bouton plein écran manuel (Visible uniquement en Portrait) */
+    #manualFullscreenBtn { display: inline-block; background: #263238; color: #ffb74d; border: 1px solid #455a64; font-weight: bold; }
+    @media (orientation: landscape) {
+      #manualFullscreenBtn { display: none !important; }
+    }
 
     /* Modale d'information objet */
     .object-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -76,7 +93,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-globe-2"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.4</span>
+      <span class="beta">PLANÉTARIUM v5.5</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     <div class="scene" id="scene">
@@ -99,16 +116,24 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         <button type="button" id="resetTimeBtn" style="min-height: 36px; padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;">Direct</button>
       </div>
       <select id="typeFilter" aria-label="Filtrer les objets">
-        <option value="all">Tous les objets</option>
+        <option value="all">Tous les types</option>
         <option value="galaxie">Galaxies</option>
         <option value="nebuleuse">Nébuleuses</option>
         <option value="amas">Amas d'étoiles</option>
         <option value="etoile">Étoiles</option>
       </select>
+      <select id="magFilterSelect" aria-label="Mag. Max">
+        <option value="99">Mag. Max : Toutes</option>
+        <option value="6">Mag. ≤ 6 (Œil nu)</option>
+        <option value="8">Mag. ≤ 8 (Jumelles)</option>
+        <option value="10">Mag. ≤ 10 (Petit télescope)</option>
+        <option value="12">Mag. ≤ 12 (Grand télescope)</option>
+      </select>
       <button id="toggleNamesBtn" type="button">Noms : ON</button>
       <button id="centerButton" type="button">Recentrer</button>
+      <button id="manualFullscreenBtn" type="button">Plein écran</button>
     </div>
-    <p class="scene-help">Modifiez l'heure pour simuler le mouvement des astres. Grille azimutale et repérage de Polaris actifs.</p>
+    <p class="scene-help">Passez en mode paysage pour activer le plein écran automatique. Filtrez par type et magnitude.</p>
   </main>
 
   <!-- Modale d'information objet -->
@@ -141,7 +166,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <nav class="bottom-nav" aria-label="Navigation principale">
     <a class="nav-item" href="/beta_sky" aria-current="page" title="Vue 3D du ciel"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-globe-2"></use></svg></span></a>
     <a class="nav-item" href="/" title="Mode Encodeurs"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-telescope"></use></svg></span></a>
-    <a class="nav-item" href="/station" title="Mise en station"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg></span></a>
+    <a class="nav-item" href="/station" title="Mise en station"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-crosshair"></use></svg></span></a>
     <a class="nav-item" href="/calib_page" title="Calibration"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-ruler"></use></svg></span></a>
     <a class="nav-item" href="/config" title="Configuration"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-settings"></use></svg></span></a>
     <a class="nav-item" href="/help" title="Aide SkySafari"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-book-open"></use></svg></span></a>
@@ -156,6 +181,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const gl = canvas.getContext('webgl', { antialias: true, alpha: true });
     const statusElement = document.getElementById('skyStatus');
     const filterElement = document.getElementById('typeFilter');
+    const magFilterElement = document.getElementById('magFilterSelect');
     const labelsElement = document.getElementById('objectLabels');
     const constLabelsElement = document.getElementById('constellationLabels');
     const viewReadout = document.getElementById('viewReadout');
@@ -177,6 +203,31 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let showNames = true;
     let lastScreenObjects = [];
     let useSystemTime = true;
+
+    // Gestion de l'orientation et plein écran automatique
+    function checkOrientation() {
+      if (window.innerHeight < window.innerWidth) {
+        document.body.classList.add('landscape-fullscreen');
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } else {
+        document.body.classList.remove('landscape-fullscreen');
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    }
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+
+    document.getElementById('manualFullscreenBtn').addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
 
     // Initialisation du champ datetime-local avec l'heure courante locale
     function initDateTimeInput() {
@@ -205,73 +256,40 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     }
 
     const CONSTELLATION_LINES = [
-      // 1. Aigle (Aquila)
       ["Tarazed", "Altair"], ["Altair", "Alshain"], ["Altair", "Deneb el Okab"],
-      // 2. Andromède (Andromeda)
       ["Alpheratz", "Mirach"], ["Mirach", "Almach"], ["Alpheratz", "Adhil"],
-      // 3. Balance (Libra)
       ["Zubenelgenubi", "Zubeneschamali"],
-      // 4. Bélier (Aries)
       ["Hamal", "Sheratan"], ["Sheratan", "Mesarthim"],
-      // 5. Bouvier (Boötes)
       ["Arcturus", "Nekkar"], ["Nekkar", "Seginus"], ["Seginus", "Alkalurops"], ["Arcturus", "Muphrid"], ["Arcturus", "Hozian"],
-      // 6. Cancer (Cancer)
       ["Tarf", "Acubens"],
-      // 7. Capricorne (Capricornus)
       ["Sadalmelik", "Sadalsuud"],
-      // 8. Cassiopée (Cassiopeia)
       ["Caph", "Shedar"], ["Shedar", "Navi"], ["Navi", "Ruchbah"], ["Ruchbah", "Segin"],
-      // 9. Céphée (Cepheus)
       ["Alderamin", "Alrai"], ["Alrai", "Errai"], ["Alderamin", "Kurhah"],
-      // 10. Chevelure de Bérénice & 11. Chiens de chasse
       ["Cor Caroli", "Chara"], ["Diadem", "Cor Caroli"],
-      // 12. Cocher (Auriga)
       ["Capella", "Menkalinan"], ["Menkalinan", "Mahasim"], ["Capella", "Hassaleh"],
-      // 13. Couronne boréale (Corona Borealis)
       ["Alphecca", "Nusakan"],
-      // 14. Cygne (Cygnus)
       ["Deneb", "Sadr"], ["Sadr", "Albireo"], ["Fawaris", "Sadr"], ["Sadr", "Gienah"],
-      // 15. Dauphin (Delphinus)
       ["Rotanev", "Sualocin"],
-      // 16. Dragon (Draco)
       ["Eltanin", "Rastaban"], ["Rastaban", "Thuban"],
-      // 18. Flèche (Sagitta)
       ["Sham", "Deneb"],
-      // 19. Gémeaux (Gemini)
       ["Castor", "Pollux"], ["Pollux", "Alhena"], ["Castor", "Tejat"], ["Mebsuta", "Pollux"],
-      // 20. Girafe (Camelopardalis)
       ["Beta Camelopardalis", "Alpha Lyncis"],
-      // 21. Grande Ourse (Ursa Major)
       ["Dubhe", "Merak"], ["Merak", "Phecda"], ["Phecda", "Megrez"], 
       ["Megrez", "Dubhe"], ["Megrez", "Alioth"], ["Alioth", "Mizar"], ["Mizar", "Alkaid"],
-      // 22. Hercule (Hercules)
       ["Kornephoros", "Rasalgethi"], ["Kornephoros", "Sujata"], ["Sujata", "Marfik"],
-      // 24. Lion (Leo) & 25. Petit Lion
       ["Regulus", "Algieba"], ["Algieba", "Zosma"], ["Zosma", "Denebola"], ["Regulus", "Adhafera"], ["Ras Elased Australis", "Regulus"], ["Praecipua", "Algieba"],
-      // 26. Lyre (Lyra)
       ["Vega", "Sheliak"], ["Sheliak", "Sulafat"], ["Sulafat", "γ Lyr"], ["γ Lyr", "Vega"],
-      // 27. Lynx
       ["Alpha Lyncis", "Beta Camelopardalis"],
-      // 28. Ophiuchus
       ["Rasalhague", "Unukalhai"],
-      // 29. Pégase (Pegasus)
       ["Markab", "Scheat"], ["Scheat", "Alpheratz"], ["Alpheratz", "Algenib"], ["Algenib", "Markab"], ["Markab", "Enif"],
-      // 30. Persée (Perseus)
       ["Mirfak", "Algol"], ["Algol", "Menkib"], ["Mirfak", "Atik"],
-      // 31. Petit Cheval (Equuleus)
       ["Kitalpha", "Alpha Equ"],
-      // 32. Petite Ourse (Ursa Minor)
       ["Polaris", "Yildun"], ["Yildun", "Zeta UMi"], ["Zeta UMi", "Epsilon UMi"],
       ["Epsilon UMi", "Pherkad"], ["Pherkad", "Kochab"], ["Kochab", "Polaris"],
-      // 33. Poissons (Pisces)
       ["Alpherg", "Gamma Piscium"],
-      // 37. Taureau (Taurus)
       ["Aldebaran", "Elnath"], ["Aldebaran", "Alcyone"], ["Aldebaran", "Tianguis"],
-      // 38. Triangle (Triangulum)
       ["Beta Trianguli", "Mothallah"],
-      // 39. Vierge (Virgo)
       ["Vindemiatrix", "Porrima"],
-      // 40. Petit Chien & 41. Grand Chien
       ["Procyon", "Gomeisa"], ["Sirius", "Mirzam"], ["Sirius", "Adhara"], ["Mirzam", "Adhara"]
     ];
 
@@ -378,7 +396,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     function setNightMode(enabled, persist = false) {
       document.documentElement.dataset.nightMode = String(enabled);
       const button = document.getElementById('nightModeToggle');
-      const label = enabled ? 'Désactiver le mode nuit' : 'Activer le mode nuit';
+      const label = enabled ? 'Désactiver mode nuit' : 'Activer mode nuit';
       button.setAttribute('aria-label', label);
       button.setAttribute('aria-pressed', String(enabled));
       button.title = label;
@@ -472,6 +490,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     function matchesFilter(object) {
       const type = (object.type || '').toLowerCase();
       const filter = filterElement.value;
+      const maxMag = parseFloat(magFilterElement.value);
+
+      if (object.mag > maxMag) return false;
+
       if (filter === 'all') return true;
       if (filter === 'galaxie') return type.includes('gal');
       if (filter === 'nebuleuse') return type.includes('neb');
@@ -835,6 +857,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     });
 
     window.addEventListener('resize', resizeCanvas);
+    checkOrientation();
     initialize();
   </script>
 </body>
