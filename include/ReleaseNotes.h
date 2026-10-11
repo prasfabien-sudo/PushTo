@@ -59,7 +59,18 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
       <span class="version-tag">v5.3.0</span>
     </div>
 
-   <!-- v5.4.0 (Vue 3D - Simulation Temporelle) -->
+    <!-- v5.5.0 (Catalogue & Constellations) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.5.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Intégration complète du réseau de lignes et de centres pour les 44 constellations majeures de l'hémisphère Nord et de la zone zodiacale (dont la Balance avec l'ajout de Zubenelgenubi et Zubeneschamali).</li>
+      </ul>
+    </div>
+
+    <!-- v5.4.0 (Vue 3D - Simulation Temporelle) -->
     <div class="release-item">
       <div class="release-header">
         <span class="release-version">Vue 3D v5.4.0</span>

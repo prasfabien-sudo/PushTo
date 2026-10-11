@@ -214,24 +214,114 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     }
 
     const CONSTELLATION_LINES = [
+      // 1. Aigle (Aquila)
+      ["Tarazed", "Altair"], ["Altair", "Alshain"], ["Altair", "Deneb el Okab"],
+      // 2. Andromède (Andromeda)
+      ["Alpheratz", "Mirach"], ["Mirach", "Almach"], ["Alpheratz", "Adhil"],
+      // 3. Balance (Libra)
+      ["Zubenelgenubi", "Zubeneschamali"],
+      // 4. Bélier (Aries)
+      ["Hamal", "Sheratan"], ["Sheratan", "Mesarthim"],
+      // 5. Bouvier (Boötes)
+      ["Arcturus", "Nekkar"], ["Nekkar", "Seginus"], ["Seginus", "Alkalurops"], ["Arcturus", "Muphrid"], ["Arcturus", "Hozian"],
+      // 6. Cancer (Cancer)
+      ["Tarf", "Acubens"],
+      // 7. Capricorne (Capricornus)
+      ["Sadalmelik", "Sadalsuud"],
+      // 8. Cassiopée (Cassiopeia)
+      ["Caph", "Shedar"], ["Shedar", "Navi"], ["Navi", "Ruchbah"], ["Ruchbah", "Segin"],
+      // 9. Céphée (Cepheus)
+      ["Alderamin", "Alrai"], ["Alrai", "Errai"], ["Alderamin", "Kurhah"],
+      // 10. Chevelure de Bérénice & 11. Chiens de chasse
+      ["Cor Caroli", "Chara"], ["Diadem", "Cor Caroli"],
+      // 12. Cocher (Auriga)
+      ["Capella", "Menkalinan"], ["Menkalinan", "Mahasim"], ["Capella", "Hassaleh"],
+      // 13. Couronne boréale (Corona Borealis)
+      ["Alphecca", "Nusakan"],
+      // 14. Cygne (Cygnus)
+      ["Deneb", "Sadr"], ["Sadr", "Albireo"], ["Fawaris", "Sadr"], ["Sadr", "Gienah"],
+      // 15. Dauphin (Delphinus)
+      ["Rotanev", "Sualocin"],
+      // 16. Dragon (Draco)
+      ["Eltanin", "Rastaban"], ["Rastaban", "Thuban"],
+      // 18. Flèche (Sagitta)
+      ["Sham", "Deneb"],
+      // 19. Gémeaux (Gemini)
+      ["Castor", "Pollux"], ["Pollux", "Alhena"], ["Castor", "Tejat"], ["Mebsuta", "Pollux"],
+      // 20. Girafe (Camelopardalis)
+      ["Beta Camelopardalis", "Alpha Lyncis"],
+      // 21. Grande Ourse (Ursa Major)
       ["Dubhe", "Merak"], ["Merak", "Phecda"], ["Phecda", "Megrez"], 
       ["Megrez", "Dubhe"], ["Megrez", "Alioth"], ["Alioth", "Mizar"], ["Mizar", "Alkaid"],
-      ["Polaris", "Yildun"], ["Yildun", "Zeta UMi"], ["Zeta UMi", "Epsilon UMi"],
-      ["Epsilon UMi", "Pherkad"], ["Pherkad", "Kochab"],
-      ["Caph", "Shedar"], ["Shedar", "Navi"], ["Navi", "Ruchbah"], ["Ruchbah", "Segin"],
-      ["Deneb", "Sadr"], ["Sadr", "Albireo"], ["Fawaris", "Sadr"], ["Sadr", "Gienah"],
+      // 22. Hercule (Hercules)
+      ["Kornephoros", "Rasalgethi"], ["Kornephoros", "Sujata"], ["Sujata", "Marfik"],
+      // 24. Lion (Leo) & 25. Petit Lion
+      ["Regulus", "Algieba"], ["Algieba", "Zosma"], ["Zosma", "Denebola"], ["Regulus", "Adhafera"], ["Ras Elased Australis", "Regulus"], ["Praecipua", "Algieba"],
+      // 26. Lyre (Lyra)
       ["Vega", "Sheliak"], ["Sheliak", "Sulafat"], ["Sulafat", "γ Lyr"], ["γ Lyr", "Vega"],
-      ["Rigel", "Betelgeuse"], ["Betelgeuse", "Bellatrix"], ["Bellatrix", "Rigel"],
-      ["Alnitak", "Alnilam"], ["Alnilam", "Mintaka"], ["Saiph", "Rigel"], ["Betelgeuse", "Meissa"]
+      // 27. Lynx
+      ["Alpha Lyncis", "Beta Camelopardalis"],
+      // 28. Ophiuchus
+      ["Rasalhague", "Unukalhai"],
+      // 29. Pégase (Pegasus)
+      ["Markab", "Scheat"], ["Scheat", "Alpheratz"], ["Alpheratz", "Algenib"], ["Algenib", "Markab"], ["Markab", "Enif"],
+      // 30. Persée (Perseus)
+      ["Mirfak", "Algol"], ["Algol", "Menkib"], ["Mirfak", "Atik"],
+      // 31. Petit Cheval (Equuleus)
+      ["Kitalpha", "Alpha Equ"],
+      // 32. Petite Ourse (Ursa Minor)
+      ["Polaris", "Yildun"], ["Yildun", "Zeta UMi"], ["Zeta UMi", "Epsilon UMi"],
+      ["Epsilon UMi", "Pherkad"], ["Pherkad", "Kochab"], ["Kochab", "Polaris"],
+      // 33. Poissons (Pisces)
+      ["Alpherg", "Gamma Piscium"],
+      // 37. Taureau (Taurus)
+      ["Aldebaran", "Elnath"], ["Aldebaran", "Alcyone"], ["Aldebaran", "Tianguis"],
+      // 38. Triangle (Triangulum)
+      ["Beta Trianguli", "Mothallah"],
+      // 39. Vierge (Virgo)
+      ["Vindemiatrix", "Porrima"],
+      // 40. Petit Chien & 41. Grand Chien
+      ["Procyon", "Gomeisa"], ["Sirius", "Mirzam"], ["Sirius", "Adhara"], ["Mirzam", "Adhara"]
     ];
 
     const CONSTELLATION_CENTERS = [
-      { name: "Grande Ourse", refStar: "Alioth" },
-      { name: "Petite Ourse", refStar: "Polaris" },
+      { name: "Aigle", refStar: "Altair" },
+      { name: "Andromède", refStar: "Mirach" },
+      { name: "Balance", refStar: "Zubenelgenubi" },
+      { name: "Bélier", refStar: "Hamal" },
+      { name: "Bouvier", refStar: "Arcturus" },
+      { name: "Cancer", refStar: "Acubens" },
+      { name: "Capricorne", refStar: "Sadalmelik" },
       { name: "Cassiopée", refStar: "Navi" },
+      { name: "Céphée", refStar: "Alderamin" },
+      { name: "Chevelure de Bérénice", refStar: "Diadem" },
+      { name: "Chiens de chasse", refStar: "Cor Caroli" },
+      { name: "Cocher", refStar: "Capella" },
+      { name: "Couronne boréale", refStar: "Alphecca" },
       { name: "Cygne", refStar: "Sadr" },
+      { name: "Dauphin", refStar: "Rotanev" },
+      { name: "Dragon", refStar: "Eltanin" },
+      { name: "Flèche", refStar: "Sham" },
+      { name: "Gémeaux", refStar: "Pollux" },
+      { name: "Girafe", refStar: "Beta Camelopardalis" },
+      { name: "Grande Ourse", refStar: "Alioth" },
+      { name: "Hercule", refStar: "Kornephoros" },
+      { name: "Lézard", refStar: "Alpha Lacertae" },
+      { name: "Lion", refStar: "Regulus" },
+      { name: "Petit Lion", refStar: "Praecipua" },
       { name: "Lyre", refStar: "Vega" },
-      { name: "Orion", refStar: "Alnilam" }
+      { name: "Lynx", refStar: "Alpha Lyncis" },
+      { name: "Ophiuchus", refStar: "Rasalhague" },
+      { name: "Pégase", refStar: "Markab" },
+      { name: "Persée", refStar: "Mirfak" },
+      { name: "Petit Cheval", refStar: "Kitalpha" },
+      { name: "Petite Ourse", refStar: "Polaris" },
+      { name: "Poissons", refStar: "Alpherg" },
+      { name: "Taureau", refStar: "Aldebaran" },
+      { name: "Triangle", refStar: "Mothallah" },
+      { name: "Vierge", refStar: "Vindemiatrix" },
+      { name: "Petit Chien", refStar: "Procyon" },
+      { name: "Grand Chien", refStar: "Sirius" }
     ];
 
     function setStatus(message, type = '') {

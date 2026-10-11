@@ -215,6 +215,15 @@ const DSO DSO_CATALOG[] PROGMEM = {
   // Petit Renard (Vulpecula)
   {"Anser", "α Vul", "Étoile M", 19.48, 24.40, 4.44},
 
+  // Grand Chien (Canis Major)
+  {"Sirius", "α CMa", "Étoile A", 6.75, -16.72, -1.46},
+  {"Mirzam", "β CMa", "Étoile B", 6.38, -17.96, 1.98},
+  {"Adhara", "ε CMa", "Étoile B", 6.98, -28.97, 1.50},
+
+  // Balance (Libra)
+  {"Zubenelgenubi", "α Lib", "Étoile A", 14.85, -16.04, 2.75},
+  {"Zubeneschamali", "β Lib", "Étoile B", 15.28, -9.38, 2.61},
+
  // ==========================================
   // CATALOGUE MESSIER INTÉGRAL (M1 à M110)
   // ==========================================
