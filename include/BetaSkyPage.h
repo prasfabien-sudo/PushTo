@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.2.0
+// Version Component: BetaSkyPage.h v5.3.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -12,7 +12,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#08090c">
-  <title>Vue 3D du ciel — Bêta</title>
+  <title>Vue 3D du ciel — Planétarium</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; padding: 12px 12px 90px; min-height: 100vh; background: #08090c; color: #d8dce6; font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -27,7 +27,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     canvas { display: block; width: 100%; height: 100%; cursor: grab; }
     canvas:active { cursor: grabbing; }
     .scene-label { position: absolute; color: #acb8c8; font-size: .72rem; text-shadow: 0 1px 4px #000; pointer-events: none; }
-    .scene-label.north { top: 10px; left: 50%; transform: translateX(-50%); }
+    .scene-label.cardinal { font-weight: bold; color: #ffb74d; background: rgba(5,8,12,0.6); padding: 2px 6px; border-radius: 4px; }
     .scene-label.telescope { top: 10px; left: 10px; }
     .scene-label.telescope.error { color: #ff7777; }
     .scene-label.view { left: 10px; bottom: 10px; }
@@ -79,15 +79,18 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-globe-2"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">BÊTA</span>
+      <span class="beta">PLANÉTARIUM</span>
     </header>
-    <p id="skyStatus" class="sky-status" role="status">Initialisation du rendu 3D...</p>
+    <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     <div class="scene" id="scene">
       <canvas id="skyCanvas" aria-label="Carte 3D interactive du ciel"></canvas>
-      <span class="scene-label north">N</span>
+      <span class="scene-label cardinal" id="labelN" style="display:none">N</span>
+      <span class="scene-label cardinal" id="labelS" style="display:none">S</span>
+      <span class="scene-label cardinal" id="labelE" style="display:none">E</span>
+      <span class="scene-label cardinal" id="labelW" style="display:none">O</span>
       <span class="scene-label telescope" id="telescopeReadout">Télescope : connexion...</span>
       <span class="scene-label view" id="viewReadout">Vue AZ 0° · ALT 0°</span>
-      <span class="scene-label horizon">Horizon</span>
+      <span class="scene-label horizon">Grille AltAz & Pôles</span>
       <span class="scene-center" aria-hidden="true"></span>
       <div id="objectLabels" aria-hidden="true"></div>
       <div id="constellationLabels" aria-hidden="true"></div>
@@ -103,7 +106,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <button id="toggleNamesBtn" type="button">Noms : ON</button>
       <button id="centerButton" type="button">Recentrer</button>
     </div>
-    <p class="scene-help">Glissez pour tourner, pincez pour zoomer. Polaris est marquée en permanence.</p>
+    <p class="scene-help">Grille azimutale de type planétarium, repérage du pôle céleste et étoiles par type spectral.</p>
   </main>
 
   <!-- Modale d'information objet -->
@@ -192,7 +195,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       { name: "Grande Ourse", refStar: "Alioth" },
       { name: "Petite Ourse", refStar: "Polaris" },
       { name: "Cassiopée", refStar: "Navi" },
-      { name: "Cygne", refScan: "Sadr", refStar: "Sadr" },
+      { name: "Cygne", refStar: "Sadr" },
       { name: "Lyre", refStar: "Vega" },
       { name: "Orion", refStar: "Alnilam" }
     ];
@@ -240,13 +243,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       
       telescopeReadout.textContent = `Télescope AZ ${azimuth.toFixed(1)}° · ALT ${elevation.toFixed(1)}°`;
       telescopeReadout.classList.remove('error');
-
-      const diffAz = Math.abs(heading - ((heading + touchHeading + 360) % 360));
-      if (diffAz < 1.5 && Math.abs(elevation - (elevation + touchElevation)) < 1.5) {
-        setStatus("Alignement AR OK : La vue correspond exactement au pointage télescope.", "align-ok");
-      } else {
-        setStatus("Mode AR actif : Ajustez le cadrage ou utilisez Recentrer pour synchroniser.", "");
-      }
     }
 
     async function pollEncoderStatus() {
@@ -330,7 +326,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         varying vec3 vColor;
         void main() {
           if (uGrid > 0.5) {
-            gl_FragColor = vec4(vColor, 0.85);
+            gl_FragColor = vec4(vColor, 0.75);
             return;
           }
           vec2 point = gl_PointCoord - vec2(0.5);
@@ -345,24 +341,22 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return program;
     }
 
-    // Gestion avancée des couleurs spectrales et types d'objets
     function objectColor(object) {
       const type = (object.type || '').toUpperCase();
       const name = (object.name || '').toUpperCase();
 
-      if (name === 'POLARIS') return [1.0, 0.95, 0.75]; // Éclat particulier pour la Polaire
+      if (name === 'POLARIS') return [1.0, 0.95, 0.75];
       if (type.includes('PLAN')) return [0.43, 0.78, 1.0];
       if (type.includes('GAL')) return [0.84, 0.67, 1.0];
       if (type.includes('NEB')) return [1.0, 0.57, 0.48];
       if (type.includes('AMAS') || type.includes('GLOB')) return [1.0, 0.82, 0.42];
 
-      // Classification spectrale des étoiles (O, B, A, F, G, K, M)
-      if (type.includes('O') || type.includes('B')) return [0.60, 0.78, 1.0]; // Bleu / Blanc chaud
-      if (type.includes('A')) return [0.90, 0.94, 1.0]; // Blanc pur
-      if (type.includes('F')) return [1.0, 1.0, 0.85]; // Jaune-blanc
-      if (type.includes('G')) return [1.0, 0.95, 0.60]; // Jaune (solaire)
-      if (type.includes('K')) return [1.0, 0.75, 0.40]; // Orange
-      if (type.includes('M')) return [1.0, 0.50, 0.30]; // Orange-rouge / Rouge froid
+      if (type.includes('O') || type.includes('B')) return [0.60, 0.78, 1.0];
+      if (type.includes('A')) return [0.90, 0.94, 1.0];
+      if (type.includes('F')) return [1.0, 1.0, 0.85];
+      if (type.includes('G')) return [1.0, 0.95, 0.60];
+      if (type.includes('K')) return [1.0, 0.75, 0.40];
+      if (type.includes('M')) return [1.0, 0.50, 0.30];
 
       return [0.91, 0.94, 1.0];
     }
@@ -389,6 +383,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const cosAltitude = Math.cos(altitude);
       return {
         altitude: altitude * 180 / Math.PI,
+        azimuth: (azimuth * 180 / Math.PI + 360) % 360,
         position: [Math.sin(azimuth) * cosAltitude, Math.sin(altitude), Math.cos(azimuth) * cosAltitude],
       };
     }
@@ -401,6 +396,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return ((greenwich + longitude) % 360 + 360) % 360;
     }
 
+    // Génération d'une grille altazimutale riche (cercles d'altitude et méridiens) type planétarium
     function makeGrid() {
       const vertices = [];
       const add = (azimuth, altitude) => {
@@ -408,12 +404,19 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const alt = altitude * Math.PI / 180;
         vertices.push(Math.sin(az) * Math.cos(alt), Math.sin(alt), Math.cos(az) * Math.cos(alt));
       };
-      for (let az = 0; az < 360; az += 2) { add(az, 0); add(az + 2, 0); }
-      for (const altitude of [30, 60]) {
-        for (let az = 0; az < 360; az += 2) { add(az, altitude); add(az + 2, altitude); }
+
+      // Cercles d'altitude (parallèles) de 0° à 80° tous les 20°
+      for (let alt = 0; alt <= 80; alt += 20) {
+        for (let az = 0; az < 360; az += 2) {
+          add(az, alt); add(az + 2, alt);
+        }
       }
-      for (let azimuth = 0; azimuth < 360; azimuth += 45) {
-        for (let altitude = 0; altitude < 88; altitude += 2) { add(azimuth, altitude); add(azimuth, altitude + 2); }
+
+      // Méridiens azimutaux tous les 30° convergents vers le zénith
+      for (let az = 0; az < 360; az += 30) {
+        for (let alt = 0; alt < 90; alt += 2) {
+          add(az, alt); add(az, alt + 2);
+        }
       }
       return new Float32Array(vertices);
     }
@@ -456,6 +459,31 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         objectMap.set(object.name, horizontal.position);
       }
 
+      // Affichage dynamique des points cardinaux (N, S, E, O) à l'horizon
+      const cardinalPoints = [
+        { id: 'labelN', az: 0 }, { id: 'labelE', az: 90 },
+        { id: 'labelS', az: 180 }, { id: 'labelW', az: 270 }
+      ];
+      cardinalPoints.forEach(cp => {
+        const azRad = cp.az * Math.PI / 180;
+        const pos = [Math.sin(azRad), 0, Math.cos(azRad)];
+        const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
+        const elEl = document.getElementById(cp.id);
+        if (depth > 0.05) {
+          const sx = (pos[0] * right[0] + pos[1] * right[1] + pos[2] * right[2]) / (depth * tanHalfFov * aspect);
+          const sy = (pos[0] * up[0] + pos[1] * up[1] + pos[2] * up[2]) / (depth * tanHalfFov);
+          if (Math.abs(sx) <= 1.1 && Math.abs(sy) <= 1.1) {
+            elEl.style.left = `${(sx + 1) * 50}%`;
+            elEl.style.top = `${(1 - sy) * 50}%`;
+            elEl.style.display = 'block';
+          } else {
+            elEl.style.display = 'none';
+          }
+        } else {
+          elEl.style.display = 'none';
+        }
+      });
+
       const lineVertices = [];
       for (const [starA, starB] of CONSTELLATION_LINES) {
         const posA = objectMap.get(starA);
@@ -481,9 +509,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         positions.push(...horizontal.position);
         colors.push(...objectColor(object));
         
-        // Calcul dynamique de la taille selon la magnitude (avec mise en valeur de Polaris)
-        let starSize = Math.max(4, Math.min(15, (6.5 - object.mag) * 2.0 + 3));
-        if (object.name === "Polaris") starSize = 18;
+        let starSize = Math.max(4, Math.min(16, (6.5 - object.mag) * 2.0 + 3));
+        if (object.name === "Polaris") starSize = 20; // Polaris mise en valeur
         sizes.push(starSize);
 
         lastScreenObjects.push({ object, screenX, screenY });
@@ -498,14 +525,14 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       gl.uniform1f(tanHalfFovLocation, tanHalfFov);
       gl.uniform1f(aspectLocation, aspect);
 
-      // Grille
+      // Grille azimutale de planétarium
       gl.uniform1f(gridLocation, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, gridBuffer);
       gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
       gl.enableVertexAttribArray(positionLocation);
       gl.disableVertexAttribArray(colorLocation);
       gl.disableVertexAttribArray(sizeLocation);
-      gl.vertexAttrib3f(colorLocation, 0.23, 0.31, 0.42);
+      gl.vertexAttrib3f(colorLocation, 0.32, 0.45, 0.62); // Teinte élégante type Stellarium
       gl.vertexAttrib1f(sizeLocation, 1);
       gl.drawArrays(gl.LINES, 0, gridVertices.length / 3);
 
@@ -537,26 +564,19 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       viewReadout.textContent = `Vue AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
 
-      // Noms des objets et marquage spécial permanent de Polaris
+      // Noms des objets et indicateur permanent Polaris
       const labels = document.createDocumentFragment();
       for (const item of lastScreenObjects) {
         const isPolaris = (item.object.name === "Polaris");
-        // Polaris s'affiche TOUJOURS, les autres dépendent de showNames et de la magnitude
         if (!isPolaris && (!showNames || item.object.mag > 7.5)) continue;
-        if (isPolaris && !showNames) {
-          // Si les noms sont masqués, on affiche quand même Polaris de manière spécifique
-        } else if (!isPolaris && !showNames) {
-          continue;
-        }
-
-        // Limiter le nombre de labels affichés simultanément pour garder de la fluidité
+        if (!isPolaris && !showNames) continue;
         if (!isPolaris && lastScreenObjects.filter(e => e.object.mag <= 7.5).indexOf(item) > 16) continue;
 
         const label = document.createElement('span');
         label.className = isPolaris ? 'object-label polaris' : 'object-label';
         label.style.left = `${(item.screenX + 1) * 50}%`;
         label.style.top = `${(1 - item.screenY) * 50}%`;
-        label.textContent = isPolaris ? `★ ${item.object.commonName || item.object.name} (Polaire)` : (item.object.commonName || item.object.name);
+        label.textContent = isPolaris ? `★ Polaris (Pôle Nord)` : (item.object.commonName || item.object.name);
         labels.appendChild(label);
       }
       labelsElement.replaceChildren(labels);
@@ -622,7 +642,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         latitude = Number(status.lat ?? latitude);
         longitude = Number(status.lon ?? longitude);
         
-        setStatus(`${objects.length} objets chargés. Prêt.`, "align-ok");
+        setStatus(`${objects.length} objets chargés. Planétarium prêt.`, "align-ok");
         window.setInterval(pollEncoderStatus, 250);
         render();
       } catch (error) {

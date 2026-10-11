@@ -1,4 +1,4 @@
-// Version Component: ReleaseNotes.h v1.2.11
+// Version Component: ReleaseNotes.h v1.2.12
 // Version Global System: v1.2.7
 #ifndef RELEASENOTES_H
 #define RELEASENOTES_H
@@ -56,7 +56,20 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
   <div class="card">
     <div class="header-row">
       <h1><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-clipboard-list'></use></svg> Release Notes</h1>
-      <span class="version-tag">v5.2.0</span>
+      <span class="version-tag">v5.3.0</span>
+    </div>
+
+    <!-- v5.3.0 (Vue 3D - Grille planétarium & Pôles) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.3.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Intégration d'une grille altazimutale complète et élégante (cercles d'altitude concentriques et méridiens convergents) inspirée des planétariums.</li>
+        <li><span class="badge badge-feat">Feat</span> Affichage dynamique des points cardinaux (N, S, E, O) directement sur l'horizon de la scène 3D.</li>
+        <li><span class="badge badge-feat">Feat</span> Variation spectrale des étoiles selon leur type et mise en valeur permanente de Polaris.</li>
+      </ul>
     </div>
 
     <!-- v5.2.0 (Vue 3D - Spectres & Polaris) -->
@@ -82,30 +95,6 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
         <li><span class="badge badge-feat">Feat</span> Assistant d'alignement AR en temps réel intégré au statut pour synchroniser la vue et les encodeurs[cite: 5].</li>
         <li><span class="badge badge-feat">Feat</span> Modale d'informations détaillées au clic (taille apparente, distance, type, magnitude, coordonnées AD/Dec)[cite: 5].</li>
         <li><span class="badge badge-feat">Feat</span> Renforcement des lignes de constellations et affichage dynamique de leurs noms au centre des figures[cite: 5].</li>
-        <li><span class="badge badge-feat">Feat</span> Bouton de bascule pour afficher ou masquer les noms (ON/OFF)[cite: 5].</li>
-        <li><span class="badge badge-fix">Fix</span> Suppression du pavé de liste sous la carte pour maximiser l'espace d'affichage de la sphère 3D[cite: 5].</li>
-      </ul>
-    </div>
-
-    <!-- v1.2.7 -->
-    <div class="release-item">
-      <div class="release-header">
-        <span class="release-version">v1.2.7</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-fix">Fix</span> La vue 3D suit désormais en temps réel les angles AZ/ALT calculés depuis les encodeurs ; le recentrage revient au pointage du télescope[cite: 2, 5].</li>
-      </ul>
-    </div>
-
-    <!-- v1.2.6 -->
-    <div class="release-item">
-      <div class="release-header">
-        <span class="release-version">v1.2.6</span>
-        <span class="release-date">Octobre 2026</span>
-      </div>
-      <ul>
-        <li><span class="badge badge-fix">Fix</span> Bouton du mode nuit déplacé dans les raccourcis de la vue 3D et rendu plus visible avec un contraste inversé[cite: 2, 5].</li>
       </ul>
     </div>
 
@@ -131,7 +120,7 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
     function setNightMode(enabled, persist = false) {
       document.documentElement.dataset.nightMode = String(enabled);
       const button = document.getElementById('nightModeToggle');
-      const label = enabled ? 'D\u00e9sactiver le mode nuit' : 'Activer le mode nuit';
+      const label = enabled ? 'Désactiver le mode nuit' : 'Activer le mode nuit';
       button.setAttribute('aria-label', label);
       button.setAttribute('aria-pressed', String(enabled));
       button.title = label;
