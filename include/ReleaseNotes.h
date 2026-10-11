@@ -59,6 +59,17 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
       <span class="version-tag">v5.3.0</span>
     </div>
 
+   <!-- v5.4.0 (Vue 3D - Simulation Temporelle) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.4.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Ajout d'un sélecteur de date/heure interactif permettant de simuler et d'anticiper l'affichage du ciel à n'importe quel moment (avec bouton "Direct" pour revenir à l'heure réelle).</li>
+      </ul>
+    </div>
+
     <!-- v5.3.0 (Vue 3D - Grille planétarium & Pôles) -->
     <div class="release-item">
       <div class="release-header">

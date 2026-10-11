@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.3.0
+// Version Component: BetaSkyPage.h v5.4.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -23,7 +23,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .sky-status { min-height: 20px; margin: 0 2px 8px; color: #aab3c2; font-size: .82rem; }
     .sky-status.error { color: #ff7777; }
     .sky-status.align-ok { color: #69ff84; }
-    .scene { position: relative; height: min(65vh, 540px); min-height: 320px; overflow: hidden; border: 1px solid #273142; border-radius: 14px; background: radial-gradient(ellipse at 50% 100%, #1b2638 0, #0d1420 47%, #05070b 100%); touch-action: none; }
+    .scene { position: relative; height: min(60vh, 500px); min-height: 300px; overflow: hidden; border: 1px solid #273142; border-radius: 14px; background: radial-gradient(ellipse at 50% 100%, #1b2638 0, #0d1420 47%, #05070b 100%); touch-action: none; }
     canvas { display: block; width: 100%; height: 100%; cursor: grab; }
     canvas:active { cursor: grabbing; }
     .scene-label { position: absolute; color: #acb8c8; font-size: .72rem; text-shadow: 0 1px 4px #000; pointer-events: none; }
@@ -39,10 +39,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .constellation-label { position: absolute; z-index: 1; color: #7cb9e8; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.85; }
 
     .controls { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
-    button, select { min-height: 44px; border: 1px solid #344256; border-radius: 9px; background: #151b25; color: #e6eaf2; font: inherit; }
+    .time-control-box { grid-column: span 3; display: flex; gap: 6px; align-items: center; background: #151b25; padding: 6px 10px; border: 1px solid #344256; border-radius: 9px; }
+    button, select, input { min-height: 44px; border: 1px solid #344256; border-radius: 9px; background: #151b25; color: #e6eaf2; font: inherit; }
     button { padding: 8px 10px; cursor: pointer; }
     button:active { background: #253247; }
-    select { width: 100%; padding: 8px 10px; }
+    select, input[type="datetime-local"] { width: 100%; padding: 8px 10px; background: #10151d; }
     .scene-help { margin: 9px 2px; color: #929cac; font-size: .78rem; line-height: 1.45; }
 
     /* Modale d'information objet */
@@ -79,7 +80,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-globe-2"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM</span>
+      <span class="beta">PLANÉTARIUM v5.4</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     <div class="scene" id="scene">
@@ -90,12 +91,17 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <span class="scene-label cardinal" id="labelW" style="display:none">O</span>
       <span class="scene-label telescope" id="telescopeReadout">Télescope : connexion...</span>
       <span class="scene-label view" id="viewReadout">Vue AZ 0° · ALT 0°</span>
-      <span class="scene-label horizon">Grille AltAz & Pôles</span>
+      <span class="scene-label horizon">Grille AltAz & Heure</span>
       <span class="scene-center" aria-hidden="true"></span>
       <div id="objectLabels" aria-hidden="true"></div>
       <div id="constellationLabels" aria-hidden="true"></div>
     </div>
     <div class="controls">
+      <div class="time-control-box">
+        <span style="font-size: 0.75rem; color: #8b94a2; white-space: nowrap;">Heure ciel :</span>
+        <input type="datetime-local" id="customTimeInput" aria-label="Heure d'affichage du ciel">
+        <button type="button" id="resetTimeBtn" style="min-height: 36px; padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;">Direct</button>
+      </div>
       <select id="typeFilter" aria-label="Filtrer les objets">
         <option value="all">Tous les objets</option>
         <option value="galaxie">Galaxies</option>
@@ -106,7 +112,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <button id="toggleNamesBtn" type="button">Noms : ON</button>
       <button id="centerButton" type="button">Recentrer</button>
     </div>
-    <p class="scene-help">Grille azimutale de type planétarium, repérage du pôle céleste et étoiles par type spectral.</p>
+    <p class="scene-help">Modifiez l'heure pour simuler le mouvement des astres. Grille azimutale et repérage de Polaris actifs.</p>
   </main>
 
   <!-- Modale d'information objet -->
@@ -164,6 +170,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const viewReadout = document.getElementById('viewReadout');
     const telescopeReadout = document.getElementById('telescopeReadout');
     const toggleNamesBtn = document.getElementById('toggleNamesBtn');
+    const customTimeInput = document.getElementById('customTimeInput');
     
     let objects = [];
     let latitude = 45.89;
@@ -178,6 +185,33 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let encoderRequestInFlight = false;
     let showNames = true;
     let lastScreenObjects = [];
+    let useSystemTime = true;
+
+    // Initialisation du champ datetime-local avec l'heure courante locale
+    function initDateTimeInput() {
+      const now = new Date();
+      const offsetMs = now.getTimezoneOffset() * 60000;
+      const localIso = new Date(now.getTime() - offsetMs).toISOString().slice(0, 16);
+      if (customTimeInput && !customTimeInput.value) {
+        customTimeInput.value = localIso;
+      }
+    }
+    initDateTimeInput();
+
+    customTimeInput.addEventListener('change', () => {
+      useSystemTime = false;
+    });
+
+    document.getElementById('resetTimeBtn').addEventListener('click', () => {
+      useSystemTime = true;
+      initDateTimeInput();
+    });
+
+    function getSkyDate() {
+      if (useSystemTime) return new Date();
+      const val = customTimeInput.value;
+      return val ? new Date(val) : new Date();
+    }
 
     const CONSTELLATION_LINES = [
       ["Dubhe", "Merak"], ["Merak", "Phecda"], ["Phecda", "Megrez"], 
@@ -396,7 +430,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return ((greenwich + longitude) % 360 + 360) % 360;
     }
 
-    // Génération d'une grille altazimutale riche (cercles d'altitude et méridiens) type planétarium
     function makeGrid() {
       const vertices = [];
       const add = (azimuth, altitude) => {
@@ -405,14 +438,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         vertices.push(Math.sin(az) * Math.cos(alt), Math.sin(alt), Math.cos(az) * Math.cos(alt));
       };
 
-      // Cercles d'altitude (parallèles) de 0° à 80° tous les 20°
       for (let alt = 0; alt <= 80; alt += 20) {
         for (let az = 0; az < 360; az += 2) {
           add(az, alt); add(az + 2, alt);
         }
       }
 
-      // Méridiens azimutaux tous les 30° convergents vers le zénith
       for (let az = 0; az < 360; az += 30) {
         for (let alt = 0; alt < 90; alt += 2) {
           add(az, alt); add(az, alt + 2);
@@ -450,7 +481,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const right = [Math.cos(az), 0, -Math.sin(az)];
       const up = [-Math.sin(az) * Math.sin(el), Math.cos(el), -Math.cos(az) * Math.sin(el)];
       const tanHalfFov = Math.tan(fieldOfView * Math.PI / 180);
-      const sidereal = siderealDegrees(new Date());
+      
+      // Utilisation de la date courante ou de l'heure simulée par l'utilisateur
+      const sidereal = siderealDegrees(getSkyDate());
       const latRadians = latitude * Math.PI / 180;
 
       const objectMap = new Map();
@@ -459,7 +492,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         objectMap.set(object.name, horizontal.position);
       }
 
-      // Affichage dynamique des points cardinaux (N, S, E, O) à l'horizon
       const cardinalPoints = [
         { id: 'labelN', az: 0 }, { id: 'labelE', az: 90 },
         { id: 'labelS', az: 180 }, { id: 'labelW', az: 270 }
@@ -510,7 +542,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         colors.push(...objectColor(object));
         
         let starSize = Math.max(4, Math.min(16, (6.5 - object.mag) * 2.0 + 3));
-        if (object.name === "Polaris") starSize = 20; // Polaris mise en valeur
+        if (object.name === "Polaris") starSize = 20;
         sizes.push(starSize);
 
         lastScreenObjects.push({ object, screenX, screenY });
@@ -525,18 +557,16 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       gl.uniform1f(tanHalfFovLocation, tanHalfFov);
       gl.uniform1f(aspectLocation, aspect);
 
-      // Grille azimutale de planétarium
       gl.uniform1f(gridLocation, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, gridBuffer);
       gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
       gl.enableVertexAttribArray(positionLocation);
       gl.disableVertexAttribArray(colorLocation);
       gl.disableVertexAttribArray(sizeLocation);
-      gl.vertexAttrib3f(colorLocation, 0.32, 0.45, 0.62); // Teinte élégante type Stellarium
+      gl.vertexAttrib3f(colorLocation, 0.32, 0.45, 0.62);
       gl.vertexAttrib1f(sizeLocation, 1);
       gl.drawArrays(gl.LINES, 0, gridVertices.length / 3);
 
-      // Lignes de constellations
       if (lineVertices.length > 0) {
         gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineVertices), gl.DYNAMIC_DRAW);
@@ -545,7 +575,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         gl.drawArrays(gl.LINES, 0, lineVertices.length / 3);
       }
 
-      // Étoiles
       gl.uniform1f(gridLocation, 0);
       if (positions.length) {
         gl.bindBuffer(gl.ARRAY_BUFFER, objectBuffer);
@@ -564,7 +593,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       viewReadout.textContent = `Vue AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
 
-      // Noms des objets et indicateur permanent Polaris
       const labels = document.createDocumentFragment();
       for (const item of lastScreenObjects) {
         const isPolaris = (item.object.name === "Polaris");
@@ -581,7 +609,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
       labelsElement.replaceChildren(labels);
 
-      // Noms des constellations
       const constLabels = document.createDocumentFragment();
       if (showNames) {
         for (const c of CONSTELLATION_CENTERS) {

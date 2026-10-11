@@ -32,5 +32,8 @@ Mise en route auto du gyroscope quand on bouge le pc
 afficher plus de constellation
 gérer l'hemisphere sud
 
+gérer la couleur du ciel en fonction de l'heure
+
+
 a tester
 ------------
