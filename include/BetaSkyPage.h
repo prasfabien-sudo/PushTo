@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.32.0
+// Version Component: BetaSkyPage.h v5.36.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -59,7 +59,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     select, input[type="datetime-local"] { width: 100%; padding: 8px 10px; background: #10151d; }
     .scene-help { margin: 9px 2px; color: #929cac; font-size: .78rem; line-height: 1.45; text-align: center; }
 
-    /* Croix directionnelle (D-Pad) et sélecteur de sensibilité alignés en haut */
+    /* Croix directionnelle (D-Pad) et réglage de sensibilité combinés en haut */
     .dpad-wrapper { grid-column: span 4; display: flex; align-items: center; justify-content: center; gap: 12px; background: #121822; padding: 8px; border: 1px solid #273142; border-radius: 12px; margin-bottom: 4px; }
     .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 180px; }
     .jog-btn { background: #1e293b !important; font-weight: bold; color: #ffb74d !important; font-size: 1rem; display: flex; align-items: center; justify-content: center; min-height: 38px; }
@@ -115,7 +115,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.32</span>
+      <span class="beta">PLANÉTARIUM v5.36</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -176,7 +176,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       </div>
 
       <select id="magFilterSelect" aria-label="Mag. Max">
-        <option value="99">Mag. Max : Toutes</option>
+        <option value="99" selected>Mag. Max : Toutes</option>
         <option value="6">Mag. ≤ 6 (Œil nu)</option>
         <option value="8">Mag. ≤ 8 (Jumelles)</option>
         <option value="10">Mag. ≤ 10 (Petit télescope)</option>
@@ -233,7 +233,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <script>
     const canvas = document.getElementById('skyCanvas');
     const sceneDiv = document.getElementById('scene');
-    const gl = canvas.getContext('webgl', { antialias: true, alpha: true });
+    const gl = canvas.getContext('webgl', { antialias: true, alpha: true, powerPreference: 'high-performance' });
     const statusElement = document.getElementById('skyStatus');
     const magFilterElement = document.getElementById('magFilterSelect');
     const labelsElement = document.getElementById('objectLabels');
@@ -249,23 +249,24 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let objects = [];
     let latitude = 45.89;
     let longitude = 6.05;
+    
+    let targetHeading = 0;
+    let targetElevation = 35;
     let heading = 0;
     let elevation = 35;
+
     let touchHeading = 0;
     let touchElevation = 0;
     
     let alignOffsetHeading = 0;
     let alignOffsetElevation = 0;
 
-    let animationFrame = 0;
-    let lastRenderAt = 0;
     let fieldOfView = 34;
     let encoderRequestInFlight = false;
     let showNames = true;
     let lastScreenObjects = [];
     let useSystemTime = true;
     
-    // Pour détecter si le télescope a bougé physiquement et réinitialiser le touch temporaire
     let lastRawAZ = null;
     let lastRawALT = null;
 
@@ -276,7 +277,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     window.addEventListener('click', () => filterDropMenu.classList.remove('open'));
     filterDropMenu.addEventListener('click', (e) => e.stopPropagation());
 
-    // Gestion des boutons de Jog en croix avec prise en compte du pas (sensibilité)
     document.getElementById('jogLeftBtn').addEventListener('click', () => {
       const step = parseFloat(stepSelect.value) || 1;
       alignOffsetHeading = (alignOffsetHeading - step + 360) % 360;
@@ -294,7 +294,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       alignOffsetElevation = Math.max(-45, Math.min(45, alignOffsetElevation - step));
     });
 
-    // Gestion du Zoom direct (+ et -) depuis les boutons du planétarium
     document.getElementById('zoomInBtn').addEventListener('click', () => {
       fieldOfView = Math.max(12, fieldOfView - 4);
     });
@@ -483,8 +482,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         throw new Error('Données encodeurs invalides.');
       }
 
-      // Si le télescope physique a bougé (changement des valeurs brutes d'encodeurs),
-      // on réinitialise le déplacement temporaire au doigt pour repartir de la position réelle.
       if (lastRawAZ !== null && lastRawALT !== null) {
         if (rawAZ !== lastRawAZ || rawALT !== lastRawALT) {
           touchHeading = 0;
@@ -496,10 +493,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       const azimuth = ((rawAZ * dirAZ / ticksAZ * 360) % 360 + 360) % 360;
       const altitudeCircle = ((rawALT * dirALT / ticksALT * 360) % 360 + 360) % 360;
-      heading = azimuth;
-      elevation = altitudeCircle > 180 ? altitudeCircle - 360 : altitudeCircle;
       
-      telescopeReadout.textContent = `Télescope AZ ${azimuth.toFixed(1)}° · ALT ${elevation.toFixed(1)}°`;
+      targetHeading = azimuth;
+      targetElevation = altitudeCircle > 180 ? altitudeCircle - 360 : altitudeCircle;
+      
+      telescopeReadout.textContent = `Télescope AZ ${azimuth.toFixed(1)}° · ALT ${targetElevation.toFixed(1)}°`;
       telescopeReadout.classList.remove('error');
     }
 
@@ -581,9 +579,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
             return;
           }
           vec2 point = gl_PointCoord - vec2(0.5);
-          float edge = 1.0 - smoothstep(0.3, 0.5, length(point));
+          float dist = length(point);
+          float edge = 1.0 - smoothstep(0.2, 0.5, dist);
           if (edge < 0.05) discard;
-          gl_FragColor = vec4(vColor, edge);
+          vec3 finalColor = mix(vColor, vec3(1.0), (0.5 - dist) * 0.6);
+          gl_FragColor = vec4(finalColor, edge);
         }`);
       const program = gl.createProgram();
       gl.attachShader(program, vertex);
@@ -596,20 +596,21 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const type = (object.type || '').toUpperCase();
       const name = (object.name || '').toUpperCase();
 
-      if (name === 'POLARIS') return [1.0, 0.95, 0.75];
-      if (type.includes('PLAN')) return [0.43, 0.78, 1.0];
-      if (type.includes('GAL')) return [0.84, 0.67, 1.0];
-      if (type.includes('NEB')) return [1.0, 0.57, 0.48];
-      if (type.includes('AMAS') || type.includes('GLOB')) return [1.0, 0.82, 0.42];
+      if (name === 'POLARIS') return [1.0, 0.95, 0.8];
+      if (type.includes('PLAN')) return [0.5, 0.85, 1.0];
+      if (type.includes('GAL')) return [0.88, 0.72, 1.0];
+      if (type.includes('NEB')) return [1.0, 0.62, 0.52];
+      if (type.includes('AMAS') || type.includes('GLOB')) return [1.0, 0.88, 0.5];
 
-      if (type.includes('O') || type.includes('B')) return [0.60, 0.78, 1.0];
-      if (type.includes('A')) return [0.90, 0.94, 1.0];
-      if (type.includes('F')) return [1.0, 1.0, 0.85];
-      if (type.includes('G')) return [1.0, 0.95, 0.60];
-      if (type.includes('K')) return [1.0, 0.75, 0.40];
-      if (type.includes('M')) return [1.0, 0.50, 0.30];
+      if (type.includes('O') || type.includes('B')) return [0.65, 0.82, 1.0];
+      if (type.includes('A')) return [0.92, 0.96, 1.0];
+      if (type.includes('F')) return [1.0, 1.0, 0.88];
+      if (type.includes('G')) return [1.0, 0.96, 0.65];
+      if (type.includes('K')) return [1.0, 0.78, 0.45];
+      if (type.includes('M')) return [1.0, 0.55, 0.35];
 
-      return [0.91, 0.94, 1.0];
+      if (object.mag < 1.5) return [1.0, 0.98, 0.88];
+      return [0.92, 0.95, 1.0];
     }
 
     function matchesFilter(object) {
@@ -692,14 +693,19 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     function render() {
       animationFrame = requestAnimationFrame(render);
       if (!gl || objects.length === 0) return;
-      const now = performance.now();
-      if (now - lastRenderAt < 33) return;
-      lastRenderAt = now;
       resizeCanvas();
       const width = canvas.width;
       const height = canvas.height;
       const aspect = width / height;
       
+      // Interpolation plus rapide (0.4) pour coller au plus près des mouvements du télescope
+      let diffAZ = targetHeading - heading;
+      if (diffAZ > 180) diffAZ -= 360;
+      if (diffAZ < -180) diffAZ += 360;
+      heading = (heading + diffAZ * 0.4 + 360) % 360;
+      
+      elevation += (targetElevation - elevation) * 0.4;
+
       const currentHeading = (heading + touchHeading + alignOffsetHeading + 360) % 360;
       const currentElevation = Math.max(-5, Math.min(88, elevation + touchElevation + alignOffsetElevation));
       
@@ -769,8 +775,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         positions.push(...horizontal.position);
         colors.push(...objectColor(object));
         
-        let starSize = Math.max(4, Math.min(16, (6.5 - object.mag) * 2.0 + 3));
-        if (object.name === "Polaris") starSize = 20;
+        let starSize = Math.max(3.5, Math.min(24, (7.5 - object.mag) * 2.8 + 4));
+        if (object.name === "Polaris") starSize = 22;
         sizes.push(starSize);
 
         lastScreenObjects.push({ object, screenX, screenY });
@@ -824,9 +830,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const labels = document.createDocumentFragment();
       for (const item of lastScreenObjects) {
         const isPolaris = (item.object.name === "Polaris");
-        if (!isPolaris && (!showNames || item.object.mag > 7.5)) continue;
+        if (!isPolaris && (!showNames || item.object.mag > 8.0)) continue;
         if (!isPolaris && !showNames) continue;
-        if (!isPolaris && lastScreenObjects.filter(e => e.object.mag <= 7.5).indexOf(item) > 16) continue;
+        if (!isPolaris && lastScreenObjects.filter(e => e.object.mag <= 8.0).indexOf(item) > 22) continue;
 
         const label = document.createElement('span');
         label.className = isPolaris ? 'object-label polaris' : 'object-label';
@@ -895,13 +901,19 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const [catalogRes, statusRes] = await Promise.all([fetch('/catalog'), fetch('/status')]);
         objects = await catalogRes.json();
         const status = await statusRes.json();
+        
         applyEncoderStatus(status);
+        heading = targetHeading;
+        elevation = targetElevation;
+
         latitude = Number(status.lat ?? latitude);
         longitude = Number(status.lon ?? longitude);
         
         updateSkyBackground(getSkyDate());
         setStatus(`${objects.length} objets chargés. Planétarium prêt.`, "align-ok");
-        window.setInterval(pollEncoderStatus, 250);
+        
+        // Polling des encodeurs augmenté à 100 ms (10 fois par seconde) pour plus de réactivité
+        window.setInterval(pollEncoderStatus, 100);
         
         resizeCanvas();
         render();
