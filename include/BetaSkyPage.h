@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.24.0
+// Version Component: BetaSkyPage.h v5.28.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -73,6 +73,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .btn-ar.active { background: #00897b !important; border-color: #80cbc4 !important; }
     .btn-gyro { background: #311b92 !important; color: #ede7f6 !important; font-weight: bold; }
     .btn-gyro.active { background: #512da8 !important; border-color: #b388ff !important; }
+    .jog-btn { background: #1e293b !important; font-weight: bold; color: #ffb74d !important; font-size: 1rem; }
 
     .object-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
     .object-modal[hidden] { display: none; }
@@ -103,7 +104,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-globe-2"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.24</span>
+      <span class="beta">PLANÉTARIUM v5.28</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     <div class="scene" id="scene">
@@ -149,10 +150,17 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <button id="centerButton" type="button">Recentrer</button>
       <button id="toggleArBtn" type="button" class="btn-ar">Caméra AR : OFF</button>
       <button id="toggleGyroBtn" type="button" class="btn-gyro">Capteurs AR : OFF</button>
+      
+      <!-- Boutons d'ajustement fin (Offset degré par degré) -->
+      <button id="jogLeftBtn" type="button" class="jog-btn" title="Ajuster Azimut -1°">◀ Az-</button>
+      <button id="jogRightBtn" type="button" class="jog-btn" title="Ajuster Azimut +1°">Az+ ▶</button>
+      <button id="jogUpBtn" type="button" class="jog-btn" title="Ajuster Altitude +1°">▲ Alt+</button>
+      <button id="jogDownBtn" type="button" class="jog-btn" title="Ajuster Altitude -1°">▼ Alt-</button>
+
       <button id="realignBtn" type="button" title="Réaligner l'orientation capteur">Réaligner</button>
       <button id="manualFullscreenBtn" type="button">Plein écran</button>
     </div>
-    <p class="scene-help">Support Pixel / Android Absolute Orientation actif.</p>
+    <p class="scene-help">Utilisez les flèches pour appliquer un offset d'alignement cumulatif.</p>
   </main>
 
   <div class="object-modal" id="objectModal" hidden>
@@ -182,9 +190,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   </div>
 
   <nav class="bottom-nav" aria-label="Navigation principale">
-    <a class="nav-item" href="/beta_sky" aria-current="page" title="Vue 3D du ciel"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-globe-2"></use></svg></span></a>
+    <a class="nav-item" href="/beta_sky" aria-current="page" title="Vue 3D du ciel"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg></span></a>
     <a class="nav-item" href="/" title="Mode Encodeurs"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-telescope"></use></svg></span></a>
-    <a class="nav-item" href="/station" title="Mise en station"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-crosshair"></use></svg></span></a>
+    <a class="nav-item" href="/station" title="Mise en station"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg></span></a>
     <a class="nav-item" href="/calib_page" title="Calibration"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-ruler"></use></svg></span></a>
     <a class="nav-item" href="/config" title="Configuration"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-settings"></use></svg></span></a>
     <a class="nav-item" href="/help" title="Aide SkySafari"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-book-open"></use></svg></span></a>
@@ -220,6 +228,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let elevation = 35;
     let touchHeading = 0;
     let touchElevation = 0;
+    
+    // Offsets cumulatifs pour l'ajustement fin
+    let alignOffsetHeading = 0;
+    let alignOffsetElevation = 0;
+
     let animationFrame = 0;
     let lastRenderAt = 0;
     let fieldOfView = 34;
@@ -267,6 +280,20 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
     });
 
+    // Gestion des boutons de Jog (ajustement fin en tant qu'offset)
+    document.getElementById('jogLeftBtn').addEventListener('click', () => {
+      alignOffsetHeading = (alignOffsetHeading - 1 + 360) % 360;
+    });
+    document.getElementById('jogRightBtn').addEventListener('click', () => {
+      alignOffsetHeading = (alignOffsetHeading + 1 + 360) % 360;
+    });
+    document.getElementById('jogUpBtn').addEventListener('click', () => {
+      alignOffsetElevation = Math.max(-30, Math.min(30, alignOffsetElevation + 1));
+    });
+    document.getElementById('jogDownBtn').addEventListener('click', () => {
+      alignOffsetElevation = Math.max(-30, Math.min(30, alignOffsetElevation - 1));
+    });
+
     toggleGyroBtn.addEventListener('click', async () => {
       if (!gyroActive) {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -280,7 +307,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         }
         compassInitialized = false;
         
-        // Utilisation en priorité de deviceorientationabsolute pour Android / Pixel 7a
         if ('ondeviceorientationabsolute' in window) {
           window.addEventListener('deviceorientationabsolute', handleOrientation, true);
         } else {
@@ -300,7 +326,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
     });
 
-    // Gestionnaire optimisé pour le Pixel 7a et Android absolu
     function handleOrientation(event) {
       if (!gyroActive) return;
 
@@ -312,7 +337,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       if (typeof event.webkitCompassHeading !== 'undefined' && event.webkitCompassHeading !== null) {
         compassHeading = event.webkitCompassHeading;
       } else if (event.absolute && event.alpha !== null) {
-        // Sur Android/Pixel avec deviceorientationabsolute, alpha indique directement le nord absolu
         compassHeading = event.alpha;
       }
 
@@ -334,7 +358,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       if (!compassInitialized) {
         rawGyroHeading = calculatedAzimuth;
         compassInitialized = true;
-        setStatus("Capteur absolu (Pixel 7a) initialisé sur le Nord.", "align-ok");
+        setStatus("Capteur absolu initialisé sur le Nord.", "align-ok");
       }
 
       let diffAz = calculatedAzimuth - rawGyroHeading;
@@ -359,7 +383,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       compassInitialized = false;
       touchHeading = 0;
       touchElevation = 0;
-      alert("Réalignement des capteurs effectué.");
+      alignOffsetHeading = 0;
+      alignOffsetElevation = 0;
+      alert("Réalignement et réinitialisation des offsets effectués.");
     });
 
     function updateSkyBackground(date) {
@@ -749,8 +775,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const width = canvas.width;
       const height = canvas.height;
       const aspect = width / height;
-      const currentHeading = (heading + touchHeading + 360) % 360;
-      const currentElevation = Math.max(-5, Math.min(88, elevation + touchElevation));
+      
+      // Intégration des offsets d'ajustement fin
+      const currentHeading = (heading + touchHeading + alignOffsetHeading + 360) % 360;
+      const currentElevation = Math.max(-5, Math.min(88, elevation + touchElevation + alignOffsetElevation));
+      
       const az = currentHeading * Math.PI / 180;
       const el = currentElevation * Math.PI / 180;
       const forward = [Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)];
@@ -1041,6 +1070,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     document.getElementById('centerButton').addEventListener('click', () => {
       touchHeading = 0;
       touchElevation = 0;
+      alignOffsetHeading = 0;
+      alignOffsetElevation = 0;
       fieldOfView = 34;
       rawGyroHeading = 0;
     });

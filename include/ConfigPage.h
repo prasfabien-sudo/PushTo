@@ -28,6 +28,7 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
     label { font-size: 0.9em; color: #ccc; }
     input[type="number"], input[type="text"], select { background: #121212; color: #ffb74d; border: 1px solid #444; padding: 8px; border-radius: 6px; font-size: 0.95em; box-sizing: border-box; }
     input[type="number"] { width: 110px; text-align: right; }
+    input[readonly] { background: #161616; color: #888; border-color: #2a2a2a; cursor: not-allowed; }
     input[type="text"] { width: 100%; margin-bottom: 8px; }
     select { width: 100%; }
     
@@ -67,6 +68,29 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
       <div class="form-group">
         <label for="ticksALT">Pas par tour ALT :</label>
         <input type="number" id="ticksALT" name="ticksALT" required>
+      </div>
+
+      <!-- Section Broches GPIO des Encodeurs (Consultation) -->
+      <div class="section-title">Broches GPIO (Fixes)</div>
+
+      <div class="form-group">
+        <label for="pinAzA">Pin AZ Phase A :</label>
+        <input type="number" id="pinAzA" readonly>
+      </div>
+
+      <div class="form-group">
+        <label for="pinAzB">Pin AZ Phase B :</label>
+        <input type="number" id="pinAzB" readonly>
+      </div>
+
+      <div class="form-group">
+        <label for="pinAltA">Pin ALT Phase A :</label>
+        <input type="number" id="pinAltA" readonly>
+      </div>
+
+      <div class="form-group">
+        <label for="pinAltB">Pin ALT Phase B :</label>
+        <input type="number" id="pinAltB" readonly>
       </div>
 
       <!-- Sens de Rotation -->
@@ -264,6 +288,10 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
         .then(d => {
           document.getElementById('ticksAZ').value = d.ticksAZ || 10000;
           document.getElementById('ticksALT').value = d.ticksALT || 10000;
+          document.getElementById('pinAzA').value = d.pinAzA !== undefined ? d.pinAzA : 18;
+          document.getElementById('pinAzB').value = d.pinAzB !== undefined ? d.pinAzB : 19;
+          document.getElementById('pinAltA').value = d.pinAltA !== undefined ? d.pinAltA : 21;
+          document.getElementById('pinAltB').value = d.pinAltB !== undefined ? d.pinAltB : 22;
           document.getElementById('revAZ').checked = d.revAZ || false;
           document.getElementById('revALT').checked = d.revALT || false;
           
