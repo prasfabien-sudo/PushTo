@@ -13,6 +13,9 @@ Voir si possible d'avoir une base d'objet hébergé localement sur le téléphon
 
 VUE 3D
 -------
+
+
+
 J'aimerai pouvoir afficher les constellations de manière optionnelle (tout en gardant les autres objet affiché)
 Lorsque je passe en vue paysage, la vue avec le gyroscope ne fonctionne plus correctement. Je vais a 90 degré sur la droite et la vue semble bloquée.
 A tester: J'aimerai que le mode réalité augmenté soit capable en temps réel de proposer un alignement
@@ -32,6 +35,9 @@ platesolving (astronometry)==> Ca peut pas fonctionner il faut une application m
 optimisation
 ----------
 toutes les données des objets doivent etre en base de donnés (rregarder référence en dur dans la page BetaSkyPage)
+
+
+
 
 a tester
 ------------

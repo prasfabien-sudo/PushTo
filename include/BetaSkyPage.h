@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.28.0
+// Version Component: BetaSkyPage.h v5.32.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -25,7 +25,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .sky-status.align-ok { color: #69ff84; }
     
     .scene { position: relative; height: min(60vh, 500px); min-height: 300px; overflow: hidden; border: 1px solid #273142; border-radius: 14px; background: radial-gradient(ellipse at 50% 100%, #1b2638 0, #0d1420 47%, #05070b 100%); touch-action: none; transition: height 0.3s, background 0.5s; }
-    #videoElement { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; display: none; }
     canvas { display: block; width: 100%; height: 100%; cursor: grab; position: relative; z-index: 1; background: transparent; }
     canvas:active { cursor: grabbing; }
     .scene-label { position: absolute; z-index: 2; color: #acb8c8; font-size: .72rem; text-shadow: 0 1px 4px #000; pointer-events: none; }
@@ -36,6 +35,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .scene-label.horizon { right: 10px; bottom: 10px; }
     .scene-center { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(255,255,255,.7); border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; z-index: 2; }
     
+    /* Boutons de Zoom intégrés dans le planétarium (coin supérieur droit) */
+    .scene-zoom-controls { position: absolute; top: 10px; right: 10px; z-index: 5; display: flex; flex-direction: column; gap: 4px; }
+    .zoom-btn { width: 32px; height: 32px; background: rgba(21, 27, 37, 0.85); border: 1px solid #344256; border-radius: 6px; color: #ffb74d; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); padding: 0; }
+    .zoom-btn:active { background: rgba(37, 50, 71, 0.95); transform: scale(0.95); }
+
     .object-label { position: absolute; z-index: 2; padding: 2px 5px; border-radius: 4px; color: #f4e6be; background: rgba(5,8,12,0.75); font-size: .68rem; white-space: nowrap; text-shadow: 0 1px 3px #000; transform: translate(-50%,-120%); pointer-events: none; transition: opacity 0.2s; }
     .object-label.polaris { color: #ffb74d; background: rgba(30,35,45,0.9); border: 1px solid rgba(255,183,77,0.5); font-weight: bold; z-index: 3; }
     .constellation-label { position: absolute; z-index: 2; color: #7cb9e8; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.85; }
@@ -53,7 +57,20 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     button { padding: 8px 10px; cursor: pointer; }
     button:active { background: #253247; }
     select, input[type="datetime-local"] { width: 100%; padding: 8px 10px; background: #10151d; }
-    .scene-help { margin: 9px 2px; color: #929cac; font-size: .78rem; line-height: 1.45; }
+    .scene-help { margin: 9px 2px; color: #929cac; font-size: .78rem; line-height: 1.45; text-align: center; }
+
+    /* Croix directionnelle (D-Pad) et sélecteur de sensibilité alignés en haut */
+    .dpad-wrapper { grid-column: span 4; display: flex; align-items: center; justify-content: center; gap: 12px; background: #121822; padding: 8px; border: 1px solid #273142; border-radius: 12px; margin-bottom: 4px; }
+    .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 180px; }
+    .jog-btn { background: #1e293b !important; font-weight: bold; color: #ffb74d !important; font-size: 1rem; display: flex; align-items: center; justify-content: center; min-height: 38px; }
+    .jog-up { grid-column: 2; grid-row: 1; }
+    .jog-left { grid-column: 1; grid-row: 2; }
+    .jog-center { grid-column: 2; grid-row: 2; background: #10151d !important; border: 1px dashed #344256; font-size: 0.6rem; color: #8b94a2 !important; cursor: default; display: flex; align-items: center; justify-content: center; }
+    .jog-right { grid-column: 3; grid-row: 2; }
+    .jog-down { grid-column: 2; grid-row: 3; }
+    
+    .sens-box { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; color: #8b94a2; }
+    .sens-box select { min-height: 36px; padding: 4px 8px; font-size: 0.8rem; background: #151b25; color: #ffb74d; font-weight: bold; }
 
     body.landscape-fullscreen { padding: 0 !important; background: #000; overflow: hidden; }
     body.landscape-fullscreen .sky-heading,
@@ -68,12 +85,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     @media (orientation: landscape) {
       #manualFullscreenBtn { display: none !important; }
     }
-
-    .btn-ar { background: #00695c !important; color: #e0f2f1 !important; font-weight: bold; }
-    .btn-ar.active { background: #00897b !important; border-color: #80cbc4 !important; }
-    .btn-gyro { background: #311b92 !important; color: #ede7f6 !important; font-weight: bold; }
-    .btn-gyro.active { background: #512da8 !important; border-color: #b388ff !important; }
-    .jog-btn { background: #1e293b !important; font-weight: bold; color: #ffb74d !important; font-size: 1rem; }
 
     .object-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
     .object-modal[hidden] { display: none; }
@@ -103,12 +114,18 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 <body>
   <main class="sky-card">
     <header class="sky-heading">
-      <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-globe-2"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.28</span>
+      <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
+      <span class="beta">PLANÉTARIUM v5.32</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
+    
     <div class="scene" id="scene">
-      <video id="videoElement" autoplay playsinline muted></video>
+      <!-- Boutons de zoom intégrés dans le planétarium (coin supérieur droit) -->
+      <div class="scene-zoom-controls">
+        <button id="zoomInBtn" type="button" class="zoom-btn" title="Zoomer (+)">+</button>
+        <button id="zoomOutBtn" type="button" class="zoom-btn" title="Dézoomer (-)">-</button>
+      </div>
+
       <canvas id="skyCanvas" aria-label="Carte 3D interactive du ciel"></canvas>
       <span class="scene-label cardinal" id="labelN" style="display:none">N</span>
       <span class="scene-label cardinal" id="labelS" style="display:none">S</span>
@@ -121,7 +138,27 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <div id="objectLabels" aria-hidden="true"></div>
       <div id="constellationLabels" aria-hidden="true"></div>
     </div>
+    
     <div class="controls">
+      <!-- Croix directionnelle (D-Pad) et réglage de sensibilité combinés en haut -->
+      <div class="dpad-wrapper">
+        <div class="dpad-container">
+          <button id="jogUpBtn" type="button" class="jog-btn jog-up" title="Ajuster Altitude">▲</button>
+          <button id="jogLeftBtn" type="button" class="jog-btn jog-left" title="Ajuster Azimut">◀</button>
+          <div class="jog-center">Offset</div>
+          <button id="jogRightBtn" type="button" class="jog-btn jog-right" title="Ajuster Azimut">▶</button>
+          <button id="jogDownBtn" type="button" class="jog-btn jog-down" title="Ajuster Altitude">▼</button>
+        </div>
+        <div class="sens-box">
+          <label for="stepSelect">Pas (sensibilité) :</label>
+          <select id="stepSelect" aria-label="Sensibilité du pas d'offset">
+            <option value="0.1">0.1° (Fin)</option>
+            <option value="1" selected>1.0° (Normal)</option>
+            <option value="5">5.0° (Large)</option>
+          </select>
+        </div>
+      </div>
+
       <div class="time-control-box">
         <span style="font-size: 0.75rem; color: #8b94a2; white-space: nowrap;">Heure ciel :</span>
         <input type="datetime-local" id="customTimeInput" aria-label="Heure d'affichage du ciel">
@@ -148,19 +185,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       <button id="toggleNamesBtn" type="button">Noms : ON</button>
       <button id="centerButton" type="button">Recentrer</button>
-      <button id="toggleArBtn" type="button" class="btn-ar">Caméra AR : OFF</button>
-      <button id="toggleGyroBtn" type="button" class="btn-gyro">Capteurs AR : OFF</button>
       
-      <!-- Boutons d'ajustement fin (Offset degré par degré) -->
-      <button id="jogLeftBtn" type="button" class="jog-btn" title="Ajuster Azimut -1°">◀ Az-</button>
-      <button id="jogRightBtn" type="button" class="jog-btn" title="Ajuster Azimut +1°">Az+ ▶</button>
-      <button id="jogUpBtn" type="button" class="jog-btn" title="Ajuster Altitude +1°">▲ Alt+</button>
-      <button id="jogDownBtn" type="button" class="jog-btn" title="Ajuster Altitude -1°">▼ Alt-</button>
-
-      <button id="realignBtn" type="button" title="Réaligner l'orientation capteur">Réaligner</button>
-      <button id="manualFullscreenBtn" type="button">Plein écran</button>
+      <button id="manualFullscreenBtn" type="button" style="grid-column: span 4;">Plein écran</button>
     </div>
-    <p class="scene-help">Utilisez les flèches pour appliquer un offset d'alignement cumulatif.</p>
+    <p class="scene-help">Utilisez la croix pour appliquer un offset permanent. Le déplacement tactile est temporaire.</p>
   </main>
 
   <div class="object-modal" id="objectModal" hidden>
@@ -192,7 +220,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <nav class="bottom-nav" aria-label="Navigation principale">
     <a class="nav-item" href="/beta_sky" aria-current="page" title="Vue 3D du ciel"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg></span></a>
     <a class="nav-item" href="/" title="Mode Encodeurs"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-telescope"></use></svg></span></a>
-    <a class="nav-item" href="/station" title="Mise en station"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg></span></a>
+    <a class="nav-item" href="/station" title="Mise en station"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-crosshair"></use></svg></span></a>
     <a class="nav-item" href="/calib_page" title="Calibration"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-ruler"></use></svg></span></a>
     <a class="nav-item" href="/config" title="Configuration"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-settings"></use></svg></span></a>
     <a class="nav-item" href="/help" title="Aide SkySafari"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-book-open"></use></svg></span></a>
@@ -205,7 +233,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <script>
     const canvas = document.getElementById('skyCanvas');
     const sceneDiv = document.getElementById('scene');
-    const videoElement = document.getElementById('videoElement');
     const gl = canvas.getContext('webgl', { antialias: true, alpha: true });
     const statusElement = document.getElementById('skyStatus');
     const magFilterElement = document.getElementById('magFilterSelect');
@@ -215,11 +242,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const telescopeReadout = document.getElementById('telescopeReadout');
     const toggleNamesBtn = document.getElementById('toggleNamesBtn');
     const customTimeInput = document.getElementById('customTimeInput');
-    const toggleArBtn = document.getElementById('toggleArBtn');
-    const toggleGyroBtn = document.getElementById('toggleGyroBtn');
-    const realignBtn = document.getElementById('realignBtn');
     const filterDropBtn = document.getElementById('filterDropBtn');
     const filterDropMenu = document.getElementById('filterDropMenu');
+    const stepSelect = document.getElementById('stepSelect');
     
     let objects = [];
     let latitude = 45.89;
@@ -229,7 +254,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let touchHeading = 0;
     let touchElevation = 0;
     
-    // Offsets cumulatifs pour l'ajustement fin
     let alignOffsetHeading = 0;
     let alignOffsetElevation = 0;
 
@@ -240,12 +264,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let showNames = true;
     let lastScreenObjects = [];
     let useSystemTime = true;
-
-    let arActive = false;
-    let gyroActive = false;
-    let compassInitialized = false;
-    let rawGyroHeading = 0;
-    let rawGyroElevation = 0;
+    
+    // Pour détecter si le télescope a bougé physiquement et réinitialiser le touch temporaire
+    let lastRawAZ = null;
+    let lastRawALT = null;
 
     filterDropBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -254,142 +276,33 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     window.addEventListener('click', () => filterDropMenu.classList.remove('open'));
     filterDropMenu.addEventListener('click', (e) => e.stopPropagation());
 
-    toggleArBtn.addEventListener('click', async () => {
-      if (!arActive) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-          videoElement.srcObject = stream;
-          videoElement.style.display = 'block';
-          sceneDiv.style.background = 'transparent';
-          videoElement.play();
-          arActive = true;
-          toggleArBtn.textContent = "Caméra AR : ON";
-          toggleArBtn.classList.add('active');
-        } catch (err) {
-          alert("Impossible d'accéder à la caméra : " + err.message);
-        }
-      } else {
-        const stream = videoElement.srcObject;
-        if (stream) stream.getTracks().forEach(track => track.stop());
-        videoElement.srcObject = null;
-        videoElement.style.display = 'none';
-        arActive = false;
-        toggleArBtn.textContent = "Caméra AR : OFF";
-        toggleArBtn.classList.remove('active');
-        updateSkyBackground(getSkyDate());
-      }
-    });
-
-    // Gestion des boutons de Jog (ajustement fin en tant qu'offset)
+    // Gestion des boutons de Jog en croix avec prise en compte du pas (sensibilité)
     document.getElementById('jogLeftBtn').addEventListener('click', () => {
-      alignOffsetHeading = (alignOffsetHeading - 1 + 360) % 360;
+      const step = parseFloat(stepSelect.value) || 1;
+      alignOffsetHeading = (alignOffsetHeading - step + 360) % 360;
     });
     document.getElementById('jogRightBtn').addEventListener('click', () => {
-      alignOffsetHeading = (alignOffsetHeading + 1 + 360) % 360;
+      const step = parseFloat(stepSelect.value) || 1;
+      alignOffsetHeading = (alignOffsetHeading + step + 360) % 360;
     });
     document.getElementById('jogUpBtn').addEventListener('click', () => {
-      alignOffsetElevation = Math.max(-30, Math.min(30, alignOffsetElevation + 1));
+      const step = parseFloat(stepSelect.value) || 1;
+      alignOffsetElevation = Math.max(-45, Math.min(45, alignOffsetElevation + step));
     });
     document.getElementById('jogDownBtn').addEventListener('click', () => {
-      alignOffsetElevation = Math.max(-30, Math.min(30, alignOffsetElevation - 1));
+      const step = parseFloat(stepSelect.value) || 1;
+      alignOffsetElevation = Math.max(-45, Math.min(45, alignOffsetElevation - step));
     });
 
-    toggleGyroBtn.addEventListener('click', async () => {
-      if (!gyroActive) {
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-          try {
-            const response = await DeviceOrientationEvent.requestPermission();
-            if (response !== 'granted') {
-              alert("Permission d'accès aux capteurs refusée.");
-              return;
-            }
-          } catch (e) { console.error(e); }
-        }
-        compassInitialized = false;
-        
-        if ('ondeviceorientationabsolute' in window) {
-          window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-        } else {
-          window.addEventListener('deviceorientation', handleOrientation, true);
-        }
-
-        gyroActive = true;
-        toggleGyroBtn.textContent = "Capteurs AR : ON";
-        toggleGyroBtn.classList.add('active');
-        resizeCanvas();
-      } else {
-        window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
-        window.removeEventListener('deviceorientation', handleOrientation, true);
-        gyroActive = false;
-        toggleGyroBtn.textContent = "Capteurs AR : OFF";
-        toggleGyroBtn.classList.remove('active');
-      }
+    // Gestion du Zoom direct (+ et -) depuis les boutons du planétarium
+    document.getElementById('zoomInBtn').addEventListener('click', () => {
+      fieldOfView = Math.max(12, fieldOfView - 4);
     });
-
-    function handleOrientation(event) {
-      if (!gyroActive) return;
-
-      let alpha = event.alpha !== null ? event.alpha * Math.PI / 180 : 0;
-      let beta = event.beta !== null ? event.beta * Math.PI / 180 : 0;
-      let gamma = event.gamma !== null ? event.gamma * Math.PI / 180 : 0;
-
-      let compassHeading = null;
-      if (typeof event.webkitCompassHeading !== 'undefined' && event.webkitCompassHeading !== null) {
-        compassHeading = event.webkitCompassHeading;
-      } else if (event.absolute && event.alpha !== null) {
-        compassHeading = event.alpha;
-      }
-
-      let cA = Math.cos(alpha), sA = Math.sin(alpha);
-      let cB = Math.cos(beta), sB = Math.sin(beta);
-      let cG = Math.cos(gamma), sG = Math.sin(gamma);
-
-      let vx = -sA * cG - cA * sB * sG;
-      let vy = -cA * cG + sA * sB * sG;
-      let vz = cB * cG;
-
-      let calculatedAzimuth = (360 - (Math.atan2(vx, vy) * 180 / Math.PI)) % 360;
-      if (compassHeading !== null) {
-        calculatedAzimuth = (360 - compassHeading) % 360;
-      }
-
-      let calculatedElevation = -Math.asin(Math.max(-1, Math.min(1, vz))) * 180 / Math.PI;
-
-      if (!compassInitialized) {
-        rawGyroHeading = calculatedAzimuth;
-        compassInitialized = true;
-        setStatus("Capteur absolu initialisé sur le Nord.", "align-ok");
-      }
-
-      let diffAz = calculatedAzimuth - rawGyroHeading;
-      if (diffAz > 180) diffAz -= 360;
-      if (diffAz < -180) diffAz += 360;
-      rawGyroHeading = (rawGyroHeading + diffAz + 360) % 360;
-
-      rawGyroElevation = calculatedElevation;
-
-      let targetH = rawGyroHeading;
-      let targetE = Math.max(-5, Math.min(89, rawGyroElevation));
-
-      let dH = targetH - touchHeading;
-      if (dH > 180) dH -= 360;
-      if (dH < -180) dH += 360;
-      touchHeading = (touchHeading + dH * 0.25 + 360) % 360;
-
-      touchElevation += (targetE - touchElevation) * 0.25;
-    }
-
-    realignBtn.addEventListener('click', () => {
-      compassInitialized = false;
-      touchHeading = 0;
-      touchElevation = 0;
-      alignOffsetHeading = 0;
-      alignOffsetElevation = 0;
-      alert("Réalignement et réinitialisation des offsets effectués.");
+    document.getElementById('zoomOutBtn').addEventListener('click', () => {
+      fieldOfView = Math.min(60, fieldOfView + 4);
     });
 
     function updateSkyBackground(date) {
-      if (arActive) return;
       const hours = date.getHours() + date.getMinutes() / 60;
       let bg = '';
       if (hours >= 6 && hours < 8) {
@@ -569,6 +482,17 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         || ticksAZ <= 0 || ticksALT <= 0 || ![1, -1].includes(dirAZ) || ![1, -1].includes(dirALT)) {
         throw new Error('Données encodeurs invalides.');
       }
+
+      // Si le télescope physique a bougé (changement des valeurs brutes d'encodeurs),
+      // on réinitialise le déplacement temporaire au doigt pour repartir de la position réelle.
+      if (lastRawAZ !== null && lastRawALT !== null) {
+        if (rawAZ !== lastRawAZ || rawALT !== lastRawALT) {
+          touchHeading = 0;
+          touchElevation = 0;
+        }
+      }
+      lastRawAZ = rawAZ;
+      lastRawALT = rawALT;
 
       const azimuth = ((rawAZ * dirAZ / ticksAZ * 360) % 360 + 360) % 360;
       const altitudeCircle = ((rawALT * dirALT / ticksALT * 360) % 360 + 360) % 360;
@@ -776,7 +700,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const height = canvas.height;
       const aspect = width / height;
       
-      // Intégration des offsets d'ajustement fin
       const currentHeading = (heading + touchHeading + alignOffsetHeading + 360) % 360;
       const currentElevation = Math.max(-5, Math.min(88, elevation + touchElevation + alignOffsetElevation));
       
@@ -1029,14 +952,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     
     const scene = document.getElementById('scene');
     scene.addEventListener('pointerdown', event => {
-      if (gyroActive) return;
       activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       dragPoint = { x: event.clientX, y: event.clientY };
       scene.setPointerCapture(event.pointerId);
       pinchDistance = activePointers.size === 2 ? pointerDistance() : null;
     });
     scene.addEventListener('pointermove', event => {
-      if (gyroActive) return;
       if (activePointers.has(event.pointerId)) activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (activePointers.size >= 2) {
         const distance = pointerDistance();
@@ -1073,7 +994,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       alignOffsetHeading = 0;
       alignOffsetElevation = 0;
       fieldOfView = 34;
-      rawGyroHeading = 0;
     });
 
     window.addEventListener('resize', resizeCanvas);
