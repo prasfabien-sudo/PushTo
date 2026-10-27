@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.36.0
+// Version Component: BetaSkyPage.h v5.38.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -40,7 +40,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .zoom-btn { width: 32px; height: 32px; background: rgba(21, 27, 37, 0.85); border: 1px solid #344256; border-radius: 6px; color: #ffb74d; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); padding: 0; }
     .zoom-btn:active { background: rgba(37, 50, 71, 0.95); transform: scale(0.95); }
 
-    .object-label { position: absolute; z-index: 2; padding: 2px 5px; border-radius: 4px; color: #f4e6be; background: rgba(5,8,12,0.75); font-size: .68rem; white-space: nowrap; text-shadow: 0 1px 3px #000; transform: translate(-50%,-120%); pointer-events: none; transition: opacity 0.2s; }
+    .object-label { position: absolute; z-index: 2; padding: 2px 6px; border-radius: 4px; color: #f4e6be; background: rgba(5,8,12,0.8); font-size: .68rem; white-space: nowrap; text-shadow: 0 1px 3px #000; pointer-events: none; transition: transform 0.1s ease-out; }
     .object-label.polaris { color: #ffb74d; background: rgba(30,35,45,0.9); border: 1px solid rgba(255,183,77,0.5); font-weight: bold; z-index: 3; }
     .constellation-label { position: absolute; z-index: 2; color: #7cb9e8; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.85; }
 
@@ -115,7 +115,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.36</span>
+      <span class="beta">PLANÉTARIUM v5.38</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -184,6 +184,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       </select>
 
       <button id="toggleNamesBtn" type="button">Noms : ON</button>
+      <button id="toggleConstellationsBtn" type="button">Constel. : ON</button>
       <button id="centerButton" type="button">Recentrer</button>
       
       <button id="manualFullscreenBtn" type="button" style="grid-column: span 4;">Plein écran</button>
@@ -241,6 +242,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const viewReadout = document.getElementById('viewReadout');
     const telescopeReadout = document.getElementById('telescopeReadout');
     const toggleNamesBtn = document.getElementById('toggleNamesBtn');
+    const toggleConstellationsBtn = document.getElementById('toggleConstellationsBtn');
     const customTimeInput = document.getElementById('customTimeInput');
     const filterDropBtn = document.getElementById('filterDropBtn');
     const filterDropMenu = document.getElementById('filterDropMenu');
@@ -264,11 +266,28 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let fieldOfView = 34;
     let encoderRequestInFlight = false;
     let showNames = true;
+    let showConstellations = true;
     let lastScreenObjects = [];
     let useSystemTime = true;
     
     let lastRawAZ = null;
     let lastRawALT = null;
+
+    let wakeLock = null;
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => {});
+        } catch (err) {}
+      }
+    }
+
+    document.addEventListener('visibilitychange', async () => {
+      if (wakeLock !== null && document.visibilityState === 'visible') {
+        await requestWakeLock();
+      }
+    });
 
     filterDropBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -559,7 +578,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         varying vec3 vColor;
         void main() {
           float depth = dot(aPosition, uForward);
-          if (depth <= 0.01) {
+          if (depth <= 0.0) {
             gl_Position = vec4(3.0, 3.0, 3.0, 1.0);
           } else {
             float x = dot(aPosition, uRight) / (depth * uTanHalfFov * uAspect);
@@ -575,14 +594,14 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         varying vec3 vColor;
         void main() {
           if (uGrid > 0.5) {
-            gl_FragColor = vec4(vColor, 0.75);
+            gl_FragColor = vec4(vColor, 0.85);
             return;
           }
           vec2 point = gl_PointCoord - vec2(0.5);
           float dist = length(point);
           float edge = 1.0 - smoothstep(0.2, 0.5, dist);
           if (edge < 0.05) discard;
-          vec3 finalColor = mix(vColor, vec3(1.0), (0.5 - dist) * 0.6);
+          vec3 finalColor = mix(vColor, vec3(1.0), (0.5 - dist) * 0.5);
           gl_FragColor = vec4(finalColor, edge);
         }`);
       const program = gl.createProgram();
@@ -698,7 +717,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const height = canvas.height;
       const aspect = width / height;
       
-      // Interpolation plus rapide (0.4) pour coller au plus près des mouvements du télescope
       let diffAZ = targetHeading - heading;
       if (diffAZ > 180) diffAZ -= 360;
       if (diffAZ < -180) diffAZ += 360;
@@ -751,10 +769,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       });
 
       const lineVertices = [];
-      for (const [starA, starB] of CONSTELLATION_LINES) {
-        const posA = objectMap.get(starA);
-        const posB = objectMap.get(starB);
-        if (posA && posB) lineVertices.push(...posA, ...posB);
+      if (showConstellations) {
+        for (const [starA, starB] of CONSTELLATION_LINES) {
+          const posA = objectMap.get(starA);
+          const posB = objectMap.get(starB);
+          if (posA && posB) lineVertices.push(...posA, ...posB);
+        }
       }
 
       const positions = [];
@@ -767,17 +787,19 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const horizontal = horizontalPosition(object, sidereal, latRadians);
         if (horizontal.altitude < 0) continue;
         const depth = horizontal.position[0] * forward[0] + horizontal.position[1] * forward[1] + horizontal.position[2] * forward[2];
-        if (depth <= 0.01) continue;
+        if (depth <= 0.0) continue;
         const screenX = (horizontal.position[0] * right[0] + horizontal.position[1] * right[1] + horizontal.position[2] * right[2]) / (depth * tanHalfFov * aspect);
         const screenY = (horizontal.position[0] * up[0] + horizontal.position[1] * up[1] + horizontal.position[2] * up[2]) / (depth * tanHalfFov);
-        if (Math.abs(screenX) > 1 || Math.abs(screenY) > 1) continue;
+        if (Math.abs(screenX) > 1.2 || Math.abs(screenY) > 1.2) continue;
         
         positions.push(...horizontal.position);
         colors.push(...objectColor(object));
         
-        let starSize = Math.max(3.5, Math.min(24, (7.5 - object.mag) * 2.8 + 4));
-        if (object.name === "Polaris") starSize = 22;
-        sizes.push(starSize);
+        // Taille agrandie dynamiquement en fonction du zoom (fieldOfView)
+        let baseSize = Math.max(4.0, Math.min(26, (8.0 - object.mag) * 3.0 + 5));
+        if (object.name === "Polaris") baseSize = 24;
+        const zoomFactor = 34 / fieldOfView; // S'agrandit quand on zoome
+        sizes.push(baseSize * Math.min(zoomFactor, 2.5));
 
         lastScreenObjects.push({ object, screenX, screenY });
       }
@@ -801,7 +823,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       gl.vertexAttrib1f(sizeLocation, 1);
       gl.drawArrays(gl.LINES, 0, gridVertices.length / 3);
 
-      if (lineVertices.length > 0) {
+      if (showConstellations && lineVertices.length > 0) {
         gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineVertices), gl.DYNAMIC_DRAW);
         gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
@@ -832,19 +854,38 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const isPolaris = (item.object.name === "Polaris");
         if (!isPolaris && (!showNames || item.object.mag > 8.0)) continue;
         if (!isPolaris && !showNames) continue;
-        if (!isPolaris && lastScreenObjects.filter(e => e.object.mag <= 8.0).indexOf(item) > 22) continue;
+        if (!isPolaris && lastScreenObjects.filter(e => e.object.mag <= 8.0).indexOf(item) > 25) continue;
 
         const label = document.createElement('span');
         label.className = isPolaris ? 'object-label polaris' : 'object-label';
-        label.style.left = `${(item.screenX + 1) * 50}%`;
-        label.style.top = `${(1 - item.screenY) * 50}%`;
+        
+        let leftPct = (item.screenX + 1) * 50;
+        let topPct = (1 - item.screenY) * 50;
+        
+        // Déport automatique du texte lorsque l'on zoome (éloigne le nom du centre pour éviter la surcharge)
+        let offsetX = 0;
+        let offsetY = -18;
+        if (fieldOfView < 25) {
+          const dx = item.screenX;
+          const dy = item.screenY;
+          const distFromCenter = Math.hypot(dx, dy);
+          if (distFromCenter < 0.4) {
+            // Si l'objet est proche du centre de la vue ciblée, on décale son nom sur le côté
+            offsetX = dx >= 0 ? 25 : -85;
+            offsetY = dy >= 0 ? 10 : -35;
+          }
+        }
+
+        label.style.left = `${leftPct}%`;
+        label.style.top = `${topPct}%`;
+        label.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
         label.textContent = isPolaris ? `★ Polaris (Pôle Nord)` : (item.object.commonName || item.object.name);
         labels.appendChild(label);
       }
       labelsElement.replaceChildren(labels);
 
       const constLabels = document.createDocumentFragment();
-      if (showNames) {
+      if (showNames && showConstellations) {
         for (const c of CONSTELLATION_CENTERS) {
           const pos = objectMap.get(c.refStar);
           if (pos) {
@@ -873,6 +914,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     async function initialize() {
       if (!gl) { setStatus('WebGL non supporté.', true); return; }
       try {
+        await requestWakeLock();
+
         program = createProgram();
         positionLocation = gl.getAttribLocation(program, 'aPosition');
         colorLocation = gl.getAttribLocation(program, 'aColor');
@@ -912,7 +955,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         updateSkyBackground(getSkyDate());
         setStatus(`${objects.length} objets chargés. Planétarium prêt.`, "align-ok");
         
-        // Polling des encodeurs augmenté à 100 ms (10 fois par seconde) pour plus de réactivité
         window.setInterval(pollEncoderStatus, 100);
         
         resizeCanvas();
@@ -998,6 +1040,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     toggleNamesBtn.addEventListener('click', () => {
       showNames = !showNames;
       toggleNamesBtn.textContent = showNames ? "Noms : ON" : "Noms : OFF";
+    });
+
+    toggleConstellationsBtn.addEventListener('click', () => {
+      showConstellations = !showConstellations;
+      toggleConstellationsBtn.textContent = showConstellations ? "Constel. : ON" : "Constel. : OFF";
     });
 
     document.getElementById('centerButton').addEventListener('click', () => {
