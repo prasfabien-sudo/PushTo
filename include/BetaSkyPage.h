@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.46.0
+// Version Component: BetaSkyPage.h v5.48.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -113,7 +113,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.46</span>
+      <span class="beta">PLANÉTARIUM v5.48</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -557,14 +557,16 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       if (type.includes('NEB')) return '#ff9e84';
       if (type.includes('AMAS') || type.includes('GLOB')) return '#ffe066';
 
-      if (type.includes('O') || type.includes('B')) return '#a6d4ff';
-      if (type.includes('A')) return '#ebf5ff';
-      if (type.includes('F')) return '#ffffd9';
-      if (type.includes('G')) return '#ffee80';
-      if (type.includes('K')) return '#ffc773';
-      if (type.includes('M')) return '#ff8c59';
+      if (type.includes('O') || type.includes('B')) return '#9ec5ff';
+      if (type.includes('A')) return '#d8eaff';
+      if (type.includes('F')) return '#fffde6';
+      if (type.includes('G')) return '#ffee66';
+      if (type.includes('K')) return '#ffad42';
+      if (type.includes('M')) return '#ff6b42';
 
-      return '#e6f0ff';
+      if (object.mag < 1.0) return '#ffffff';
+      if (object.mag < 2.5) return '#e0f0ff';
+      return '#c2dcff';
     }
 
     function matchesFilter(object) {
@@ -692,7 +694,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       ctx2d.clearRect(0, 0, width, height);
 
-      // Lignes de constellations plus fines
+      // Tracé des lignes de constellations
       if (showConstellations) {
         ctx2d.strokeStyle = "rgba(90, 160, 220, 0.35)";
         ctx2d.lineWidth = 0.8;
@@ -719,7 +721,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       lastScreenObjects = [];
 
-      // Dessin des étoiles avec taille divisée par 5
+      // Rendu des astres avec pictogrammes spécifiques selon le type d'objet
       for (const object of objects) {
         if (!matchesFilter(object)) continue;
         const horizontal = horizontalPosition(object, sidereal, latRadians);
@@ -736,23 +738,60 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const sx = width / 2 + screenXNorm * (width / 2);
         const sy = height / 2 - screenYNorm * (height / 2);
         
-        // Taille ajustée et réduite (divisée par ~5)
-        let starSize = Math.max(0.8, Math.min(3.5, (10.0 - object.mag) * 0.4 + 0.9));
-        if (object.name === "Polaris") starSize = 2.2;
-        const zoomFactor = 34 / fieldOfView;
-        starSize *= Math.min(zoomFactor, 2.0);
-
+        const type = (object.type || '').toLowerCase();
         const colorHex = objectColorHex(object);
 
         ctx2d.save();
-        ctx2d.fillStyle = colorHex;
-        ctx2d.shadowColor = colorHex;
-        ctx2d.shadowBlur = starSize * 1.5; // Halo proportionnel et léger
-        ctx2d.beginPath();
-        ctx2d.arc(sx, sy, starSize, 0, 2 * Math.PI);
-        ctx2d.fill();
-        ctx2d.restore();
+        
+        if (type.includes('gal')) {
+          // Picto Galaxie : Ellipse inclinée (spirale vue de biais)
+          ctx2d.strokeStyle = colorHex;
+          ctx2d.fillStyle = colorHex;
+          ctx2d.lineWidth = 1.2;
+          ctx2d.beginPath();
+          ctx2d.ellipse(sx, sy, 7, 3.5, Math.PI / 4, 0, 2 * Math.PI);
+          ctx2d.stroke();
+          ctx2d.globalAlpha = 0.3;
+          ctx2d.fill();
+        } else if (type.includes('neb')) {
+          // Picto Nébuleuse : Losange doux / nuage
+          ctx2d.strokeStyle = colorHex;
+          ctx2d.fillStyle = colorHex;
+          ctx2d.lineWidth = 1.2;
+          ctx2d.beginPath();
+          ctx2d.moveTo(sx, sy - 6);
+          ctx2d.lineTo(sx + 6, sy);
+          ctx2d.lineTo(sx, sy + 6);
+          ctx2d.lineTo(sx - 6, sy);
+          ctx2d.closePath();
+          ctx2d.stroke();
+          ctx2d.globalAlpha = 0.25;
+          ctx2d.fill();
+        } else if (type.includes('amas') || type.includes('glob')) {
+          // Picto Amas d'étoiles : Cercle en pointillés ou anneau concentrique
+          ctx2d.strokeStyle = colorHex;
+          ctx2d.lineWidth = 1.2;
+          ctx2d.setLineDash([2, 2]);
+          ctx2d.beginPath();
+          ctx2d.arc(sx, sy, 5.5, 0, 2 * Math.PI);
+          ctx2d.stroke();
+          ctx2d.setLineDash([]);
+        } else {
+          // Étoile classique : Disque avec halo de brillance proportionnel à la magnitude
+          let starSize = Math.max(0.7, Math.min(4.5, (8.5 - object.mag) * 0.5 + 0.8));
+          if (object.name === "Polaris") starSize = 2.8;
+          const zoomFactor = 34 / fieldOfView;
+          starSize *= Math.min(zoomFactor, 2.0);
 
+          ctx2d.fillStyle = colorHex;
+          ctx2d.shadowColor = colorHex;
+          ctx2d.shadowBlur = object.mag < 2.0 ? starSize * 2.5 : starSize * 1.2;
+          ctx2d.beginPath();
+          ctx2d.arc(sx, sy, starSize, 0, 2 * Math.PI);
+          ctx2d.fill();
+        }
+
+        ctx2d.restore();
         lastScreenObjects.push({ object, screenX: screenXNorm, screenY: screenYNorm });
       }
 
