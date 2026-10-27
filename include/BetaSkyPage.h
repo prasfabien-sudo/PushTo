@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.38.0
+// Version Component: BetaSkyPage.h v5.46.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -35,7 +35,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .scene-label.horizon { right: 10px; bottom: 10px; }
     .scene-center { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(255,255,255,.7); border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; z-index: 2; }
     
-    /* Boutons de Zoom intégrés dans le planétarium (coin supérieur droit) */
     .scene-zoom-controls { position: absolute; top: 10px; right: 10px; z-index: 5; display: flex; flex-direction: column; gap: 4px; }
     .zoom-btn { width: 32px; height: 32px; background: rgba(21, 27, 37, 0.85); border: 1px solid #344256; border-radius: 6px; color: #ffb74d; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); padding: 0; }
     .zoom-btn:active { background: rgba(37, 50, 71, 0.95); transform: scale(0.95); }
@@ -59,7 +58,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     select, input[type="datetime-local"] { width: 100%; padding: 8px 10px; background: #10151d; }
     .scene-help { margin: 9px 2px; color: #929cac; font-size: .78rem; line-height: 1.45; text-align: center; }
 
-    /* Croix directionnelle (D-Pad) et réglage de sensibilité combinés en haut */
     .dpad-wrapper { grid-column: span 4; display: flex; align-items: center; justify-content: center; gap: 12px; background: #121822; padding: 8px; border: 1px solid #273142; border-radius: 12px; margin-bottom: 4px; }
     .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 180px; }
     .jog-btn { background: #1e293b !important; font-weight: bold; color: #ffb74d !important; font-size: 1rem; display: flex; align-items: center; justify-content: center; min-height: 38px; }
@@ -115,12 +113,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.38</span>
+      <span class="beta">PLANÉTARIUM v5.46</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
     <div class="scene" id="scene">
-      <!-- Boutons de zoom intégrés dans le planétarium (coin supérieur droit) -->
       <div class="scene-zoom-controls">
         <button id="zoomInBtn" type="button" class="zoom-btn" title="Zoomer (+)">+</button>
         <button id="zoomOutBtn" type="button" class="zoom-btn" title="Dézoomer (-)">-</button>
@@ -140,7 +137,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     </div>
     
     <div class="controls">
-      <!-- Croix directionnelle (D-Pad) et réglage de sensibilité combinés en haut -->
       <div class="dpad-wrapper">
         <div class="dpad-container">
           <button id="jogUpBtn" type="button" class="jog-btn jog-up" title="Ajuster Altitude">▲</button>
@@ -234,7 +230,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <script>
     const canvas = document.getElementById('skyCanvas');
     const sceneDiv = document.getElementById('scene');
-    const gl = canvas.getContext('webgl', { antialias: true, alpha: true, powerPreference: 'high-performance' });
+    const ctx2d = canvas.getContext('2d');
     const statusElement = document.getElementById('skyStatus');
     const magFilterElement = document.getElementById('magFilterSelect');
     const labelsElement = document.getElementById('objectLabels');
@@ -551,85 +547,24 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     setNightMode(localStorage.getItem('dobson-night-mode') === 'true');
 
-    function compileShader(type, source) {
-      const shader = gl.createShader(type);
-      if (!shader) throw new Error('Création shader impossible.');
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        const msg = gl.getShaderInfoLog(shader);
-        gl.deleteShader(shader);
-        throw new Error(`Erreur WebGL : ${msg}`);
-      }
-      return shader;
-    }
-
-    function createProgram() {
-      const vertex = compileShader(gl.VERTEX_SHADER, `
-        attribute vec3 aPosition;
-        attribute vec3 aColor;
-        attribute float aSize;
-        uniform vec3 uRight;
-        uniform vec3 uUp;
-        uniform vec3 uForward;
-        uniform float uTanHalfFov;
-        uniform float uAspect;
-        uniform float uGrid;
-        varying vec3 vColor;
-        void main() {
-          float depth = dot(aPosition, uForward);
-          if (depth <= 0.0) {
-            gl_Position = vec4(3.0, 3.0, 3.0, 1.0);
-          } else {
-            float x = dot(aPosition, uRight) / (depth * uTanHalfFov * uAspect);
-            float y = dot(aPosition, uUp) / (depth * uTanHalfFov);
-            gl_Position = vec4(x, y, 0.0, 1.0);
-          }
-          gl_PointSize = aSize;
-          vColor = aColor;
-        }`);
-      const fragment = compileShader(gl.FRAGMENT_SHADER, `
-        precision mediump float;
-        uniform float uGrid;
-        varying vec3 vColor;
-        void main() {
-          if (uGrid > 0.5) {
-            gl_FragColor = vec4(vColor, 0.85);
-            return;
-          }
-          vec2 point = gl_PointCoord - vec2(0.5);
-          float dist = length(point);
-          float edge = 1.0 - smoothstep(0.2, 0.5, dist);
-          if (edge < 0.05) discard;
-          vec3 finalColor = mix(vColor, vec3(1.0), (0.5 - dist) * 0.5);
-          gl_FragColor = vec4(finalColor, edge);
-        }`);
-      const program = gl.createProgram();
-      gl.attachShader(program, vertex);
-      gl.attachShader(program, fragment);
-      gl.linkProgram(program);
-      return program;
-    }
-
-    function objectColor(object) {
+    function objectColorHex(object) {
       const type = (object.type || '').toUpperCase();
       const name = (object.name || '').toUpperCase();
 
-      if (name === 'POLARIS') return [1.0, 0.95, 0.8];
-      if (type.includes('PLAN')) return [0.5, 0.85, 1.0];
-      if (type.includes('GAL')) return [0.88, 0.72, 1.0];
-      if (type.includes('NEB')) return [1.0, 0.62, 0.52];
-      if (type.includes('AMAS') || type.includes('GLOB')) return [1.0, 0.88, 0.5];
+      if (name === 'POLARIS') return '#ffedcc';
+      if (type.includes('PLAN')) return '#80d8ff';
+      if (type.includes('GAL')) return '#e0b8ff';
+      if (type.includes('NEB')) return '#ff9e84';
+      if (type.includes('AMAS') || type.includes('GLOB')) return '#ffe066';
 
-      if (type.includes('O') || type.includes('B')) return [0.65, 0.82, 1.0];
-      if (type.includes('A')) return [0.92, 0.96, 1.0];
-      if (type.includes('F')) return [1.0, 1.0, 0.88];
-      if (type.includes('G')) return [1.0, 0.96, 0.65];
-      if (type.includes('K')) return [1.0, 0.78, 0.45];
-      if (type.includes('M')) return [1.0, 0.55, 0.35];
+      if (type.includes('O') || type.includes('B')) return '#a6d4ff';
+      if (type.includes('A')) return '#ebf5ff';
+      if (type.includes('F')) return '#ffffd9';
+      if (type.includes('G')) return '#ffee80';
+      if (type.includes('K')) return '#ffc773';
+      if (type.includes('M')) return '#ff8c59';
 
-      if (object.mag < 1.5) return [1.0, 0.98, 0.88];
-      return [0.92, 0.95, 1.0];
+      return '#e6f0ff';
     }
 
     function matchesFilter(object) {
@@ -638,17 +573,26 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       if (object.mag > maxMag) return false;
 
       const checkboxes = filterDropMenu.querySelectorAll('input[type="checkbox"]');
-      let allowed = false;
+      let isGalaxieChecked = true, isNebuleuseChecked = true, isAmasChecked = true, isEtoileChecked = true;
+      
       checkboxes.forEach(cb => {
-        if (cb.checked) {
-          const val = cb.value;
-          if (val === 'galaxie' && type.includes('gal')) allowed = true;
-          if (val === 'nebuleuse' && type.includes('neb')) allowed = true;
-          if (val === 'amas' && (type.includes('amas') || type.includes('glob'))) allowed = true;
-          if (val === 'etoile' && !type.includes('gal') && !type.includes('neb') && !type.includes('amas') && !type.includes('glob')) allowed = true;
-        }
+        if (cb.value === 'galaxie') isGalaxieChecked = cb.checked;
+        if (cb.value === 'nebuleuse') isNebuleuseChecked = cb.checked;
+        if (cb.value === 'amas') isAmasChecked = cb.checked;
+        if (cb.value === 'etoile') isEtoileChecked = cb.checked;
       });
-      return allowed;
+
+      const isGal = type.includes('gal');
+      const isNeb = type.includes('neb');
+      const isAmas = type.includes('amas') || type.includes('glob');
+      const isStar = !isGal && !isNeb && !isAmas;
+
+      if (isGal && isGalaxieChecked) return true;
+      if (isNeb && isNebuleuseChecked) return true;
+      if (isAmas && isAmasChecked) return true;
+      if (isStar && isEtoileChecked) return true;
+
+      return false;
     }
 
     function horizontalPosition(object, siderealDegrees, latRadians) {
@@ -676,28 +620,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return ((greenwich + longitude) % 360 + 360) % 360;
     }
 
-    function makeGrid() {
-      const vertices = [];
-      const add = (azimuth, altitude) => {
-        const az = azimuth * Math.PI / 180;
-        const alt = altitude * Math.PI / 180;
-        vertices.push(Math.sin(az) * Math.cos(alt), Math.sin(alt), Math.cos(az) * Math.cos(alt));
-      };
-
-      for (let alt = 0; alt <= 80; alt += 20) {
-        for (let az = 0; az < 360; az += 2) {
-          add(az, alt); add(az + 2, alt);
-        }
-      }
-
-      for (let az = 0; az < 360; az += 30) {
-        for (let alt = 0; alt < 90; alt += 2) {
-          add(az, alt); add(az, alt + 2);
-        }
-      }
-      return new Float32Array(vertices);
-    }
-
     function resizeCanvas() {
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
       const width = Math.max(1, Math.round(canvas.clientWidth * ratio));
@@ -705,23 +627,23 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       if (canvas.width !== width || canvas.height !== height) {
         canvas.width = width;
         canvas.height = height;
-        gl.viewport(0, 0, width, height);
+        ctx2d.setTransform(ratio, 0, 0, ratio, 0, 0);
       }
     }
 
     function render() {
-      animationFrame = requestAnimationFrame(render);
-      if (!gl || objects.length === 0) return;
+      requestAnimationFrame(render);
+      if (objects.length === 0) return;
       resizeCanvas();
-      const width = canvas.width;
-      const height = canvas.height;
+      
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
       const aspect = width / height;
       
       let diffAZ = targetHeading - heading;
       if (diffAZ > 180) diffAZ -= 360;
       if (diffAZ < -180) diffAZ += 360;
       heading = (heading + diffAZ * 0.4 + 360) % 360;
-      
       elevation += (targetElevation - elevation) * 0.4;
 
       const currentHeading = (heading + touchHeading + alignOffsetHeading + 360) % 360;
@@ -768,93 +690,81 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         }
       });
 
-      const lineVertices = [];
+      ctx2d.clearRect(0, 0, width, height);
+
+      // Lignes de constellations plus fines
       if (showConstellations) {
+        ctx2d.strokeStyle = "rgba(90, 160, 220, 0.35)";
+        ctx2d.lineWidth = 0.8;
         for (const [starA, starB] of CONSTELLATION_LINES) {
           const posA = objectMap.get(starA);
           const posB = objectMap.get(starB);
-          if (posA && posB) lineVertices.push(...posA, ...posB);
+          if (posA && posB) {
+            const depthA = posA[0] * forward[0] + posA[1] * forward[1] + posA[2] * forward[2];
+            const depthB = posB[0] * forward[0] + posB[1] * forward[1] + posB[2] * forward[2];
+            if (depthA > 0 && depthB > 0) {
+              const sxA = width / 2 + ((posA[0] * right[0] + posA[1] * right[1] + posA[2] * right[2]) / (depthA * tanHalfFov * aspect)) * (width / 2);
+              const syA = height / 2 - ((posA[0] * up[0] + posA[1] * up[1] + posA[2] * up[2]) / (depthA * tanHalfFov)) * (height / 2);
+              const sxB = width / 2 + ((posB[0] * right[0] + posB[1] * right[1] + posB[2] * right[2]) / (depthB * tanHalfFov * aspect)) * (width / 2);
+              const syB = height / 2 - ((posB[0] * up[0] + posB[1] * up[1] + posB[2] * up[2]) / (depthB * tanHalfFov)) * (height / 2);
+              
+              ctx2d.beginPath();
+              ctx2d.moveTo(sxA, syA);
+              ctx2d.lineTo(sxB, syB);
+              ctx2d.stroke();
+            }
+          }
         }
       }
 
-      const positions = [];
-      const colors = [];
-      const sizes = [];
       lastScreenObjects = [];
 
+      // Dessin des étoiles avec taille divisée par 5
       for (const object of objects) {
         if (!matchesFilter(object)) continue;
         const horizontal = horizontalPosition(object, sidereal, latRadians);
         if (horizontal.altitude < 0) continue;
+        
         const depth = horizontal.position[0] * forward[0] + horizontal.position[1] * forward[1] + horizontal.position[2] * forward[2];
         if (depth <= 0.0) continue;
-        const screenX = (horizontal.position[0] * right[0] + horizontal.position[1] * right[1] + horizontal.position[2] * right[2]) / (depth * tanHalfFov * aspect);
-        const screenY = (horizontal.position[0] * up[0] + horizontal.position[1] * up[1] + horizontal.position[2] * up[2]) / (depth * tanHalfFov);
-        if (Math.abs(screenX) > 1.2 || Math.abs(screenY) > 1.2) continue;
         
-        positions.push(...horizontal.position);
-        colors.push(...objectColor(object));
+        const screenXNorm = (horizontal.position[0] * right[0] + horizontal.position[1] * right[1] + horizontal.position[2] * right[2]) / (depth * tanHalfFov * aspect);
+        const screenYNorm = (horizontal.position[0] * up[0] + horizontal.position[1] * up[1] + horizontal.position[2] * up[2]) / (depth * tanHalfFov);
         
-        // Taille agrandie dynamiquement en fonction du zoom (fieldOfView)
-        let baseSize = Math.max(4.0, Math.min(26, (8.0 - object.mag) * 3.0 + 5));
-        if (object.name === "Polaris") baseSize = 24;
-        const zoomFactor = 34 / fieldOfView; // S'agrandit quand on zoome
-        sizes.push(baseSize * Math.min(zoomFactor, 2.5));
+        if (Math.abs(screenXNorm) > 1.2 || Math.abs(screenYNorm) > 1.2) continue;
+        
+        const sx = width / 2 + screenXNorm * (width / 2);
+        const sy = height / 2 - screenYNorm * (height / 2);
+        
+        // Taille ajustée et réduite (divisée par ~5)
+        let starSize = Math.max(0.8, Math.min(3.5, (10.0 - object.mag) * 0.4 + 0.9));
+        if (object.name === "Polaris") starSize = 2.2;
+        const zoomFactor = 34 / fieldOfView;
+        starSize *= Math.min(zoomFactor, 2.0);
 
-        lastScreenObjects.push({ object, screenX, screenY });
-      }
+        const colorHex = objectColorHex(object);
 
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.useProgram(program);
-      gl.uniform3fv(rightLocation, right);
-      gl.uniform3fv(upLocation, up);
-      gl.uniform3fv(forwardLocation, forward);
-      gl.uniform1f(tanHalfFovLocation, tanHalfFov);
-      gl.uniform1f(aspectLocation, aspect);
+        ctx2d.save();
+        ctx2d.fillStyle = colorHex;
+        ctx2d.shadowColor = colorHex;
+        ctx2d.shadowBlur = starSize * 1.5; // Halo proportionnel et léger
+        ctx2d.beginPath();
+        ctx2d.arc(sx, sy, starSize, 0, 2 * Math.PI);
+        ctx2d.fill();
+        ctx2d.restore();
 
-      gl.uniform1f(gridLocation, 1);
-      gl.bindBuffer(gl.ARRAY_BUFFER, gridBuffer);
-      gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-      gl.enableVertexAttribArray(positionLocation);
-      gl.disableVertexAttribArray(colorLocation);
-      gl.disableVertexAttribArray(sizeLocation);
-      gl.vertexAttrib3f(colorLocation, 0.32, 0.45, 0.62);
-      gl.vertexAttrib1f(sizeLocation, 1);
-      gl.drawArrays(gl.LINES, 0, gridVertices.length / 3);
-
-      if (showConstellations && lineVertices.length > 0) {
-        gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineVertices), gl.DYNAMIC_DRAW);
-        gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-        gl.vertexAttrib3f(colorLocation, 0.55, 0.82, 1.0); 
-        gl.drawArrays(gl.LINES, 0, lineVertices.length / 3);
-      }
-
-      gl.uniform1f(gridLocation, 0);
-      if (positions.length) {
-        gl.bindBuffer(gl.ARRAY_BUFFER, objectBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
-        gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.DYNAMIC_DRAW);
-        gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(colorLocation);
-        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.DYNAMIC_DRAW);
-        gl.vertexAttribPointer(sizeBuffer, 1, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(sizeBuffer);
-        gl.drawArrays(gl.POINTS, 0, sizes.length);
+        lastScreenObjects.push({ object, screenX: screenXNorm, screenY: screenYNorm });
       }
 
       viewReadout.textContent = `Vue AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
 
+      // Étiquettes des objets
       const labels = document.createDocumentFragment();
       for (const item of lastScreenObjects) {
         const isPolaris = (item.object.name === "Polaris");
         if (!isPolaris && (!showNames || item.object.mag > 8.0)) continue;
         if (!isPolaris && !showNames) continue;
-        if (!isPolaris && lastScreenObjects.filter(e => e.object.mag <= 8.0).indexOf(item) > 25) continue;
+        if (!isPolaris && lastScreenObjects.filter(e => e.object.mag <= 8.0).indexOf(item) > 30) continue;
 
         const label = document.createElement('span');
         label.className = isPolaris ? 'object-label polaris' : 'object-label';
@@ -862,28 +772,15 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         let leftPct = (item.screenX + 1) * 50;
         let topPct = (1 - item.screenY) * 50;
         
-        // Déport automatique du texte lorsque l'on zoome (éloigne le nom du centre pour éviter la surcharge)
-        let offsetX = 0;
-        let offsetY = -18;
-        if (fieldOfView < 25) {
-          const dx = item.screenX;
-          const dy = item.screenY;
-          const distFromCenter = Math.hypot(dx, dy);
-          if (distFromCenter < 0.4) {
-            // Si l'objet est proche du centre de la vue ciblée, on décale son nom sur le côté
-            offsetX = dx >= 0 ? 25 : -85;
-            offsetY = dy >= 0 ? 10 : -35;
-          }
-        }
-
         label.style.left = `${leftPct}%`;
         label.style.top = `${topPct}%`;
-        label.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+        label.style.transform = `translate(0px, -16px)`;
         label.textContent = isPolaris ? `★ Polaris (Pôle Nord)` : (item.object.commonName || item.object.name);
         labels.appendChild(label);
       }
       labelsElement.replaceChildren(labels);
 
+      // Étiquettes des constellations
       const constLabels = document.createDocumentFragment();
       if (showNames && showConstellations) {
         for (const c of CONSTELLATION_CENTERS) {
@@ -908,37 +805,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       constLabelsElement.replaceChildren(constLabels);
     }
 
-    let program, gridBuffer, lineBuffer, objectBuffer, colorBuffer, sizeBuffer;
-    let positionLocation, colorLocation, sizeLocation, rightLocation, upLocation, forwardLocation, tanHalfFovLocation, aspectLocation, gridLocation, gridVertices;
-
     async function initialize() {
-      if (!gl) { setStatus('WebGL non supporté.', true); return; }
       try {
         await requestWakeLock();
-
-        program = createProgram();
-        positionLocation = gl.getAttribLocation(program, 'aPosition');
-        colorLocation = gl.getAttribLocation(program, 'aColor');
-        sizeLocation = gl.getAttribLocation(program, 'aSize');
-        rightLocation = gl.getUniformLocation(program, 'uRight');
-        upLocation = gl.getUniformLocation(program, 'uUp');
-        forwardLocation = gl.getUniformLocation(program, 'uForward');
-        tanHalfFovLocation = gl.getUniformLocation(program, 'uTanHalfFov');
-        aspectLocation = gl.getUniformLocation(program, 'uAspect');
-        gridLocation = gl.getUniformLocation(program, 'uGrid');
-        
-        gridBuffer = gl.createBuffer();
-        lineBuffer = gl.createBuffer();
-        objectBuffer = gl.createBuffer();
-        colorBuffer = gl.createBuffer();
-        sizeBuffer = gl.createBuffer();
-        
-        gridVertices = makeGrid();
-        gl.bindBuffer(gl.ARRAY_BUFFER, gridBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, gridVertices, gl.STATIC_DRAW);
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
         resizeCanvas();
 
         const [catalogRes, statusRes] = await Promise.all([fetch('/catalog'), fetch('/status')]);
@@ -956,8 +825,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         setStatus(`${objects.length} objets chargés. Planétarium prêt.`, "align-ok");
         
         window.setInterval(pollEncoderStatus, 100);
-        
-        resizeCanvas();
         render();
       } catch (error) {
         setStatus(error.message, true);
