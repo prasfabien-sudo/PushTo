@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.48.7
+// Version Component: BetaSkyPage.h v5.48.8
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -41,7 +41,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     .object-label { position: absolute; z-index: 2; padding: 2px 6px; border-radius: 4px; color: #f4e6be; background: rgba(5,8,12,0.8); font-size: .68rem; white-space: nowrap; text-shadow: 0 1px 3px #000; pointer-events: none; transition: transform 0.1s ease-out; }
     .object-label.polaris { color: #ffb74d; background: rgba(30,35,45,0.9); border: 1px solid rgba(255,183,77,0.5); font-weight: bold; z-index: 3; }
-    .constellation-label { position: absolute; z-index: 2; color: #7cb9e8; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.85; }
+    .constellation-label { position: absolute; z-index: 2; color: #ffb366; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.9; }
 
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
     .time-control-box { grid-column: span 4; display: flex; gap: 6px; align-items: center; background: #151b25; padding: 6px 10px; border: 1px solid #344256; border-radius: 9px; }
@@ -114,7 +114,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.48.7</span>
+      <span class="beta">PLANÉTARIUM v5.48.8</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -167,6 +167,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <div class="filter-dropdown">
         <button type="button" class="filter-drop-btn" id="filterDropBtn">Affichage Objets <span style="font-size:0.7em;">▼</span></button>
         <div class="filter-drop-menu" id="filterDropMenu">
+          <div class="filter-section-title">Repères & Grille</div>
+          <label><input type="checkbox" id="showGrid" checked> Grille & Horizon</label>
+
           <div class="filter-section-title">Astres</div>
           <label><input type="checkbox" id="showGal" checked> Galaxies</label>
           <label><input type="checkbox" id="showNeb" checked> Nébuleuses</label>
@@ -702,68 +705,69 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       ctx2d.clearRect(0, 0, width, height);
 
-      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE (Horizon renforcé) ---
-      for (let altDeg = 0; altDeg <= 80; altDeg += 20) {
-        const altRad = altDeg * Math.PI / 180;
-        if (altDeg === 0) {
-          // Horizon (0°) très marqué et lumineux
-          ctx2d.strokeStyle = "rgba(100, 200, 255, 0.85)";
-          ctx2d.lineWidth = 2.2;
-        } else {
-          // Cercles d'altitude intermédiaires renforcés
-          ctx2d.strokeStyle = "rgba(80, 150, 210, 0.35)";
-          ctx2d.lineWidth = 1.2;
-        }
-        
-        let ptsDrawn = 0;
-        ctx2d.beginPath();
-        for (let aDeg = 0; aDeg <= 360; aDeg += 5) {
-          const aRad = aDeg * Math.PI / 180;
-          const pos = [Math.sin(aRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(aRad) * Math.cos(altRad)];
-          const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
-          if (depth > 0.02) {
-            const sx = width / 2 + ((pos[0] * right[0] + pos[1] * right[1] + pos[2] * right[2]) / (depth * tanHalfFov * aspect)) * (width / 2);
-            const sy = height / 2 - ((pos[0] * up[0] + pos[1] * up[1] + pos[2] * up[2]) / (depth * tanHalfFov)) * (height / 2);
-            if (ptsDrawn === 0) ctx2d.moveTo(sx, sy);
-            else ctx2d.lineTo(sx, sy);
-            ptsDrawn++;
-          } else {
-            ptsDrawn = 0;
-          }
-        }
-        if (ptsDrawn > 1) ctx2d.stroke();
-      }
-
-      // Méridiens d'azimut renforcés
-      for (let azDeg = 0; azDeg < 360; azDeg += 45) {
-        const azRad = azDeg * Math.PI / 180;
-        ctx2d.strokeStyle = "rgba(80, 150, 210, 0.35)";
-        ctx2d.lineWidth = 1.2;
-        let ptsDrawn = 0;
-        ctx2d.beginPath();
-        for (let altDeg = 0; altDeg <= 90; altDeg += 5) {
+      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE (Piloté par la case à cocher) ---
+      const showGrid = document.getElementById('showGrid').checked;
+      if (showGrid) {
+        for (let altDeg = 0; altDeg <= 80; altDeg += 20) {
           const altRad = altDeg * Math.PI / 180;
-          const pos = [Math.sin(azRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(azRad) * Math.cos(altRad)];
-          const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
-          if (depth > 0.02) {
-            const sx = width / 2 + ((pos[0] * right[0] + pos[1] * right[1] + pos[2] * right[2]) / (depth * tanHalfFov * aspect)) * (width / 2);
-            const sy = height / 2 - ((pos[0] * up[0] + pos[1] * up[1] + pos[2] * up[2]) / (depth * tanHalfFov)) * (height / 2);
-            if (ptsDrawn === 0) ctx2d.moveTo(sx, sy);
-            else ctx2d.lineTo(sx, sy);
-            ptsDrawn++;
+          if (altDeg === 0) {
+            ctx2d.strokeStyle = "rgba(0, 220, 255, 0.9)"; // Horizon bleu électrique très net
+            ctx2d.lineWidth = 2.2;
           } else {
-            ptsDrawn = 0;
+            ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)"; // Cercles de grille bleu cyan
+            ctx2d.lineWidth = 1.2;
           }
+          
+          let ptsDrawn = 0;
+          ctx2d.beginPath();
+          for (let aDeg = 0; aDeg <= 360; aDeg += 5) {
+            const aRad = aDeg * Math.PI / 180;
+            const pos = [Math.sin(aRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(aRad) * Math.cos(altRad)];
+            const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
+            if (depth > 0.02) {
+              const sx = width / 2 + ((pos[0] * right[0] + pos[1] * right[1] + pos[2] * right[2]) / (depth * tanHalfFov * aspect)) * (width / 2);
+              const sy = height / 2 - ((pos[0] * up[0] + pos[1] * up[1] + pos[2] * up[2]) / (depth * tanHalfFov)) * (height / 2);
+              if (ptsDrawn === 0) ctx2d.moveTo(sx, sy);
+              else ctx2d.lineTo(sx, sy);
+              ptsDrawn++;
+            } else {
+              ptsDrawn = 0;
+            }
+          }
+          if (ptsDrawn > 1) ctx2d.stroke();
         }
-        if (ptsDrawn > 1) ctx2d.stroke();
-      }
-      // -----------------------------------------------------------
 
-      // Tracé des lignes de constellations piloté par la case à cocher
+        // Méridiens d'azimut
+        for (let azDeg = 0; azDeg < 360; azDeg += 45) {
+          const azRad = azDeg * Math.PI / 180;
+          ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
+          ctx2d.lineWidth = 1.2;
+          let ptsDrawn = 0;
+          ctx2d.beginPath();
+          for (let altDeg = 0; altDeg <= 90; altDeg += 5) {
+            const altRad = altDeg * Math.PI / 180;
+            const pos = [Math.sin(azRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(azRad) * Math.cos(altRad)];
+            const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
+            if (depth > 0.02) {
+              const sx = width / 2 + ((pos[0] * right[0] + pos[1] * right[1] + pos[2] * right[2]) / (depth * tanHalfFov * aspect)) * (width / 2);
+              const sy = height / 2 - ((pos[0] * up[0] + pos[1] * up[1] + pos[2] * up[2]) / (depth * tanHalfFov)) * (height / 2);
+              if (ptsDrawn === 0) ctx2d.moveTo(sx, sy);
+              else ctx2d.lineTo(sx, sy);
+              ptsDrawn++;
+            } else {
+              ptsDrawn = 0;
+            }
+          }
+          if (ptsDrawn > 1) ctx2d.stroke();
+        }
+      }
+      // -------------------------------------------------------------------
+
+      // Tracé des lignes de constellations (Teinte Orange/Ambre distincte de la grille bleue)
       const showConstellations = document.getElementById('showConstellations').checked;
       if (showConstellations) {
-        ctx2d.strokeStyle = "rgba(90, 160, 220, 0.35)";
-        ctx2d.lineWidth = 0.8;
+        ctx2d.strokeStyle = "rgba(255, 165, 80, 0.45)";
+        ctx2d.lineWidth = 1.0;
         for (const [starA, starB] of CONSTELLATION_LINES) {
           const posA = objectMap.get(starA);
           const posB = objectMap.get(starB);
@@ -1025,6 +1029,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     toggleAllMaskBtn.addEventListener('click', () => {
       allMaskedState = !allMaskedState;
       
+      document.getElementById('showGrid').checked = !allMaskedState;
       document.getElementById('showGal').checked = false;
       document.getElementById('showNeb').checked = false;
       document.getElementById('showAmas').checked = false;
