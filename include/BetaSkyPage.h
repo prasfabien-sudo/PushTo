@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.48.1
+// Version Component: BetaSkyPage.h v5.48.4
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -48,9 +48,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     
     .filter-dropdown { position: relative; grid-column: span 2; }
     .filter-drop-btn { width: 100%; min-height: 44px; background: #151b25; border: 1px solid #344256; border-radius: 9px; color: #e6eaf2; text-align: left; padding: 8px 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font: inherit; }
-    .filter-drop-menu { position: absolute; bottom: calc(100% + 4px); left: 0; right: 0; background: #151b25; border: 1px solid #344256; border-radius: 9px; padding: 8px 12px; z-index: 50; box-shadow: 0 4px 16px rgba(0,0,0,0.6); display: none; }
+    .filter-drop-menu { position: absolute; bottom: calc(100% + 4px); left: 0; right: 0; background: #151b25; border: 1px solid #344256; border-radius: 9px; padding: 10px 12px; z-index: 50; box-shadow: 0 4px 16px rgba(0,0,0,0.6); display: none; width: 230px; }
     .filter-drop-menu.open { display: block; }
-    .filter-drop-menu label { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.85rem; cursor: pointer; color: #e6eaf2; }
+    .filter-section-title { font-size: 0.72rem; color: #ffb74d; font-weight: bold; margin: 6px 0 3px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #273142; padding-bottom: 2px; }
+    .filter-drop-menu label { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 0.82rem; cursor: pointer; color: #e6eaf2; }
 
     button, select, input { min-height: 44px; border: 1px solid #344256; border-radius: 9px; background: #151b25; color: #e6eaf2; font: inherit; }
     button { padding: 8px 10px; cursor: pointer; }
@@ -113,7 +114,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.48.1</span>
+      <span class="beta">PLANÉTARIUM v5.48.4</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -162,12 +163,19 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       </div>
 
       <div class="filter-dropdown">
-        <button type="button" class="filter-drop-btn" id="filterDropBtn">Types d'objets <span style="font-size:0.7em;">▼</span></button>
+        <button type="button" class="filter-drop-btn" id="filterDropBtn">Affichage Objets <span style="font-size:0.7em;">▼</span></button>
         <div class="filter-drop-menu" id="filterDropMenu">
-          <label><input type="checkbox" value="galaxie" checked> Galaxies</label>
-          <label><input type="checkbox" value="nebuleuse" checked> Nébuleuses</label>
-          <label><input type="checkbox" value="amas" checked> Amas d'étoiles</label>
-          <label><input type="checkbox" value="etoile" checked> Étoiles</label>
+          <div class="filter-section-title">Affichage des astres</div>
+          <label><input type="checkbox" id="showGal" checked> Galaxies</label>
+          <label><input type="checkbox" id="showNeb" checked> Nébuleuses</label>
+          <label><input type="checkbox" id="showAmas" checked> Amas d'étoiles</label>
+          <label><input type="checkbox" id="showStars" checked> Étoiles</label>
+          
+          <div class="filter-section-title">Affichage des noms</div>
+          <label><input type="checkbox" id="labelGal" checked> Noms Galaxie</label>
+          <label><input type="checkbox" id="labelNeb" checked> Noms Nébuleuse</label>
+          <label><input type="checkbox" id="labelAmas" checked> Noms Amas</label>
+          <label><input type="checkbox" id="labelStars" checked> Noms Étoile</label>
         </div>
       </div>
 
@@ -179,9 +187,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         <option value="12">Mag. ≤ 12 (Grand télescope)</option>
       </select>
 
-      <button id="toggleNamesBtn" type="button">Noms : ON</button>
-      <button id="toggleConstellationsBtn" type="button">Constel. : ON</button>
-      <button id="centerButton" type="button">Recentrer</button>
+      <button id="toggleConstellationsBtn" type="button" style="grid-column: span 2;">Constel. : ON</button>
+      <button id="centerButton" type="button" style="grid-column: span 2;">Recentrer</button>
       
       <button id="manualFullscreenBtn" type="button" style="grid-column: span 4;">Plein écran</button>
     </div>
@@ -237,7 +244,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const constLabelsElement = document.getElementById('constellationLabels');
     const viewReadout = document.getElementById('viewReadout');
     const telescopeReadout = document.getElementById('telescopeReadout');
-    const toggleNamesBtn = document.getElementById('toggleNamesBtn');
     const toggleConstellationsBtn = document.getElementById('toggleConstellationsBtn');
     const customTimeInput = document.getElementById('customTimeInput');
     const filterDropBtn = document.getElementById('filterDropBtn');
@@ -261,7 +267,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     let fieldOfView = 34;
     let encoderRequestInFlight = false;
-    let showNames = true;
     let showConstellations = true;
     let lastScreenObjects = [];
     let useSystemTime = true;
@@ -569,30 +574,30 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return '#c2dcff';
     }
 
-    function matchesFilter(object) {
+    function getObjectType(object) {
       const type = (object.type || '').toLowerCase();
-      const maxMag = parseFloat(magFilterElement.value);
-      if (object.mag > maxMag) return false;
-
-      const checkboxes = filterDropMenu.querySelectorAll('input[type="checkbox"]');
-      let isGalaxieChecked = true, isNebuleuseChecked = true, isAmasChecked = true, isEtoileChecked = true;
-      
-      checkboxes.forEach(cb => {
-        if (cb.value === 'galaxie') isGalaxieChecked = cb.checked;
-        if (cb.value === 'nebuleuse') isNebuleuseChecked = cb.checked;
-        if (cb.value === 'amas') isAmasChecked = cb.checked;
-        if (cb.value === 'etoile') isEtoileChecked = cb.checked;
-      });
-
       const isGal = type.includes('gal');
       const isNeb = type.includes('neb');
       const isAmas = type.includes('amas') || type.includes('glob');
       const isStar = !isGal && !isNeb && !isAmas;
+      return { isGal, isNeb, isAmas, isStar };
+    }
 
-      if (isGal && isGalaxieChecked) return true;
-      if (isNeb && isNebuleuseChecked) return true;
-      if (isAmas && isAmasChecked) return true;
-      if (isStar && isEtoileChecked) return true;
+    function matchesFilter(object) {
+      const maxMag = parseFloat(magFilterElement.value);
+      if (object.mag > maxMag) return false;
+
+      const { isGal, isNeb, isAmas, isStar } = getObjectType(object);
+      
+      const showGal = document.getElementById('showGal').checked;
+      const showNeb = document.getElementById('showNeb').checked;
+      const showAmas = document.getElementById('showAmas').checked;
+      const showStars = document.getElementById('showStars').checked;
+
+      if (isGal && showGal) return true;
+      if (isNeb && showNeb) return true;
+      if (isAmas && showAmas) return true;
+      if (isStar && showStars) return true;
 
       return false;
     }
@@ -694,9 +699,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       ctx2d.clearRect(0, 0, width, height);
 
-      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE ---
+      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE (v5.48.1 d'origine) ---
       ctx2d.lineWidth = 0.8;
-      // Cercles d'altitude (0°, 20°, 40°, 60°, 80°)
       for (let altDeg = 0; altDeg <= 80; altDeg += 20) {
         const altRad = altDeg * Math.PI / 180;
         ctx2d.strokeStyle = altDeg === 0 ? "rgba(70, 130, 180, 0.45)" : "rgba(70, 130, 180, 0.18)";
@@ -719,7 +723,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         if (ptsDrawn > 1) ctx2d.stroke();
       }
 
-      // Méridiens d'azimut (tous les 45° : N, NE, E, SE, S, SO, O, NO)
       for (let azDeg = 0; azDeg < 360; azDeg += 45) {
         const azRad = azDeg * Math.PI / 180;
         ctx2d.strokeStyle = "rgba(70, 130, 180, 0.18)";
@@ -741,7 +744,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         }
         if (ptsDrawn > 1) ctx2d.stroke();
       }
-      // ---------------------------------------
+      // -----------------------------------------------------------
 
       // Tracé des lignes de constellations
       if (showConstellations) {
@@ -770,7 +773,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       lastScreenObjects = [];
 
-      // Rendu des astres avec pictogrammes spécifiques selon le type d'objet
+      // Rendu des astres
       for (const object of objects) {
         if (!matchesFilter(object)) continue;
         const horizontal = horizontalPosition(object, sidereal, latRadians);
@@ -793,7 +796,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         ctx2d.save();
         
         if (type.includes('gal')) {
-          // Picto Galaxie : Ellipse inclinée (spirale vue de biais)
           ctx2d.strokeStyle = colorHex;
           ctx2d.fillStyle = colorHex;
           ctx2d.lineWidth = 1.2;
@@ -803,7 +805,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           ctx2d.globalAlpha = 0.3;
           ctx2d.fill();
         } else if (type.includes('neb')) {
-          // Picto Nébuleuse : Losange doux / nuage
           ctx2d.strokeStyle = colorHex;
           ctx2d.fillStyle = colorHex;
           ctx2d.lineWidth = 1.2;
@@ -817,7 +818,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           ctx2d.globalAlpha = 0.25;
           ctx2d.fill();
         } else if (type.includes('amas') || type.includes('glob')) {
-          // Picto Amas d'étoiles : Cercle en pointillés ou anneau concentrique
           ctx2d.strokeStyle = colorHex;
           ctx2d.lineWidth = 1.2;
           ctx2d.setLineDash([2, 2]);
@@ -826,7 +826,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           ctx2d.stroke();
           ctx2d.setLineDash([]);
         } else {
-          // Étoile classique : Disque avec halo de brillance proportionnel à la magnitude
           let starSize = Math.max(0.7, Math.min(4.5, (8.5 - object.mag) * 0.5 + 0.8));
           if (object.name === "Polaris") starSize = 2.8;
           const zoomFactor = 34 / fieldOfView;
@@ -846,13 +845,25 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       viewReadout.textContent = `Vue AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
 
-      // Étiquettes des objets
+      // Étiquettes des objets pilotées par les cases à cocher du menu
       const labels = document.createDocumentFragment();
+      const labelGal = document.getElementById('labelGal').checked;
+      const labelNeb = document.getElementById('labelNeb').checked;
+      const labelAmas = document.getElementById('labelAmas').checked;
+      const labelStars = document.getElementById('labelStars').checked;
+
       for (const item of lastScreenObjects) {
         const isPolaris = (item.object.name === "Polaris");
-        if (!isPolaris && (!showNames || item.object.mag > 8.0)) continue;
-        if (!isPolaris && !showNames) continue;
-        if (!isPolaris && lastScreenObjects.filter(e => e.object.mag <= 8.0).indexOf(item) > 30) continue;
+        const { isGal, isNeb, isAmas, isStar } = getObjectType(item.object);
+
+        let showThisLabel = false;
+        if (isPolaris) showThisLabel = true;
+        else if (isGal && labelGal) showThisLabel = true;
+        else if (isNeb && labelNeb) showThisLabel = true;
+        else if (isAmas && labelAmas) showThisLabel = true;
+        else if (isStar && labelStars && item.object.mag <= 8.0) showThisLabel = true;
+
+        if (!showThisLabel) continue;
 
         const label = document.createElement('span');
         label.className = isPolaris ? 'object-label polaris' : 'object-label';
@@ -870,7 +881,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       // Étiquettes des constellations
       const constLabels = document.createDocumentFragment();
-      if (showNames && showConstellations) {
+      if (showConstellations) {
         for (const c of CONSTELLATION_CENTERS) {
           const pos = objectMap.get(c.refStar);
           if (pos) {
@@ -991,11 +1002,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       event.preventDefault();
       fieldOfView = Math.max(12, Math.min(60, fieldOfView + Math.sign(event.deltaY) * 2));
     }, { passive: false });
-
-    toggleNamesBtn.addEventListener('click', () => {
-      showNames = !showNames;
-      toggleNamesBtn.textContent = showNames ? "Noms : ON" : "Noms : OFF";
-    });
 
     toggleConstellationsBtn.addEventListener('click', () => {
       showConstellations = !showConstellations;
