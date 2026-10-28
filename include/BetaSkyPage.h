@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.48.8
+// Version Component: BetaSkyPage.h v5.50.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -46,13 +46,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
     .time-control-box { grid-column: span 4; display: flex; gap: 6px; align-items: center; background: #151b25; padding: 6px 10px; border: 1px solid #344256; border-radius: 9px; }
     
-    .filter-dropdown { position: relative; grid-column: span 2; }
-    .filter-drop-btn { width: 100%; min-height: 44px; background: #151b25; border: 1px solid #344256; border-radius: 9px; color: #e6eaf2; text-align: left; padding: 8px 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font: inherit; }
-    .filter-drop-menu { position: absolute; bottom: calc(100% + 4px); left: 0; right: 0; background: #151b25; border: 1px solid #344256; border-radius: 9px; padding: 10px 12px; z-index: 50; box-shadow: 0 4px 16px rgba(0,0,0,0.6); display: none; width: 230px; max-height: 380px; overflow-y: auto; }
-    .filter-drop-menu.open { display: block; }
-    .filter-section-title { font-size: 0.72rem; color: #ffb74d; font-weight: bold; margin: 8px 0 3px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #273142; padding-bottom: 2px; }
-    .filter-drop-menu label { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 0.82rem; cursor: pointer; color: #e6eaf2; }
-
+    .settings-btn { grid-column: span 2; background: #151b25; border: 1px solid #344256; border-radius: 9px; color: #ffb74d; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 6px; cursor: pointer; font: inherit; }
+    
     button, select, input { min-height: 44px; border: 1px solid #344256; border-radius: 9px; background: #151b25; color: #e6eaf2; font: inherit; }
     button { padding: 8px 10px; cursor: pointer; }
     button:active { background: #253247; }
@@ -85,16 +80,28 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       #manualFullscreenBtn { display: none !important; }
     }
 
-    .object-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    /* Pop-up Générale (Modal) */
+    .object-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px); }
     .object-modal[hidden] { display: none; }
-    .modal-content { width: min(100%, 380px); background: #151b25; border: 1px solid #344256; border-radius: 14px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.7); }
-    .modal-content h2 { margin: 0 0 4px; font-size: 1.1rem; color: #ffb74d; }
+    .modal-content { width: min(100%, 390px); background: #151b25; border: 1px solid #344256; border-radius: 14px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.7); max-height: 85vh; overflow-y: auto; }
+    .modal-content h2 { margin: 0 0 12px; font-size: 1.1rem; color: #ffb74d; border-bottom: 1px solid #273142; padding-bottom: 8px; }
     .modal-sub { color: #8b94a2; font-size: .85rem; margin-bottom: 12px; }
     .modal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
     .modal-stat { background: #10151d; padding: 8px 10px; border-radius: 8px; border: 1px solid #222d3b; }
     .modal-stat-label { font-size: .7rem; color: #8b94a2; display: block; }
     .modal-stat-value { font-size: .95rem; font-weight: bold; color: #f1f3f8; }
-    .modal-close { width: 100%; background: #263238; border: 1px solid #455a64; color: #fff; font-weight: bold; }
+    
+    /* Grille de paramètres épurée (Ligne par objet avec colonnes Objet / Nom) */
+    .settings-section-title { font-size: 0.72rem; color: #ffb74d; font-weight: bold; margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #273142; padding-bottom: 2px; }
+    .settings-table { display: flex; flex-direction: column; gap: 6px; }
+    .settings-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 4px 6px; background: #10151d; border-radius: 6px; border: 1px solid #222d3b; font-size: 0.83rem; }
+    .settings-row span { color: #e6eaf2; font-weight: 500; }
+    .settings-headers { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; padding: 0 6px 2px; font-size: 0.68rem; color: #8b94a2; text-transform: uppercase; font-weight: bold; text-align: center; }
+    .settings-headers div:nth-child(2), .settings-headers div:nth-child(3) { width: 42px; }
+    .settings-cell-check { display: flex; justify-content: center; width: 42px; }
+    .settings-modal-body input[type="checkbox"] { width: 17px; height: 17px; accent-color: #ffb74d; cursor: pointer; }
+    .settings-modal-body input[type="checkbox"]:disabled { opacity: 0.3; cursor: not-allowed; }
+    .modal-close { width: 100%; background: #263238; border: 1px solid #455a64; color: #fff; font-weight: bold; margin-top: 14px; }
 
     html[data-night-mode="true"]::after { content: ""; position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; background: rgba(255, 0, 0, 0.82); mix-blend-mode: multiply; filter: brightness(0.45); }
     
@@ -114,7 +121,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.48.8</span>
+      <span class="beta">PLANÉTARIUM v5.50.0</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -138,7 +145,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     </div>
     
     <div class="controls">
-      <button id="toggleAllMaskBtn" type="button" style="grid-column: span 4; background: #263238; color: #ffb74d; font-weight: bold;">Tout masquer (Étoiles seules)</button>
+      <button id="toggleAllMaskBtn" type="button" style="grid-column: span 2; background: #263238; color: #ffb74d; font-weight: bold; font-size: 0.8rem;">Tout masquer</button>
+      <button id="openSettingsModalBtn" type="button" class="settings-btn">Paramètres ⚙️</button>
 
       <div class="dpad-wrapper">
         <div class="dpad-container">
@@ -164,31 +172,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         <button type="button" id="resetTimeBtn" style="min-height: 36px; padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;">Direct</button>
       </div>
 
-      <div class="filter-dropdown">
-        <button type="button" class="filter-drop-btn" id="filterDropBtn">Affichage Objets <span style="font-size:0.7em;">▼</span></button>
-        <div class="filter-drop-menu" id="filterDropMenu">
-          <div class="filter-section-title">Repères & Grille</div>
-          <label><input type="checkbox" id="showGrid" checked> Grille & Horizon</label>
-
-          <div class="filter-section-title">Astres</div>
-          <label><input type="checkbox" id="showGal" checked> Galaxies</label>
-          <label><input type="checkbox" id="showNeb" checked> Nébuleuses</label>
-          <label><input type="checkbox" id="showAmas" checked> Amas d'étoiles</label>
-          <label><input type="checkbox" id="showStars" checked> Étoiles</label>
-          
-          <div class="filter-section-title">Noms des astres</div>
-          <label><input type="checkbox" id="labelGal" checked> Noms Galaxie</label>
-          <label><input type="checkbox" id="labelNeb" checked> Noms Nébuleuse</label>
-          <label><input type="checkbox" id="labelAmas" checked> Noms Amas</label>
-          <label><input type="checkbox" id="labelStars" checked> Noms Étoile</label>
-
-          <div class="filter-section-title">Constellations</div>
-          <label><input type="checkbox" id="showConstellations" checked> Tracé lignes</label>
-          <label><input type="checkbox" id="labelConstellations" checked> Noms des constellations</label>
-        </div>
-      </div>
-
-      <select id="magFilterSelect" aria-label="Mag. Max">
+      <select id="magFilterSelect" aria-label="Mag. Max" style="grid-column: span 4;">
         <option value="99" selected>Mag. Max : Toutes</option>
         <option value="6">Mag. ≤ 6 (Œil nu)</option>
         <option value="8">Mag. ≤ 8 (Jumelles)</option>
@@ -203,6 +187,61 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     <p class="scene-help">Utilisez la croix pour appliquer un offset permanent. Le déplacement tactile est temporaire.</p>
   </main>
 
+  <!-- POP-UP PARAMÈTRES D'AFFICHAGE -->
+  <div class="object-modal" id="settingsModal" hidden>
+    <div class="modal-content">
+      <h2>Paramètres d'affichage</h2>
+      <div class="settings-modal-body">
+        
+        <div class="settings-section-title">Repères & Grille</div>
+        <div class="settings-table" style="margin-top:6px;">
+          <div class="settings-row">
+            <span>Grille & Horizon</span>
+            <div class="settings-cell-check" style="grid-column: 3;"><input type="checkbox" id="showGrid" checked></div>
+          </div>
+        </div>
+
+        <div class="settings-section-title">Catalogue céleste</div>
+        <div class="settings-headers">
+          <div style="text-align: left;">Type d'objet</div>
+          <div>Objet</div>
+          <div>Nom</div>
+        </div>
+        
+        <div class="settings-table">
+          <div class="settings-row">
+            <span>Galaxies</span>
+            <div class="settings-cell-check"><input type="checkbox" id="showGal" checked data-name-id="labelGal"></div>
+            <div class="settings-cell-check"><input type="checkbox" id="labelGal" checked></div>
+          </div>
+          <div class="settings-row">
+            <span>Nébuleuses</span>
+            <div class="settings-cell-check"><input type="checkbox" id="showNeb" checked data-name-id="labelNeb"></div>
+            <div class="settings-cell-check"><input type="checkbox" id="labelNeb" checked></div>
+          </div>
+          <div class="settings-row">
+            <span>Amas d'étoiles</span>
+            <div class="settings-cell-check"><input type="checkbox" id="showAmas" checked data-name-id="labelAmas"></div>
+            <div class="settings-cell-check"><input type="checkbox" id="labelAmas" checked></div>
+          </div>
+          <div class="settings-row">
+            <span>Étoiles</span>
+            <div class="settings-cell-check"><input type="checkbox" id="showStars" checked data-name-id="labelStars"></div>
+            <div class="settings-cell-check"><input type="checkbox" id="labelStars" checked></div>
+          </div>
+          <div class="settings-row">
+            <span>Constellations</span>
+            <div class="settings-cell-check"><input type="checkbox" id="showConstellations" checked data-name-id="labelConstellations"></div>
+            <div class="settings-cell-check"><input type="checkbox" id="labelConstellations" checked></div>
+          </div>
+        </div>
+
+      </div>
+      <button class="modal-close" type="button" onclick="closeSettingsModal()">Fermer</button>
+    </div>
+  </div>
+
+  <!-- POP-UP FICHE OBJET -->
   <div class="object-modal" id="objectModal" hidden>
     <div class="modal-content">
       <h2 id="modalTitle">Nom de l'objet</h2>
@@ -253,8 +292,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const viewReadout = document.getElementById('viewReadout');
     const telescopeReadout = document.getElementById('telescopeReadout');
     const customTimeInput = document.getElementById('customTimeInput');
-    const filterDropBtn = document.getElementById('filterDropBtn');
-    const filterDropMenu = document.getElementById('filterDropMenu');
     const stepSelect = document.getElementById('stepSelect');
     
     let objects = [];
@@ -296,12 +333,36 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
     });
 
-    filterDropBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      filterDropMenu.classList.toggle('open');
+    // Gestion de la Pop-up Paramètres
+    const settingsModal = document.getElementById('settingsModal');
+    document.getElementById('openSettingsModalBtn').addEventListener('click', () => {
+      settingsModal.hidden = false;
     });
-    window.addEventListener('click', () => filterDropMenu.classList.remove('open'));
-    filterDropMenu.addEventListener('click', (e) => e.stopPropagation());
+    function closeSettingsModal() {
+      settingsModal.hidden = true;
+    }
+
+    // Liaison dynamique : si on décoche l'objet, son nom se décoche et se désactive
+    document.querySelectorAll('.settings-row input[type="checkbox"][data-name-id]').forEach(objChk => {
+      const nameId = objChk.dataset.nameId;
+      const nameChk = document.getElementById(nameId);
+      
+      const updateLinkState = () => {
+        if (!objChk.checked) {
+          nameChk.checked = false;
+          nameChk.disabled = true;
+        } else {
+          nameChk.disabled = false;
+        }
+      };
+
+      // Initialisation au chargement
+      updateLinkState();
+
+      objChk.addEventListener('change', () => {
+        updateLinkState();
+      });
+    });
 
     document.getElementById('jogLeftBtn').addEventListener('click', () => {
       const step = parseFloat(stepSelect.value) || 1;
@@ -705,16 +766,16 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       ctx2d.clearRect(0, 0, width, height);
 
-      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE (Piloté par la case à cocher) ---
+      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE ---
       const showGrid = document.getElementById('showGrid').checked;
       if (showGrid) {
         for (let altDeg = 0; altDeg <= 80; altDeg += 20) {
           const altRad = altDeg * Math.PI / 180;
           if (altDeg === 0) {
-            ctx2d.strokeStyle = "rgba(0, 220, 255, 0.9)"; // Horizon bleu électrique très net
+            ctx2d.strokeStyle = "rgba(0, 220, 255, 0.9)";
             ctx2d.lineWidth = 2.2;
           } else {
-            ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)"; // Cercles de grille bleu cyan
+            ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
             ctx2d.lineWidth = 1.2;
           }
           
@@ -737,7 +798,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           if (ptsDrawn > 1) ctx2d.stroke();
         }
 
-        // Méridiens d'azimut
         for (let azDeg = 0; azDeg < 360; azDeg += 45) {
           const azRad = azDeg * Math.PI / 180;
           ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
@@ -763,7 +823,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
       // -------------------------------------------------------------------
 
-      // Tracé des lignes de constellations (Teinte Orange/Ambre distincte de la grille bleue)
+      // Tracé des lignes de constellations
       const showConstellations = document.getElementById('showConstellations').checked;
       if (showConstellations) {
         ctx2d.strokeStyle = "rgba(255, 165, 80, 0.45)";
@@ -863,7 +923,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       viewReadout.textContent = `Vue AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
 
-      // Étiquettes des objets pilotées par les cases à cocher du menu
+      // Étiquettes des objets
       const labels = document.createDocumentFragment();
       const labelGal = document.getElementById('labelGal').checked;
       const labelNeb = document.getElementById('labelNeb').checked;
@@ -897,7 +957,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
       labelsElement.replaceChildren(labels);
 
-      // Étiquettes des constellations pilotées par la case à cocher
+      // Étiquettes des constellations
       const constLabels = document.createDocumentFragment();
       const labelConstellations = document.getElementById('labelConstellations').checked;
       if (labelConstellations) {
@@ -1022,7 +1082,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       fieldOfView = Math.max(12, Math.min(60, fieldOfView + Math.sign(event.deltaY) * 2));
     }, { passive: false });
 
-    // Gestion du bouton "Tout masquer" / "Restaurer l'affichage"
+    // Gestion du bouton "Tout masquer" / "Restaurer"
     const toggleAllMaskBtn = document.getElementById('toggleAllMaskBtn');
     let allMaskedState = false;
 
@@ -1033,17 +1093,23 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       document.getElementById('showGal').checked = false;
       document.getElementById('showNeb').checked = false;
       document.getElementById('showAmas').checked = false;
-      document.getElementById('showStars').checked = true;
+      document.getElementById('showStars').checked = true; // Étoiles seules visibles
 
-      document.getElementById('labelGal').checked = !allMaskedState;
-      document.getElementById('labelNeb').checked = !allMaskedState;
-      document.getElementById('labelAmas').checked = !allMaskedState;
+      document.getElementById('labelGal').checked = false;
+      document.getElementById('labelNeb').checked = false;
+      document.getElementById('labelAmas').checked = false;
       document.getElementById('labelStars').checked = false;
 
-      document.getElementById('showConstellations').checked = !allMaskedState;
-      document.getElementById('labelConstellations').checked = !allMaskedState;
+      document.getElementById('showConstellations').checked = false;
+      document.getElementById('labelConstellations').checked = false;
 
-      toggleAllMaskBtn.textContent = allMaskedState ? "Restaurer l'affichage par défaut" : "Tout masquer (Étoiles seules)";
+      // Déclencher la mise à jour des états activés/désactivés des cases de noms
+      document.querySelectorAll('.settings-row input[type="checkbox"][data-name-id]').forEach(objChk => {
+        const nameChk = document.getElementById(objChk.dataset.nameId);
+        nameChk.disabled = !objChk.checked;
+      });
+
+      toggleAllMaskBtn.textContent = allMaskedState ? "Restaurer" : "Tout masquer";
     });
 
     document.getElementById('centerButton').addEventListener('click', () => {
