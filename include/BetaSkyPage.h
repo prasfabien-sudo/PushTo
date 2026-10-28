@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.48.0
+// Version Component: BetaSkyPage.h v5.48.1
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -113,7 +113,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.48</span>
+      <span class="beta">PLANÉTARIUM v5.48.1</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -693,6 +693,55 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       });
 
       ctx2d.clearRect(0, 0, width, height);
+
+      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE ---
+      ctx2d.lineWidth = 0.8;
+      // Cercles d'altitude (0°, 20°, 40°, 60°, 80°)
+      for (let altDeg = 0; altDeg <= 80; altDeg += 20) {
+        const altRad = altDeg * Math.PI / 180;
+        ctx2d.strokeStyle = altDeg === 0 ? "rgba(70, 130, 180, 0.45)" : "rgba(70, 130, 180, 0.18)";
+        let ptsDrawn = 0;
+        ctx2d.beginPath();
+        for (let aDeg = 0; aDeg <= 360; aDeg += 5) {
+          const aRad = aDeg * Math.PI / 180;
+          const pos = [Math.sin(aRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(aRad) * Math.cos(altRad)];
+          const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
+          if (depth > 0.02) {
+            const sx = width / 2 + ((pos[0] * right[0] + pos[1] * right[1] + pos[2] * right[2]) / (depth * tanHalfFov * aspect)) * (width / 2);
+            const sy = height / 2 - ((pos[0] * up[0] + pos[1] * up[1] + pos[2] * up[2]) / (depth * tanHalfFov)) * (height / 2);
+            if (ptsDrawn === 0) ctx2d.moveTo(sx, sy);
+            else ctx2d.lineTo(sx, sy);
+            ptsDrawn++;
+          } else {
+            ptsDrawn = 0;
+          }
+        }
+        if (ptsDrawn > 1) ctx2d.stroke();
+      }
+
+      // Méridiens d'azimut (tous les 45° : N, NE, E, SE, S, SO, O, NO)
+      for (let azDeg = 0; azDeg < 360; azDeg += 45) {
+        const azRad = azDeg * Math.PI / 180;
+        ctx2d.strokeStyle = "rgba(70, 130, 180, 0.18)";
+        let ptsDrawn = 0;
+        ctx2d.beginPath();
+        for (let altDeg = 0; altDeg <= 90; altDeg += 5) {
+          const altRad = altDeg * Math.PI / 180;
+          const pos = [Math.sin(azRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(azRad) * Math.cos(altRad)];
+          const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
+          if (depth > 0.02) {
+            const sx = width / 2 + ((pos[0] * right[0] + pos[1] * right[1] + pos[2] * right[2]) / (depth * tanHalfFov * aspect)) * (width / 2);
+            const sy = height / 2 - ((pos[0] * up[0] + pos[1] * up[1] + pos[2] * up[2]) / (depth * tanHalfFov)) * (height / 2);
+            if (ptsDrawn === 0) ctx2d.moveTo(sx, sy);
+            else ctx2d.lineTo(sx, sy);
+            ptsDrawn++;
+          } else {
+            ptsDrawn = 0;
+          }
+        }
+        if (ptsDrawn > 1) ctx2d.stroke();
+      }
+      // ---------------------------------------
 
       // Tracé des lignes de constellations
       if (showConstellations) {

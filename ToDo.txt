@@ -7,27 +7,12 @@ se connecter à : http://127.0.0.1:8000/
 
 Général
 -------
-sortir le menu de toutes les pages afin de pouvoir le modifier plus facilement
-Voir si possible d'avoir une base d'objet hébergé localement sur le téléphone pour pouvoir avoir une grosse base ou alors faire appel à un service sur le web?
 
 
 VUE 3D
 -------
+Fonction de recherche d'objet dans le planétarium avec les fleches qui indiquent la direction
 
-
-
-J'aimerai pouvoir afficher les constellations de manière optionnelle (tout en gardant les autres objet affiché)
-Lorsque je passe en vue paysage, la vue avec le gyroscope ne fonctionne plus correctement. Je vais a 90 degré sur la droite et la vue semble bloquée.
-A tester: J'aimerai que le mode réalité augmenté soit capable en temps réel de proposer un alignement
-Corriger bug d'afficahge des constellation (ex : Orion)
-
-Ligne de l'équateur céleste tracée dynamiquement en temps réel pour séparer les hémisphères nord et sud.
-
-
-Mise en route auto du gyroscope quand on bouge le pc
-
-
-gérer l'hemisphere sud (a voir si vraiment c'est nécessaire car ca met systématiquement le bazar)
 
 platesolving (astronometry)==> Ca peut pas fonctionner il faut une application mobile.Car pas d'internet vu que que c'est l'ESP 32 qui est le point d'acces
 
