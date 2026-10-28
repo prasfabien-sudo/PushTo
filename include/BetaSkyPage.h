@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.48.4
+// Version Component: BetaSkyPage.h v5.48.6
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -48,9 +48,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     
     .filter-dropdown { position: relative; grid-column: span 2; }
     .filter-drop-btn { width: 100%; min-height: 44px; background: #151b25; border: 1px solid #344256; border-radius: 9px; color: #e6eaf2; text-align: left; padding: 8px 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font: inherit; }
-    .filter-drop-menu { position: absolute; bottom: calc(100% + 4px); left: 0; right: 0; background: #151b25; border: 1px solid #344256; border-radius: 9px; padding: 10px 12px; z-index: 50; box-shadow: 0 4px 16px rgba(0,0,0,0.6); display: none; width: 230px; }
+    .filter-drop-menu { position: absolute; bottom: calc(100% + 4px); left: 0; right: 0; background: #151b25; border: 1px solid #344256; border-radius: 9px; padding: 10px 12px; z-index: 50; box-shadow: 0 4px 16px rgba(0,0,0,0.6); display: none; width: 230px; max-height: 380px; overflow-y: auto; }
     .filter-drop-menu.open { display: block; }
-    .filter-section-title { font-size: 0.72rem; color: #ffb74d; font-weight: bold; margin: 6px 0 3px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #273142; padding-bottom: 2px; }
+    .filter-section-title { font-size: 0.72rem; color: #ffb74d; font-weight: bold; margin: 8px 0 3px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #273142; padding-bottom: 2px; }
     .filter-drop-menu label { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 0.82rem; cursor: pointer; color: #e6eaf2; }
 
     button, select, input { min-height: 44px; border: 1px solid #344256; border-radius: 9px; background: #151b25; color: #e6eaf2; font: inherit; }
@@ -114,7 +114,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.48.4</span>
+      <span class="beta">PLANÉTARIUM v5.48.6</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -138,6 +138,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     </div>
     
     <div class="controls">
+      <button id="toggleAllMaskBtn" type="button" style="grid-column: span 4; background: #263238; color: #ffb74d; font-weight: bold;">Tout masquer (Étoiles seules)</button>
+
       <div class="dpad-wrapper">
         <div class="dpad-container">
           <button id="jogUpBtn" type="button" class="jog-btn jog-up" title="Ajuster Altitude">▲</button>
@@ -165,17 +167,21 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <div class="filter-dropdown">
         <button type="button" class="filter-drop-btn" id="filterDropBtn">Affichage Objets <span style="font-size:0.7em;">▼</span></button>
         <div class="filter-drop-menu" id="filterDropMenu">
-          <div class="filter-section-title">Affichage des astres</div>
+          <div class="filter-section-title">Astres</div>
           <label><input type="checkbox" id="showGal" checked> Galaxies</label>
           <label><input type="checkbox" id="showNeb" checked> Nébuleuses</label>
           <label><input type="checkbox" id="showAmas" checked> Amas d'étoiles</label>
           <label><input type="checkbox" id="showStars" checked> Étoiles</label>
           
-          <div class="filter-section-title">Affichage des noms</div>
+          <div class="filter-section-title">Noms des astres</div>
           <label><input type="checkbox" id="labelGal" checked> Noms Galaxie</label>
           <label><input type="checkbox" id="labelNeb" checked> Noms Nébuleuse</label>
           <label><input type="checkbox" id="labelAmas" checked> Noms Amas</label>
           <label><input type="checkbox" id="labelStars" checked> Noms Étoile</label>
+
+          <div class="filter-section-title">Constellations</div>
+          <label><input type="checkbox" id="showConstellations" checked> Tracé lignes</label>
+          <label><input type="checkbox" id="labelConstellations" checked> Noms des constellations</label>
         </div>
       </div>
 
@@ -187,8 +193,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         <option value="12">Mag. ≤ 12 (Grand télescope)</option>
       </select>
 
-      <button id="toggleConstellationsBtn" type="button" style="grid-column: span 2;">Constel. : ON</button>
-      <button id="centerButton" type="button" style="grid-column: span 2;">Recentrer</button>
+      <button id="centerButton" type="button" style="grid-column: span 4;">Recentrer</button>
       
       <button id="manualFullscreenBtn" type="button" style="grid-column: span 4;">Plein écran</button>
     </div>
@@ -244,7 +249,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const constLabelsElement = document.getElementById('constellationLabels');
     const viewReadout = document.getElementById('viewReadout');
     const telescopeReadout = document.getElementById('telescopeReadout');
-    const toggleConstellationsBtn = document.getElementById('toggleConstellationsBtn');
     const customTimeInput = document.getElementById('customTimeInput');
     const filterDropBtn = document.getElementById('filterDropBtn');
     const filterDropMenu = document.getElementById('filterDropMenu');
@@ -267,7 +271,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     let fieldOfView = 34;
     let encoderRequestInFlight = false;
-    let showConstellations = true;
     let lastScreenObjects = [];
     let useSystemTime = true;
     
@@ -699,7 +702,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       ctx2d.clearRect(0, 0, width, height);
 
-      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE (v5.48.1 d'origine) ---
+      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE ---
       ctx2d.lineWidth = 0.8;
       for (let altDeg = 0; altDeg <= 80; altDeg += 20) {
         const altRad = altDeg * Math.PI / 180;
@@ -744,9 +747,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         }
         if (ptsDrawn > 1) ctx2d.stroke();
       }
-      // -----------------------------------------------------------
+      // ---------------------------------------
 
-      // Tracé des lignes de constellations
+      // Tracé des lignes de constellations piloté par la case à cocher
+      const showConstellations = document.getElementById('showConstellations').checked;
       if (showConstellations) {
         ctx2d.strokeStyle = "rgba(90, 160, 220, 0.35)";
         ctx2d.lineWidth = 0.8;
@@ -879,9 +883,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
       labelsElement.replaceChildren(labels);
 
-      // Étiquettes des constellations
+      // Étiquettes des constellations pilotées par la case à cocher
       const constLabels = document.createDocumentFragment();
-      if (showConstellations) {
+      const labelConstellations = document.getElementById('labelConstellations').checked;
+      if (labelConstellations) {
         for (const c of CONSTELLATION_CENTERS) {
           const pos = objectMap.get(c.refStar);
           if (pos) {
@@ -1003,9 +1008,28 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       fieldOfView = Math.max(12, Math.min(60, fieldOfView + Math.sign(event.deltaY) * 2));
     }, { passive: false });
 
-    toggleConstellationsBtn.addEventListener('click', () => {
-      showConstellations = !showConstellations;
-      toggleConstellationsBtn.textContent = showConstellations ? "Constel. : ON" : "Constel. : OFF";
+    // Gestion du bouton "Tout masquer" / "Restaurer l'affichage"
+    const toggleAllMaskBtn = document.getElementById('toggleAllMaskBtn');
+    let allMaskedState = false;
+
+    toggleAllMaskBtn.addEventListener('click', () => {
+      allMaskedState = !allMaskedState;
+      
+      // On garde uniquement les étoiles (showStars = true), et tout le reste à false
+      document.getElementById('showGal').checked = false;
+      document.getElementById('showNeb').checked = false;
+      document.getElementById('showAmas').checked = false;
+      document.getElementById('showStars').checked = true;
+
+      document.getElementById('labelGal').checked = !allMaskedState;
+      document.getElementById('labelNeb').checked = !allMaskedState;
+      document.getElementById('labelAmas').checked = !allMaskedState;
+      document.getElementById('labelStars').checked = false;
+
+      document.getElementById('showConstellations').checked = !allMaskedState;
+      document.getElementById('labelConstellations').checked = !allMaskedState;
+
+      toggleAllMaskBtn.textContent = allMaskedState ? "Restaurer l'affichage par défaut" : "Tout masquer (Étoiles seules)";
     });
 
     document.getElementById('centerButton').addEventListener('click', () => {
