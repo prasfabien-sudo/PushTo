@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.48.6
+// Version Component: BetaSkyPage.h v5.48.7
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -114,7 +114,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.48.6</span>
+      <span class="beta">PLANÉTARIUM v5.48.7</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -702,11 +702,19 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       ctx2d.clearRect(0, 0, width, height);
 
-      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE ---
-      ctx2d.lineWidth = 0.8;
+      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE (Horizon renforcé) ---
       for (let altDeg = 0; altDeg <= 80; altDeg += 20) {
         const altRad = altDeg * Math.PI / 180;
-        ctx2d.strokeStyle = altDeg === 0 ? "rgba(70, 130, 180, 0.45)" : "rgba(70, 130, 180, 0.18)";
+        if (altDeg === 0) {
+          // Horizon (0°) très marqué et lumineux
+          ctx2d.strokeStyle = "rgba(100, 200, 255, 0.85)";
+          ctx2d.lineWidth = 2.2;
+        } else {
+          // Cercles d'altitude intermédiaires renforcés
+          ctx2d.strokeStyle = "rgba(80, 150, 210, 0.35)";
+          ctx2d.lineWidth = 1.2;
+        }
+        
         let ptsDrawn = 0;
         ctx2d.beginPath();
         for (let aDeg = 0; aDeg <= 360; aDeg += 5) {
@@ -726,9 +734,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         if (ptsDrawn > 1) ctx2d.stroke();
       }
 
+      // Méridiens d'azimut renforcés
       for (let azDeg = 0; azDeg < 360; azDeg += 45) {
         const azRad = azDeg * Math.PI / 180;
-        ctx2d.strokeStyle = "rgba(70, 130, 180, 0.18)";
+        ctx2d.strokeStyle = "rgba(80, 150, 210, 0.35)";
+        ctx2d.lineWidth = 1.2;
         let ptsDrawn = 0;
         ctx2d.beginPath();
         for (let altDeg = 0; altDeg <= 90; altDeg += 5) {
@@ -747,7 +757,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         }
         if (ptsDrawn > 1) ctx2d.stroke();
       }
-      // ---------------------------------------
+      // -----------------------------------------------------------
 
       // Tracé des lignes de constellations piloté par la case à cocher
       const showConstellations = document.getElementById('showConstellations').checked;
@@ -1015,7 +1025,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     toggleAllMaskBtn.addEventListener('click', () => {
       allMaskedState = !allMaskedState;
       
-      // On garde uniquement les étoiles (showStars = true), et tout le reste à false
       document.getElementById('showGal').checked = false;
       document.getElementById('showNeb').checked = false;
       document.getElementById('showAmas').checked = false;
