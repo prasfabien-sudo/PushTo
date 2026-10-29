@@ -1,5 +1,5 @@
-// Version Component: ObjectsDB.h v5.1.0
-// Version Global System: v1.2.8
+// Version Component: ObjectsDB.h v5.2.0
+// Version Global System: v1.3.0
 #ifndef OBJECTSDB_H
 #define OBJECTSDB_H
 
@@ -10,123 +10,169 @@ struct DSO {
   const char* commonName;  // Constellation ou nom usuel
   const char* type;        // Type spectral ou type d'objet
   float ra;                // Ascension Droite (heures)
-  float dec;               // Déclinaison (degrés - Hémisphère Nord)
+  float dec;               // Déclinaison (degrés)
   float mag;               // Magnitude apparente
 };
 
 const DSO DSO_CATALOG[] PROGMEM = {
   // ==========================================
-  // ÉTOILES DE RÉFÉRENCE - HÉMISPHÈRE NORD
+  // ÉTOILES DE RÉFÉRENCE ET CONSTELLATIONS (UAI)
   // ==========================================
 
-  // Andromède
+  // Andromède (And)
   {"Alpheratz", "α And", "Étoile B", 0.14, 29.09, 2.07},
   {"Mirach", "β And", "Étoile M", 1.10, 35.62, 2.07},
   {"Almach", "γ And", "Étoile K", 2.06, 42.33, 2.10},
   {"Adhil", "ξ And", "Étoile K", 1.25, 45.49, 4.87},
+  {"Delta And", "δ And", "Étoile K", 0.66, 30.86, 3.27},
+  {"51 And", "51 And", "Étoile K", 1.63, 48.62, 3.59},
 
-  // Verseau (Aquarius - partiellement nord)
+  // Verseau (Aqr)
   {"Sadalmelik", "α Aqr", "Étoile G", 22.06, -0.32, 2.95},
   {"Sadalsuud", "β Aqr", "Étoile G", 21.52, -5.57, 2.90},
   {"Sadachbia", "γ Aqr", "Étoile A", 22.36, -1.39, 3.86},
+  {"Skat", "δ Aqr", "Étoile A", 22.91, -15.82, 3.27},
+  {"Ancha", "θ Aqr", "Étoile G", 22.28, -7.80, 4.17},
 
-  // Aigle (Aquila)
+  // Aigle (Aql)
   {"Altair", "α Aql", "Étoile A", 19.85, 8.87, 0.77},
   {"Alshain", "β Aql", "Étoile G", 19.93, 6.40, 3.71},
   {"Tarazed", "γ Aql", "Étoile K", 19.78, 10.61, 2.72},
   {"Deneb el Okab", "ζ Aql", "Étoile A", 19.09, 13.86, 2.99},
+  {"Theta Aql", "θ Aql", "Étoile B", 20.19, -0.82, 3.24},
+  {"Eta Aql", "η Aql", "Étoile F", 19.87, 1.01, 3.87},
 
-  // Bélier (Aries)
+  // Bélier (Ari)
   {"Hamal", "α Ari", "Étoile K", 2.12, 23.46, 2.01},
   {"Sheratan", "β Ari", "Étoile A", 1.93, 20.79, 2.64},
   {"Mesarthim", "γ Ari", "Étoile A", 1.92, 19.29, 3.88},
+  {"Botein", "δ Ari", "Étoile K", 3.19, 19.72, 4.35},
 
-  // Cocher (Auriga)
+  // Cocher (Aur)
   {"Capella", "α Aur", "Étoile G", 5.28, 45.99, 0.08},
   {"Menkalinan", "β Aur", "Étoile A", 5.96, 44.95, 1.90},
   {"Mahasim", "θ Aur", "Étoile A", 5.99, 37.21, 2.65},
   {"Hassaleh", "ι Aur", "Étoile K", 4.95, 33.19, 2.69},
+  {"Almaaz", "ε Aur", "Étoile F", 5.03, 43.82, 3.03},
+  {"Haedus", "η Aur", "Étoile B", 5.11, 41.23, 3.18},
 
-  // Bouvier (Boötes)
+  // Bouvier (Boo)
   {"Arcturus", "α Boo", "Étoile K", 14.26, 19.18, -0.05},
   {"Nekkar", "β Boo", "Étoile G", 15.02, 40.39, 3.49},
   {"Seginus", "γ Boo", "Étoile A", 14.54, 38.31, 3.04},
   {"Hozian", "δ Boo", "Étoile G", 15.25, 33.31, 3.46},
+  {"Izar", "ε Boo", "Étoile K", 14.75, 27.07, 2.35},
   {"Muphrid", "η Boo", "Étoile G", 13.91, 18.40, 2.68},
+  {"Alkalurops", "μ Boo", "Étoile F", 15.41, 37.38, 4.31},
 
-  // Girafe (Camelopardalis)
-  {"Beta Camelopardalis", "β Cam", "Étoile G", 5.04, 60.44, 4.03},
+  // Girafe (Cam)
+  {"Beta Cam", "β Cam", "Étoile G", 5.04, 60.44, 4.03},
+  {"Alpha Cam", "α Cam", "Étoile O", 4.90, 66.34, 4.29},
+  {"Gamma Cam", "γ Cam", "Étoile A", 3.84, 71.33, 4.59},
 
-  // Cancer
+  // Cancer (Cnc)
   {"Tarf", "β Cnc", "Étoile K", 8.27, 9.19, 3.53},
   {"Acubens", "α Cnc", "Étoile A", 8.96, 11.86, 4.26},
+  {"Asellus Australis", "δ Cnc", "Étoile K", 8.74, 18.15, 3.94},
+  {"Asellus Borealis", "γ Cnc", "Étoile A", 8.72, 21.46, 4.66},
+  {"Iota Cnc", "ι Cnc", "Étoile G", 8.77, 28.76, 4.02},
 
-  // Chiens de Chasse (Canes Venatici)
+  // Chiens de Chasse (CVn)
   {"Cor Caroli", "α CVn", "Étoile A", 12.93, 38.32, 2.89},
   {"Chara", "β CVn", "Étoile G", 12.56, 41.36, 4.24},
 
-  // Petit Chien (Canis Minor)
+  // Petit Chien (CMi)
   {"Procyon", "α CMi", "Étoile F", 7.65, 5.22, 0.38},
   {"Gomeisa", "β CMi", "Étoile B", 7.44, 8.29, 2.89},
 
-  // Cassiopée (Cassiopeia)
+  // Cassiopée (Cas)
   {"Shedar", "α Cas", "Étoile K", 0.67, 56.54, 2.24},
   {"Caph", "β Cas", "Étoile F", 0.15, 59.15, 2.28},
   {"Navi", "γ Cas", "Étoile B", 0.94, 60.71, 2.15},
   {"Ruchbah", "δ Cas", "Étoile A", 1.43, 60.23, 2.68},
   {"Segin", "ε Cas", "Étoile B", 1.90, 63.67, 3.35},
+  {"Achird", "η Cas", "Étoile G", 0.82, 57.82, 3.46},
 
-  // Céphée (Cepheus)
+  // Céphée (Cep)
   {"Alderamin", "α Cep", "Étoile A", 21.31, 62.58, 2.45},
-  {"Alrai", "β Cep", "Étoile K", 21.48, 70.55, 3.23},
+  {"Alfirk", "β Cep", "Étoile B", 21.48, 70.55, 3.23},
   {"Errai", "γ Cep", "Étoile K", 23.66, 77.63, 3.21},
+  {"Zeta Cep", "ζ Cep", "Étoile K", 22.18, 58.20, 3.39},
+  {"Iota Cep", "ι Cep", "Étoile K", 22.83, 66.20, 3.50},
+  {"Delta Cep", "δ Cep", "Étoile F", 22.48, 58.42, 4.07},
   {"Kurhah", "ξ Cep", "Étoile A", 22.05, 64.63, 4.26},
 
-  // Baleine (Cetus)
+  // Baleine (Cet)
+  {"Diphda", "β Cet", "Étoile K", 0.73, -17.99, 2.04},
   {"Menkar", "α Cet", "Étoile M", 3.04, 4.08, 2.54},
   {"Kaffaljidhma", "γ Cet", "Étoile A", 2.43, 3.23, 3.47},
+  {"Baten Kaitos", "ζ Cet", "Étoile K", 1.86, -10.33, 3.74},
 
-  // Chevelure de Berenice (Coma Berenices)
+  // Chevelure de Bérénice (Com)
   {"Diadem", "α Com", "Étoile F", 13.16, 17.53, 4.32},
+  {"Beta Com", "β Com", "Étoile G", 13.20, 27.88, 4.26},
+  {"Gamma Com", "γ Com", "Étoile K", 12.45, 28.27, 4.35},
 
-  // Couronne Boréale (Corona Borealis)
+  // Couronne Boréale (CrB)
   {"Alphecca", "α CrB", "Étoile A", 15.58, 26.71, 2.22},
   {"Nusakan", "β CrB", "Étoile F", 15.46, 29.10, 3.68},
+  {"Gamma CrB", "γ CrB", "Étoile A", 15.65, 26.30, 3.81},
+  {"Epsilon CrB", "ε CrB", "Étoile K", 15.96, 26.88, 4.14},
 
-  // Cygne (Cygnus)
+  // Cygne (Cyg)
   {"Deneb", "α Cyg", "Étoile A", 20.69, 45.28, 1.25},
   {"Albireo", "β Cyg", "Étoile K", 19.51, 27.96, 3.05},
   {"Sadr", "γ Cyg", "Étoile F", 20.37, 40.26, 2.23},
   {"Fawaris", "δ Cyg", "Étoile B", 19.75, 45.13, 2.87},
   {"Gienah", "ε Cyg", "Étoile K", 20.77, 33.97, 2.48},
+  {"Zeta Cyg", "ζ Cyg", "Étoile G", 21.22, 30.23, 3.21},
+  {"Iota Cyg", "ι Cyg", "Étoile A", 19.49, 51.73, 3.76},
 
-  // Dauphin (Delphinus)
+  // Dauphin (Del)
   {"Rotanev", "β Del", "Étoile F", 20.62, 14.60, 3.64},
   {"Sualocin", "α Del", "Étoile B", 20.65, 15.90, 3.77},
+  {"Gamma Del", "γ Del", "Étoile K", 20.78, 16.12, 3.87},
+  {"Delta Del", "δ Del", "Étoile A", 20.72, 15.07, 4.43},
 
-  // Dragon (Draco)
+  // Dragon (Dra) - Complété pour la boucle serpentiforme
   {"Eltanin", "γ Dra", "Étoile K", 17.94, 51.49, 2.23},
   {"Rastaban", "β Dra", "Étoile G", 17.50, 52.30, 2.79},
+  {"Grumium", "ξ Dra", "Étoile K", 17.89, 56.87, 3.73},
+  {"Altais", "δ Dra", "Étoile G", 19.21, 67.66, 3.07},
+  {"Aldhibah", "ζ Dra", "Étoile B", 17.14, 65.72, 3.17},
+  {"Edasich", "ι Dra", "Étoile K", 15.41, 58.96, 3.29},
   {"Thuban", "α Dra", "Étoile A", 14.07, 64.38, 3.67},
+  {"Alsafi", "σ Dra", "Étoile G", 19.54, 69.66, 4.67},
+  {"Chi Dra", "χ Dra", "Étoile F", 18.35, 72.73, 3.55},
+  {"Kuma", "ν Dra", "Étoile A", 17.53, 55.18, 4.87},
 
-  // Petit Cheval (Equuleus)
+  // Petit Cheval (Equ)
   {"Kitalpha", "α Equ", "Étoile G", 21.26, 5.24, 3.92},
+  {"Beta Equ", "β Equ", "Étoile A", 21.38, 6.80, 5.16},
 
-  // Gémeaux (Gemini)
+  // Gémeaux (Gem)
   {"Pollux", "β Gem", "Étoile K", 7.76, 28.03, 1.14},
   {"Castor", "α Gem", "Étoile A", 7.38, 31.89, 1.58},
   {"Alhena", "γ Gem", "Étoile A", 6.63, 16.40, 1.93},
   {"Mebsuta", "ε Gem", "Étoile G", 6.73, 25.13, 3.06},
   {"Tejat", "μ Gem", "Étoile M", 6.24, 22.51, 2.87},
+  {"Propus", "η Gem", "Étoile M", 6.25, 22.51, 3.31},
+  {"Wasat", "δ Gem", "Étoile F", 7.33, 21.98, 3.55},
+  {"Mekbuda", "ζ Gem", "Étoile G", 7.07, 20.57, 4.01},
 
-  // Hercule (Hercules)
+  // Hercule (Her)
   {"Kornephoros", "β Her", "Étoile G", 16.51, 21.48, 2.78},
   {"Rasalgethi", "α Her", "Étoile M", 17.24, 14.39, 3.48},
   {"Sujata", "δ Her", "Étoile A", 17.25, 24.85, 3.12},
+  {"Rutilicus", "ζ Her", "Étoile F", 16.69, 31.60, 2.81},
+  {"Eta Her", "η Her", "Étoile G", 16.71, 38.92, 3.48},
+  {"Pi Her", "π Her", "Étoile K", 17.25, 36.80, 3.16},
+  {"Epsilon Her", "ε Her", "Étoile A", 17.00, 30.92, 3.92},
   {"Marfik", "λ Her", "Étoile A", 17.50, 26.10, 4.41},
 
-  // Lézard (Lacerta)
+  // Lézard (Lac)
   {"Alpha Lacertae", "α Lac", "Étoile A", 22.55, 50.29, 3.76},
+  {"Beta Lacertae", "β Lac", "Étoile G", 22.39, 52.22, 4.42},
 
   // Lion (Leo)
   {"Regulus", "α Leo", "Étoile B", 10.14, 11.97, 1.35},
@@ -134,63 +180,90 @@ const DSO DSO_CATALOG[] PROGMEM = {
   {"Algieba", "γ Leo", "Étoile K", 10.33, 19.84, 2.01},
   {"Zosma", "δ Leo", "Étoile A", 11.24, 20.52, 2.56},
   {"Ras Elased Australis", "ε Leo", "Étoile G", 9.76, 23.77, 2.97},
+  {"Adhafera", "ζ Leo", "Étoile F", 10.28, 23.42, 3.44},
+  {"Chertan", "θ Leo", "Étoile A", 11.24, 15.43, 3.33},
 
-  // Petit Lion (Leo Minor)
+  // Petit Lion (LMi)
   {"Praecipua", "46 LMi", "Étoile K", 10.48, 34.20, 3.79},
+  {"Beta LMi", "β LMi", "Étoile G", 10.46, 36.71, 4.20},
 
-  // Lynx
+  // Lynx (Lyn)
   {"Alpha Lyncis", "α Lyn", "Étoile K", 9.36, 34.33, 3.82},
+  {"38 Lyncis", "38 Lyn", "Étoile A", 9.31, 36.80, 3.84},
 
-  // Lyre (Lyra)
+  // Lyre (Lyr)
   {"Vega", "α Lyr", "Étoile A", 18.61, 38.78, 0.03},
   {"Sheliak", "β Lyr", "Étoile B", 18.85, 33.36, 3.52},
   {"Sulafat", "γ Lyr", "Étoile A", 18.96, 32.69, 3.25},
+  {"Epsilon Lyr", "ε Lyr", "Étoile A", 18.74, 39.67, 4.67},
+  {"Zeta Lyr", "ζ Lyr", "Étoile A", 18.75, 37.60, 4.34},
 
-  // Ophiuchus
+  // Ophiuchus (Oph)
   {"Rasalhague", "α Oph", "Étoile A", 17.58, 12.56, 2.08},
+  {"Sabik", "η Oph", "Étoile A", 17.17, -15.72, 2.43},
+  {"Yed Prior", "δ Oph", "Étoile M", 16.24, -3.69, 2.73},
+  {"Yed Posterior", "ε Oph", "Étoile G", 16.31, -4.69, 3.23},
+  {"Cebalrai", "β Oph", "Étoile K", 17.72, 4.57, 2.76},
 
-  // Orion
+  // Orion (Ori)
   {"Rigel", "β Ori", "Étoile B", 5.24, -8.20, 0.12},
   {"Betelgeuse", "α Ori", "Étoile M", 5.92, 7.41, 0.50},
   {"Bellatrix", "γ Ori", "Étoile B", 5.42, 6.35, 1.64},
   {"Alnilam", "ε Ori", "Étoile B", 5.93, -1.20, 1.69},
   {"Alnitak", "ζ Ori", "Étoile O", 5.40, -1.94, 1.77},
   {"Mintaka", "δ Ori", "Étoile O", 5.53, -0.30, 2.23},
+  {"Saiph", "κ Ori", "Étoile B", 5.79, -9.67, 2.07},
   {"Meissa", "λ Ori", "Étoile O", 5.58, 9.93, 3.39},
 
-  // Pégase (Pegasus)
+  // Pégase (Peg)
   {"Enif", "ε Peg", "Étoile K", 21.74, 9.87, 2.38},
   {"Scheat", "β Peg", "Étoile M", 23.06, 28.08, 2.44},
   {"Markab", "α Peg", "Étoile B", 23.08, 15.21, 2.49},
   {"Algenib", "γ Peg", "Étoile B", 0.22, 15.18, 2.84},
+  {"Matar", "η Peg", "Étoile G", 22.72, 30.22, 2.93},
+  {"Homam", "ζ Peg", "Étoile B", 22.69, 10.83, 3.41},
+  {"Sadalbari", "μ Peg", "Étoile M", 22.83, 24.60, 3.51},
 
-  // Persée (Perseus)
+  // Persée (Per)
   {"Mirfak", "α Per", "Étoile F", 3.24, 49.86, 1.79},
   {"Algol", "β Per", "Étoile B", 3.13, 40.96, 2.12},
-  {"Menkib", "ζ Per", "Étoile B", 4.23, 31.86, 2.84},
   {"Atik", "ο Per", "Étoile B", 3.74, 32.30, 3.84},
+  {"Menkib", "ζ Per", "Étoile B", 3.90, 31.88, 2.84},
+  {"Epsilon Per", "ε Per", "Étoile B", 3.96, 40.01, 2.90},
+  {"Gamma Per", "γ Per", "Étoile G", 3.08, 53.51, 2.91},
+  {"Delta Per", "δ Per", "Étoile B", 3.71, 47.79, 3.01},
 
-  // Poissons (Pisces)
+  // Poissons (Psc)
   {"Alpherg", "η Psc", "Étoile G", 1.52, 15.35, 3.62},
   {"Gamma Piscium", "γ Psc", "Étoile G", 23.29, 3.29, 3.70},
+  {"Alrescha", "α Psc", "Étoile A", 2.03, 2.76, 3.82},
+  {"Omega Psc", "ω Psc", "Étoile F", 23.99, 6.86, 4.03},
+  {"Iota Psc", "ι Psc", "Étoile F", 23.66, 5.63, 4.13},
 
-  // Flèche (Sagitta)
+  // Flèche (Sge)
   {"Sham", "α Sge", "Étoile G", 19.65, 18.49, 4.39},
+  {"Beta Sge", "β Sge", "Étoile G", 19.68, 17.48, 4.37},
+  {"Gamma Sge", "γ Sge", "Étoile M", 19.98, 19.49, 3.51},
 
-  // Serpent (Serpens)
+  // Serpent (Ser)
   {"Unukalhai", "α Ser", "Étoile K", 15.74, 6.42, 2.63},
+  {"Chow", "β Ser", "Étoile A", 15.77, 15.42, 3.65},
+  {"Alya", "θ Ser", "Étoile A", 18.94, 4.20, 4.03},
 
-  // Taureau (Taurus)
+  // Taureau (Tau)
   {"Aldebaran", "α Tau", "Étoile K", 4.60, 16.51, 0.85},
   {"Elnath", "β Tau", "Étoile B", 5.44, 28.61, 1.65},
   {"Alcyone", "η Tau", "Étoile B", 3.79, 24.11, 2.85},
   {"Tianguis", "ζ Tau", "Étoile B", 5.62, 21.14, 3.01},
+  {"Ain", "ε Tau", "Étoile K", 4.48, 19.18, 3.53},
+  {"Gamma Tau", "γ Tau", "Étoile K", 4.33, 15.63, 3.65},
 
-  // Triangle (Triangulum)
+  // Triangle (Tri)
   {"Beta Trianguli", "β Tri", "Étoile A", 2.15, 34.98, 3.00},
   {"Mothallah", "α Tri", "Étoile F", 1.89, 29.58, 3.42},
+  {"Gamma Tri", "γ Tri", "Étoile A", 2.29, 33.84, 4.03},
 
-  // Grande Ourse (Ursa Major)
+  // Grande Ourse (UMa)
   {"Dubhe", "α UMa", "Étoile K", 11.06, 61.75, 1.79},
   {"Merak", "β UMa", "Étoile A", 11.03, 56.38, 2.37},
   {"Phecda", "γ UMa", "Étoile A", 11.90, 53.69, 2.44},
@@ -199,7 +272,7 @@ const DSO DSO_CATALOG[] PROGMEM = {
   {"Mizar", "ζ UMa", "Étoile A", 13.40, 54.92, 2.23},
   {"Alkaid", "η UMa", "Étoile B", 13.79, 49.31, 1.86},
 
-  // Petite Ourse (Ursa Minor)
+  // Petite Ourse (UMi)
   {"Polaris", "α UMi", "Étoile F", 2.53, 89.26, 2.00},
   {"Kochab", "β UMi", "Étoile K", 14.85, 74.16, 2.08},
   {"Pherkad", "γ UMi", "Étoile A", 15.35, 71.83, 3.05},
@@ -208,23 +281,28 @@ const DSO DSO_CATALOG[] PROGMEM = {
   {"Yildun", "δ UMi", "Étoile A", 17.54, 86.59, 4.35},
   {"Eta UMi", "η UMi", "Étoile F", 16.29, 75.75, 4.95},
 
-  // Vierge (Virgo - partiellement nord)
+  // Vierge (Vir)
+  {"Spica", "α Vir", "Étoile B", 13.42, -11.16, 0.98},
   {"Vindemiatrix", "ε Vir", "Étoile K", 13.03, 10.96, 2.83},
   {"Porrima", "γ Vir", "Étoile F", 12.69, -1.45, 2.74},
+  {"Heze", "ζ Vir", "Étoile A", 13.58, -0.60, 3.38},
+  {"Zavijava", "β Vir", "Étoile F", 11.84, 1.77, 3.61},
 
-  // Petit Renard (Vulpecula)
+  // Petit Renard (Vul)
   {"Anser", "α Vul", "Étoile M", 19.48, 24.40, 4.44},
 
-  // Grand Chien (Canis Major)
+  // Grand Chien (CMa)
   {"Sirius", "α CMa", "Étoile A", 6.75, -16.72, -1.46},
   {"Mirzam", "β CMa", "Étoile B", 6.38, -17.96, 1.98},
   {"Adhara", "ε CMa", "Étoile B", 6.98, -28.97, 1.50},
+  {"Wezen", "δ CMa", "Étoile F", 7.14, -26.39, 1.83},
 
-  // Balance (Libra)
+  // Balance (Lib)
   {"Zubenelgenubi", "α Lib", "Étoile A", 14.85, -16.04, 2.75},
   {"Zubeneschamali", "β Lib", "Étoile B", 15.28, -9.38, 2.61},
+  {"Zubenelhakrabi", "γ Lib", "Étoile K", 15.59, -14.79, 3.91},
 
- // ==========================================
+  // ==========================================
   // CATALOGUE MESSIER INTÉGRAL (M1 à M110)
   // ==========================================
   {"M1", "Nébuleuse du Crabe", "Nébuleuse", 5.58, 22.01, 8.4},
@@ -234,7 +312,7 @@ const DSO DSO_CATALOG[] PROGMEM = {
   {"M5", "Amas Globulaire", "Amas Globulaire", 15.31, 2.06, 5.6},
   {"M6", "Amas du Papillon", "Amas Ouvert", 17.67, -32.22, 4.2},
   {"M7", "Amas de Ptolémée", "Amas Ouvert", 17.90, -34.82, 3.3},
-  {"M8", "Nébuleuse de la Lagoon", "Nébuleuse", 18.06, -24.38, 6.0},
+  {"M8", "Nébuleuse de la Lagune", "Nébuleuse", 18.06, -24.38, 6.0},
   {"M9", "Amas Globulaire", "Amas Globulaire", 17.32, -18.51, 7.7},
   {"M10", "Amas Globulaire", "Amas Globulaire", 16.98, -4.10, 6.4},
   {"M11", "Amas du Canard Sauvage", "Amas Ouvert", 18.86, -6.27, 5.8},
@@ -338,7 +416,6 @@ const DSO DSO_CATALOG[] PROGMEM = {
   {"M109", "Galaxie Spirale", "Galaxie", 11.96, 53.37, 9.8},
   {"M110", "Galaxie Satellite M31", "Galaxie", 0.67, 41.68, 8.5},
 
-
   // ==========================================
   // OBJETS NGC CÉLÈBRES
   // ==========================================
@@ -361,8 +438,6 @@ const DSO DSO_CATALOG[] PROGMEM = {
   {"NGC 7000", "Nébuleuse de l'Amérique du Nord", "Nébuleuse", 20.99, 44.32, 4.0},
   {"NGC 7331", "Galaxie de Deerlick", "Galaxie", 22.62, 34.42, 9.5},
   {"NGC 7789", "Amas de la Rose Caroline", "Amas Ouvert", 23.95, 56.72, 6.7}
-
-
 };
 
 const size_t DSO_COUNT = sizeof(DSO_CATALOG) / sizeof(DSO_CATALOG[0]);

@@ -1,5 +1,5 @@
-// Version Component: BetaSkyPage.h v5.53.0
-// Version Global System: v1.2.7
+// Version Component: BetaSkyPage.h v5.56.0
+// Version Global System: v1.3.0
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
 
@@ -124,7 +124,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.53.0</span>
+      <span class="beta">PLANÉTARIUM v5.56.0</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -353,6 +353,59 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       settingsModal.hidden = true;
     }
 
+    // CHARGEMENT ET SAUVEGARDE SUR L'ESP32
+    async function loadSavedSkyPrefs() {
+      try {
+        const res = await fetch('/get_sky_prefs');
+        if (res.ok) {
+          const p = await res.json();
+          if (p.mag !== undefined) magFilterElement.value = p.mag;
+          if (p.showGrid !== undefined) document.getElementById('showGrid').checked = p.showGrid;
+          if (p.showGal !== undefined) document.getElementById('showGal').checked = p.showGal;
+          if (p.showNeb !== undefined) document.getElementById('showNeb').checked = p.showNeb;
+          if (p.showAmas !== undefined) document.getElementById('showAmas').checked = p.showAmas;
+          if (p.showStars !== undefined) document.getElementById('showStars').checked = p.showStars;
+          if (p.showConst !== undefined) document.getElementById('showConstellations').checked = p.showConst;
+          
+          if (p.labelGal !== undefined) document.getElementById('labelGal').checked = p.labelGal;
+          if (p.labelNeb !== undefined) document.getElementById('labelNeb').checked = p.labelNeb;
+          if (p.labelAmas !== undefined) document.getElementById('labelAmas').checked = p.labelAmas;
+          if (p.labelStars !== undefined) document.getElementById('labelStars').checked = p.labelStars;
+          if (p.labelConst !== undefined) document.getElementById('labelConstellations').checked = p.labelConst;
+        }
+      } catch (e) {
+        console.warn("Préférences ESP32 non disponibles:", e);
+      }
+    }
+
+    async function saveSkyPrefs() {
+      try {
+        const p = {
+          mag: magFilterElement.value,
+          showGrid: document.getElementById('showGrid').checked ? 1 : 0,
+          showGal: document.getElementById('showGal').checked ? 1 : 0,
+          showNeb: document.getElementById('showNeb').checked ? 1 : 0,
+          showAmas: document.getElementById('showAmas').checked ? 1 : 0,
+          showStars: document.getElementById('showStars').checked ? 1 : 0,
+          showConst: document.getElementById('showConstellations').checked ? 1 : 0,
+          labelGal: document.getElementById('labelGal').checked ? 1 : 0,
+          labelNeb: document.getElementById('labelNeb').checked ? 1 : 0,
+          labelAmas: document.getElementById('labelAmas').checked ? 1 : 0,
+          labelStars: document.getElementById('labelStars').checked ? 1 : 0,
+          labelConst: document.getElementById('labelConstellations').checked ? 1 : 0
+        };
+        const query = new URLSearchParams(p).toString();
+        await fetch('/save_sky_prefs?' + query, { method: 'POST' });
+      } catch (e) {
+        console.warn("Erreur sauvegarde ESP32:", e);
+      }
+    }
+
+    magFilterElement.addEventListener('change', saveSkyPrefs);
+    document.querySelectorAll('#settingsModal input[type="checkbox"]').forEach(chk => {
+      chk.addEventListener('change', saveSkyPrefs);
+    });
+
     document.querySelectorAll('.settings-row input[type="checkbox"][data-name-id]').forEach(objChk => {
       const nameId = objChk.dataset.nameId;
       const nameChk = document.getElementById(nameId);
@@ -394,16 +447,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       fieldOfView = Math.min(60, fieldOfView + 4);
     });
 
-    // --- CALCUL DE LA HAUTEUR DU SOLEIL ET INTERPOLATION DYNAMIQUE ---
     function getSunAltitude(date, lat, lon) {
       const start = new Date(date.getFullYear(), 0, 0);
       const diff = (date - start) + ((start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000);
       const n = Math.floor(diff / (1000 * 60 * 60 * 24));
       
-      // Déclinaison solaire approximative
       const declination = 23.45 * Math.sin((2 * Math.PI / 365) * (n - 81)) * Math.PI / 180;
-      
-      // Équation du temps (en minutes)
       const b = (2 * Math.PI / 365) * (n - 81);
       const eot = 9.87 * Math.sin(2 * b) - 7.53 * Math.cos(b) - 1.5 * Math.sin(b);
       
@@ -427,14 +476,13 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const lerp = (a, b, t) => a + (b - a) * Math.max(0, Math.min(1, t));
       const lerpRgb = (c1, c2, t) => [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)];
 
-      // Paliers de couleur du ciel selon l'altitude du Soleil
       const keyframes = [
-        { alt: -18, top: '#020305', mid: '#05080f', bot: '#080c14' }, // Nuit noire
-        { alt: -12, top: '#05080f', mid: '#0f1423', bot: '#1b1b3a' }, // Crépuscule astronomique
-        { alt: -6,  top: '#090d16', mid: '#241b3b', bot: '#4a154b' }, // Crépuscule civil / nautique
-        { alt: 0,   top: '#0f172a', mid: '#4a223f', bot: '#b23a1e' }, // Coucher / Lever (Golden hour)
-        { alt: 6,   top: '#1b365d', mid: '#2a6f97', bot: '#e07a5f' }, // Aurore / Fin de crépuscule
-        { alt: 15,  top: '#0d47a1', mid: '#1565c0', bot: '#2979ff' }  // Plein jour (Bleu azur)
+        { alt: -18, top: '#020305', mid: '#05080f', bot: '#080c14' },
+        { alt: -12, top: '#05080f', mid: '#0f1423', bot: '#1b1b3a' },
+        { alt: -6,  top: '#090d16', mid: '#241b3b', bot: '#4a154b' },
+        { alt: 0,   top: '#0f172a', mid: '#4a223f', bot: '#b23a1e' },
+        { alt: 6,   top: '#1b365d', mid: '#2a6f97', bot: '#e07a5f' },
+        { alt: 15,  top: '#0d47a1', mid: '#1565c0', bot: '#2979ff' }
       ];
 
       let k1 = keyframes[0], k2 = keyframes[keyframes.length - 1];
@@ -526,42 +574,93 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return val ? new Date(val) : new Date();
     }
 
+    // LIGNES DE CONSTELLATIONS UAI COMPLÈTES ET AMÉLIORÉES
     const CONSTELLATION_LINES = [
-      ["Tarazed", "Altair"], ["Altair", "Alshain"], ["Altair", "Deneb el Okab"],
-      ["Alpheratz", "Mirach"], ["Mirach", "Almach"], ["Alpheratz", "Adhil"],
-      ["Zubenelgenubi", "Zubeneschamali"],
-      ["Hamal", "Sheratan"], ["Sheratan", "Mesarthim"],
-      ["Arcturus", "Nekkar"], ["Nekkar", "Seginus"], ["Seginus", "Alkalurops"], ["Arcturus", "Muphrid"], ["Arcturus", "Hozian"],
-      ["Tarf", "Acubens"],
-      ["Sadalmelik", "Sadalsuud"],
-      ["Caph", "Shedar"], ["Shedar", "Navi"], ["Navi", "Ruchbah"], ["Ruchbah", "Segin"],
-      ["Alderamin", "Alrai"], ["Alrai", "Errai"], ["Alderamin", "Kurhah"],
-      ["Cor Caroli", "Chara"], ["Diadem", "Cor Caroli"],
-      ["Capella", "Menkalinan"], ["Menkalinan", "Mahasim"], ["Capella", "Hassaleh"],
-      ["Alphecca", "Nusakan"],
-      ["Deneb", "Sadr"], ["Sadr", "Albireo"], ["Fawaris", "Sadr"], ["Sadr", "Gienah"],
-      ["Rotanev", "Sualocin"],
-      ["Eltanin", "Rastaban"], ["Rastaban", "Thuban"],
-      ["Sham", "Deneb"],
-      ["Castor", "Pollux"], ["Pollux", "Alhena"], ["Castor", "Tejat"], ["Mebsuta", "Pollux"],
-      ["Beta Camelopardalis", "Alpha Lyncis"],
-      ["Dubhe", "Merak"], ["Merak", "Phecda"], ["Phecda", "Megrez"], 
-      ["Megrez", "Dubhe"], ["Megrez", "Alioth"], ["Alioth", "Mizar"], ["Mizar", "Alkaid"],
-      ["Kornephoros", "Rasalgethi"], ["Kornephoros", "Sujata"], ["Sujata", "Marfik"],
-      ["Regulus", "Algieba"], ["Algieba", "Zosma"], ["Zosma", "Denebola"], ["Regulus", "Adhafera"], ["Ras Elased Australis", "Regulus"], ["Praecipua", "Algieba"],
-      ["Vega", "Sheliak"], ["Sheliak", "Sulafat"], ["Sulafat", "γ Lyr"], ["γ Lyr", "Vega"],
-      ["Alpha Lyncis", "Beta Camelopardalis"],
-      ["Rasalhague", "Unukalhai"],
-      ["Markab", "Scheat"], ["Scheat", "Alpheratz"], ["Alpheratz", "Algenib"], ["Algenib", "Markab"], ["Markab", "Enif"],
-      ["Mirfak", "Algol"], ["Algol", "Menkib"], ["Mirfak", "Atik"],
-      ["Kitalpha", "Alpha Equ"],
+      // Aigle
+      ["Tarazed", "Altair"], ["Altair", "Alshain"], ["Altair", "Deneb el Okab"], ["Altair", "Eta Aql"], ["Eta Aql", "Theta Aql"],
+      // Andromède
+      ["Alpheratz", "Delta And"], ["Delta And", "Mirach"], ["Mirach", "Almach"], ["Alpheratz", "Adhil"], ["Mirach", "51 And"],
+      // Balance
+      ["Zubenelgenubi", "Zubeneschamali"], ["Zubeneschamali", "Zubenelhakrabi"], ["Zubenelhakrabi", "Zubenelgenubi"],
+      // Bélier
+      ["Hamal", "Sheratan"], ["Sheratan", "Mesarthim"], ["Hamal", "Botein"],
+      // Bouvier
+      ["Arcturus", "Muphrid"], ["Arcturus", "Izar"], ["Izar", "Seginus"], ["Seginus", "Nekkar"], ["Nekkar", "Hozian"], ["Hozian", "Izar"], ["Seginus", "Alkalurops"],
+      // Cancer
+      ["Tarf", "Asellus Australis"], ["Asellus Australis", "Asellus Borealis"], ["Asellus Australis", "Acubens"], ["Asellus Borealis", "Iota Cnc"],
+      // Verseau
+      ["Sadalmelik", "Sadalsuud"], ["Sadalmelik", "Sadachbia"], ["Sadachbia", "Skat"], ["Skat", "Ancha"],
+      // Cassiopée
+      ["Caph", "Shedar"], ["Shedar", "Achird"], ["Shedar", "Navi"], ["Navi", "Ruchbah"], ["Ruchbah", "Segin"],
+      // Céphée
+      ["Alderamin", "Alfirk"], ["Alfirk", "Errai"], ["Alderamin", "Zeta Cep"], ["Zeta Cep", "Delta Cep"], ["Delta Cep", "Iota Cep"], ["Iota Cep", "Errai"], ["Alderamin", "Kurhah"],
+      // Chiens de chasse
+      ["Cor Caroli", "Chara"],
+      // Chevelure de Bérénice
+      ["Diadem", "Beta Com"], ["Beta Com", "Gamma Com"],
+      // Cocher
+      ["Capella", "Menkalinan"], ["Menkalinan", "Mahasim"], ["Mahasim", "Hassaleh"], ["Capella", "Almaaz"], ["Almaaz", "Haedus"], ["Haedus", "Hassaleh"],
+      // Couronne boréale
+      ["Nusakan", "Alphecca"], ["Alphecca", "Gamma CrB"], ["Gamma CrB", "Epsilon CrB"],
+      // Cygne
+      ["Deneb", "Sadr"], ["Sadr", "Albireo"], ["Fawaris", "Sadr"], ["Sadr", "Gienah"], ["Gienah", "Zeta Cyg"], ["Fawaris", "Iota Cyg"],
+      // Dauphin
+      ["Rotanev", "Sualocin"], ["Sualocin", "Gamma Del"], ["Gamma Del", "Delta Del"], ["Delta Del", "Rotanev"],
+      // Dragon (Forme sinueuse et tête bien dessinée)
+      ["Rastaban", "Eltanin"], ["Eltanin", "Grumium"], ["Grumium", "Kuma"], ["Kuma", "Rastaban"],
+      ["Grumium", "Altais"], ["Altais", "Alsafi"], ["Alsafi", "Chi Dra"], ["Chi Dra", "Aldhibah"],
+      ["Aldhibah", "Edasich"], ["Edasich", "Thuban"],
+      // Flèche
+      ["Sham", "Beta Sge"], ["Beta Sge", "Gamma Sge"],
+      // Gémeaux
+      ["Castor", "Pollux"], ["Castor", "Propus"], ["Propus", "Tejat"], ["Tejat", "Mebsuta"], ["Mebsuta", "Castor"],
+      ["Pollux", "Wasat"], ["Wasat", "Mekbuda"], ["Mekbuda", "Alhena"], ["Wasat", "Alhena"],
+      // Girafe
+      ["Beta Cam", "Alpha Cam"], ["Alpha Cam", "Gamma Cam"],
+      // Grande Ourse
+      ["Dubhe", "Merak"], ["Merak", "Phecda"], ["Phecda", "Megrez"], ["Megrez", "Dubhe"],
+      ["Megrez", "Alioth"], ["Alioth", "Mizar"], ["Mizar", "Alkaid"],
+      // Hercule
+      ["Kornephoros", "Rutilicus"], ["Rutilicus", "Eta Her"], ["Eta Her", "Pi Her"], ["Pi Her", "Epsilon Her"], ["Epsilon Her", "Rutilicus"],
+      ["Epsilon Her", "Sujata"], ["Sujata", "Marfik"], ["Kornephoros", "Rasalgethi"],
+      // Lézard
+      ["Alpha Lacertae", "Beta Lacertae"],
+      // Lion
+      ["Regulus", "Algieba"], ["Algieba", "Adhafera"], ["Adhafera", "Ras Elased Australis"], ["Ras Elased Australis", "Regulus"],
+      ["Algieba", "Zosma"], ["Zosma", "Denebola"], ["Denebola", "Chertan"], ["Chertan", "Regulus"],
+      // Petit Lion
+      ["Praecipua", "Beta LMi"],
+      // Lynx
+      ["Alpha Lyncis", "38 Lyncis"],
+      // Lyre
+      ["Vega", "Epsilon Lyr"], ["Vega", "Zeta Lyr"], ["Zeta Lyr", "Sheliak"], ["Sheliak", "Sulafat"], ["Sulafat", "Zeta Lyr"],
+      // Ophiuchus
+      ["Rasalhague", "Cebalrai"], ["Rasalhague", "Yed Prior"], ["Yed Prior", "Yed Posterior"], ["Yed Posterior", "Sabik"],
+      // Orion
+      ["Betelgeuse", "Bellatrix"], ["Bellatrix", "Mintaka"], ["Mintaka", "Alnilam"], ["Alnilam", "Alnitak"],
+      ["Alnitak", "Saiph"], ["Saiph", "Rigel"], ["Rigel", "Mintaka"], ["Betelgeuse", "Meissa"], ["Bellatrix", "Meissa"],
+      // Pégase
+      ["Markab", "Scheat"], ["Scheat", "Alpheratz"], ["Alpheratz", "Algenib"], ["Algenib", "Markab"],
+      ["Markab", "Homam"], ["Homam", "Enif"], ["Scheat", "Matar"], ["Matar", "Sadalbari"],
+      // Persée
+      ["Mirfak", "Algol"], ["Algol", "Atik"], ["Atik", "Menkib"], ["Mirfak", "Delta Per"], ["Delta Per", "Epsilon Per"], ["Mirfak", "Gamma Per"],
+      // Petit Cheval
+      ["Kitalpha", "Beta Equ"],
+      // Petite Ourse
       ["Polaris", "Yildun"], ["Yildun", "Zeta UMi"], ["Zeta UMi", "Epsilon UMi"],
-      ["Epsilon UMi", "Pherkad"], ["Pherkad", "Kochab"], ["Kochab", "Polaris"],
-      ["Alpherg", "Gamma Piscium"],
-      ["Aldebaran", "Elnath"], ["Aldebaran", "Alcyone"], ["Aldebaran", "Tianguis"],
-      ["Beta Trianguli", "Mothallah"],
-      ["Vindemiatrix", "Porrima"],
-      ["Procyon", "Gomeisa"], ["Sirius", "Mirzam"], ["Sirius", "Adhara"], ["Mirzam", "Adhara"]
+      ["Epsilon UMi", "Pherkad"], ["Pherkad", "Kochab"], ["Kochab", "Zeta UMi"], ["Kochab", "Eta UMi"],
+      // Poissons
+      ["Alpherg", "Gamma Piscium"], ["Gamma Piscium", "Iota Psc"], ["Iota Psc", "Omega Psc"], ["Omega Psc", "Alrescha"],
+      // Serpent
+      ["Unukalhai", "Chow"], ["Unukalhai", "Alya"],
+      // Taureau
+      ["Aldebaran", "Ain"], ["Ain", "Elnath"], ["Aldebaran", "Gamma Tau"], ["Aldebaran", "Tianguis"], ["Aldebaran", "Alcyone"],
+      // Triangle
+      ["Beta Trianguli", "Mothallah"], ["Mothallah", "Gamma Tri"], ["Gamma Tri", "Beta Trianguli"],
+      // Vierge
+      ["Spica", "Heze"], ["Heze", "Vindemiatrix"], ["Vindemiatrix", "Porrima"], ["Porrima", "Zavijava"], ["Porrima", "Spica"],
+      // Grand Chien
+      ["Sirius", "Mirzam"], ["Sirius", "Adhara"], ["Adhara", "Wezen"], ["Wezen", "Sirius"]
     ];
 
     const CONSTELLATION_CENTERS = [
@@ -583,7 +682,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       { name: "Dragon", refStar: "Eltanin" },
       { name: "Flèche", refStar: "Sham" },
       { name: "Gémeaux", refStar: "Pollux" },
-      { name: "Girafe", refStar: "Beta Camelopardalis" },
+      { name: "Girafe", refStar: "Beta Cam" },
       { name: "Grande Ourse", refStar: "Alioth" },
       { name: "Hercule", refStar: "Kornephoros" },
       { name: "Lézard", refStar: "Alpha Lacertae" },
@@ -592,14 +691,16 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       { name: "Lyre", refStar: "Vega" },
       { name: "Lynx", refStar: "Alpha Lyncis" },
       { name: "Ophiuchus", refStar: "Rasalhague" },
+      { name: "Orion", refStar: "Betelgeuse" },
       { name: "Pégase", refStar: "Markab" },
       { name: "Persée", refStar: "Mirfak" },
       { name: "Petit Cheval", refStar: "Kitalpha" },
       { name: "Petite Ourse", refStar: "Polaris" },
       { name: "Poissons", refStar: "Alpherg" },
+      { name: "Serpent", refStar: "Unukalhai" },
       { name: "Taureau", refStar: "Aldebaran" },
       { name: "Triangle", refStar: "Mothallah" },
-      { name: "Vierge", refStar: "Vindemiatrix" },
+      { name: "Vierge", refStar: "Spica" },
       { name: "Petit Chien", refStar: "Procyon" },
       { name: "Grand Chien", refStar: "Sirius" }
     ];
@@ -837,7 +938,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       ctx2d.clearRect(0, 0, width, height);
 
-      // --- TRACÉ DE LA GRILLE ALTAZIMUTALE ---
+      // Tracé de la grille AltAz
       const showGrid = document.getElementById('showGrid').checked;
       if (showGrid) {
         for (let altDeg = 0; altDeg <= 80; altDeg += 20) {
@@ -892,7 +993,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           if (ptsDrawn > 1) ctx2d.stroke();
         }
       }
-      // -------------------------------------------------------------------
 
       // Tracé des lignes de constellations
       const showConstellations = document.getElementById('showConstellations').checked;
@@ -1057,6 +1157,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     async function initialize() {
       try {
         await requestWakeLock();
+        await loadSavedSkyPrefs();
         resizeCanvas();
 
         const [catalogRes, statusRes] = await Promise.all([fetch('/catalog'), fetch('/status')]);
@@ -1153,7 +1254,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       fieldOfView = Math.max(12, Math.min(60, fieldOfView + Math.sign(event.deltaY) * 2));
     }, { passive: false });
 
-    // Gestion du bouton "Tout masquer" / "Restaurer"
     const toggleAllMaskBtn = document.getElementById('toggleAllMaskBtn');
     let allMaskedState = false;
 
@@ -1180,6 +1280,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       });
 
       toggleAllMaskBtn.textContent = allMaskedState ? "Restaurer" : "Tout masquer";
+      saveSkyPrefs();
     });
 
     document.getElementById('centerButton').addEventListener('click', () => {

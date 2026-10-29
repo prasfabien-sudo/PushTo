@@ -1,5 +1,5 @@
-// Version Component: main.cpp v1.2.0
-// Version Global System: v1.2.7
+// Version Component: main.cpp v1.3.0
+// Version Global System: v1.3.0
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Preferences.h>
@@ -18,6 +18,7 @@
 #include "BetaSkyPage.h"
 
 Preferences prefs;
+Preferences skyPrefs;
 WiFiServer skySafariServer(SKYSAFARI_PORT);
 WebServer webServer(WEB_PORT);
 
@@ -98,6 +99,45 @@ void handleCatalog() {
   }
   json += "]";
   webServer.send(200, "application/json", json);
+}
+
+void handleGetSkyPrefs() {
+  skyPrefs.begin("sky_prefs", true);
+  String json = "{";
+  json += "\"mag\":\"" + skyPrefs.getString("mag", "99") + "\",";
+  json += "\"showGrid\":" + String(skyPrefs.getBool("grid", true) ? "true" : "false") + ",";
+  json += "\"showGal\":" + String(skyPrefs.getBool("gal", true) ? "true" : "false") + ",";
+  json += "\"showNeb\":" + String(skyPrefs.getBool("neb", true) ? "true" : "false") + ",";
+  json += "\"showAmas\":" + String(skyPrefs.getBool("amas", true) ? "true" : "false") + ",";
+  json += "\"showStars\":" + String(skyPrefs.getBool("stars", true) ? "true" : "false") + ",";
+  json += "\"showConst\":" + String(skyPrefs.getBool("const", true) ? "true" : "false") + ",";
+  json += "\"labelGal\":" + String(skyPrefs.getBool("lGal", true) ? "true" : "false") + ",";
+  json += "\"labelNeb\":" + String(skyPrefs.getBool("lNeb", true) ? "true" : "false") + ",";
+  json += "\"labelAmas\":" + String(skyPrefs.getBool("lAmas", true) ? "true" : "false") + ",";
+  json += "\"labelStars\":" + String(skyPrefs.getBool("lStars", true) ? "true" : "false") + ",";
+  json += "\"labelConst\":" + String(skyPrefs.getBool("lConst", true) ? "true" : "false");
+  json += "}";
+  skyPrefs.end();
+  webServer.send(200, "application/json", json);
+}
+
+void handleSaveSkyPrefs() {
+  skyPrefs.begin("sky_prefs", false);
+  if (webServer.hasArg("mag")) skyPrefs.putString("mag", webServer.arg("mag"));
+  if (webServer.hasArg("showGrid")) skyPrefs.putBool("grid", webServer.arg("showGrid").toInt() == 1);
+  if (webServer.hasArg("showGal")) skyPrefs.putBool("gal", webServer.arg("showGal").toInt() == 1);
+  if (webServer.hasArg("showNeb")) skyPrefs.putBool("neb", webServer.arg("showNeb").toInt() == 1);
+  if (webServer.hasArg("showAmas")) skyPrefs.putBool("amas", webServer.arg("showAmas").toInt() == 1);
+  if (webServer.hasArg("showStars")) skyPrefs.putBool("stars", webServer.arg("showStars").toInt() == 1);
+  if (webServer.hasArg("showConst")) skyPrefs.putBool("const", webServer.arg("showConst").toInt() == 1);
+  if (webServer.hasArg("labelGal")) skyPrefs.putBool("lGal", webServer.arg("labelGal").toInt() == 1);
+  if (webServer.hasArg("labelNeb")) skyPrefs.putBool("lNeb", webServer.arg("labelNeb").toInt() == 1);
+  if (webServer.hasArg("labelAmas")) skyPrefs.putBool("lAmas", webServer.arg("labelAmas").toInt() == 1);
+  if (webServer.hasArg("labelStars")) skyPrefs.putBool("lStars", webServer.arg("labelStars").toInt() == 1);
+  if (webServer.hasArg("labelConst")) skyPrefs.putBool("lConst", webServer.arg("labelConst").toInt() == 1);
+  skyPrefs.end();
+
+  webServer.send(200, "application/json", "{\"status\":\"OK\"}");
 }
 
 String getSitesJsonFromPrefs() {
@@ -382,6 +422,8 @@ void setup() {
   webServer.on("/simu", handleSimu);
   webServer.on("/catalog", handleCatalog);
   webServer.on("/get_sites", handleGetSites);
+  webServer.on("/get_sky_prefs", handleGetSkyPrefs);
+  webServer.on("/save_sky_prefs", handleSaveSkyPrefs);
   webServer.on("/status", handleStatus);
   webServer.on("/cmd", handleCmd);
   webServer.on("/calib", handleCalib);

@@ -7,7 +7,7 @@ se connecter à : http://127.0.0.1:8000/
 
 Général
 -------
-
+ajout des planetes et de la lune (avec la luminosité et la phase)
 
 VUE 3D
 -------
