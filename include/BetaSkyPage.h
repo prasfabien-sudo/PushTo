@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.56.0
+// Version Component: BetaSkyPage.h v5.60.0
 // Version Global System: v1.3.0
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -108,7 +108,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     html[data-night-mode="true"]::after { content: ""; position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; background: rgba(255, 0, 0, 0.82); mix-blend-mode: multiply; filter: brightness(0.45); }
     
-    .bottom-nav { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; gap: 6px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: rgba(30,30,30,0.98); border-top: 1px solid #37474f; box-shadow: 0 -4px 16px rgba(0,0,0,0.4); scrollbar-width: none; }
+    .bottom-nav { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; gap: 6px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: rgba(30,30,30,0.98); border-top: 1px solid #37474f; box-shadow: -4px 16px rgba(0,0,0,0.4); scrollbar-width: none; }
     .bottom-nav::-webkit-scrollbar { display: none; }
     .nav-item { flex: 0 0 56px; min-height: 48px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: #b0bec5; font: inherit; text-decoration: none; cursor: pointer; scroll-snap-align: start; }
     .nav-item[aria-current="page"] { color: #ffb74d; background: #263238; }
@@ -124,11 +124,21 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.56.0</span>
+      <span class="beta">PLANÉTARIUM v5.60.0</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
     <div class="scene" id="scene">
+      <!-- Indicateur de guidage combiné (Azimut + Altitude simultanés) -->
+      <div id="searchArrowOverlay" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10; display: none; background: rgba(5,8,12,0.9); border: 1px solid #ff9800; padding: 5px 14px; border-radius: 20px; color: #ffb74d; font-weight: bold; font-size: 0.85rem; align-items: center; gap: 10px; pointer-events: none; backdrop-filter: blur(4px);">
+        <span id="targetNameLabel" style="color: #fff;">M42</span>
+        <div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #344256; padding-left: 8px;">
+          <span id="azArrow" style="font-size: 1rem;" title="Azimut (Gauche / Droite)">⬅️</span>
+          <span id="altArrow" style="font-size: 1rem;" title="Altitude (Haut / Bas)">⬆️</span>
+          <span id="angularDistText" style="font-size: 0.78rem; color: #aab3c2;">19.8°</span>
+        </div>
+      </div>
+
       <div class="scene-zoom-controls">
         <button id="zoomInBtn" type="button" class="zoom-btn" title="Zoomer (+)">+</button>
         <button id="zoomOutBtn" type="button" class="zoom-btn" title="Dézoomer (-)">-</button>
@@ -149,7 +159,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     
     <div class="controls">
       <button id="toggleAllMaskBtn" type="button" style="grid-column: span 2; background: #263238; color: #ffb74d; font-weight: bold; font-size: 0.8rem;">Tout masquer</button>
-      <button id="openSettingsModalBtn" type="button" class="settings-btn">Paramètres ⚙️</button>
+      <button id="openSearchTargetModalBtn" type="button" style="grid-column: span 2; background: #263238; color: #ffb74d; font-weight: bold; font-size: 0.8rem;">Rechercher une cible 🔍</button>
+      <button id="openSettingsModalBtn" type="button" class="settings-btn" style="grid-column: span 4;">Paramètres ⚙️</button>
 
       <div class="dpad-wrapper">
         <div class="dpad-container">
@@ -198,6 +209,22 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     </div>
     <p class="scene-help">Utilisez la croix pour appliquer un offset permanent. Le déplacement tactile est temporaire.</p>
   </main>
+
+  <!-- POP-UP RECHERCHE DE CIBLE -->
+  <div class="object-modal" id="searchTargetModal" hidden>
+    <div class="modal-content">
+      <h2>Rechercher un objet cible 🎯</h2>
+      <div class="modal-sub">Sélectionnez un objet du catalogue pour activer le guidage</div>
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+        <input type="text" id="targetSearchInput" placeholder="Filtrer par nom (ex: M42, Andromède...)" style="width: 100%; padding: 8px 10px; background: #10151d; border: 1px solid #344256; border-radius: 8px; color: #fff;">
+        <select id="targetSelectDropdown" size="6" style="width: 100%; background: #10151d; border: 1px solid #344256; border-radius: 8px; color: #fff; padding: 4px;">
+          <!-- Les options sont générées dynamiquement -->
+        </select>
+      </div>
+      <button type="button" class="btn" style="width: 100%; background: #ff9800; color: #000; font-weight: bold; margin-bottom: 8px;" onclick="confirmSelectedTarget()">Définir comme cible 🚀</button>
+      <button class="modal-close" type="button" onclick="closeSearchTargetModal()">Fermer</button>
+    </div>
+  </div>
 
   <!-- POP-UP PARAMÈTRES D'AFFICHAGE -->
   <div class="object-modal" id="settingsModal" hidden>
@@ -276,6 +303,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           <span class="modal-stat-value" id="modalCoords" style="font-size:0.8rem">-</span>
         </div>
       </div>
+      <button type="button" class="btn" id="targetBtn" style="width:100%; background:#ff9800; color:#000; font-weight:bold; margin-bottom:8px;" onclick="setSearchTarget()">Rechercher cet objet 🎯</button>
       <button class="modal-close" type="button" onclick="closeModal()">Fermer</button>
     </div>
   </div>
@@ -329,6 +357,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let lastRawAZ = null;
     let lastRawALT = null;
 
+    let activeTargetObject = null;
+
     let wakeLock = null;
     async function requestWakeLock() {
       if ('wakeLock' in navigator) {
@@ -353,7 +383,70 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       settingsModal.hidden = true;
     }
 
-    // CHARGEMENT ET SAUVEGARDE SUR L'ESP32
+    // --- LOGIQUE RECHERCHE GLOBALE DE CIBLE ---
+    const searchTargetModal = document.getElementById('searchTargetModal');
+    const targetSearchInput = document.getElementById('targetSearchInput');
+    const targetSelectDropdown = document.getElementById('targetSelectDropdown');
+
+    document.getElementById('openSearchTargetModalBtn').addEventListener('click', () => {
+      populateTargetDropdown('');
+      searchTargetModal.hidden = false;
+    });
+
+    function closeSearchTargetModal() {
+      searchTargetModal.hidden = true;
+    }
+
+    function populateTargetDropdown(filterText) {
+      targetSelectDropdown.innerHTML = '';
+      const query = filterText.toLowerCase();
+      
+      const filtered = objects.filter(o => 
+        (o.name && o.name.toLowerCase().includes(query)) || 
+        (o.commonName && o.commonName.toLowerCase().includes(query)) ||
+        (o.type && o.type.toLowerCase().includes(query))
+      );
+
+      filtered.slice(0, 100).forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.name;
+        opt.textContent = `${o.name}${o.commonName ? ' (' + o.commonName + ')' : ''} - Mag: ${o.mag}`;
+        targetSelectDropdown.appendChild(opt);
+      });
+    }
+
+    targetSearchInput.addEventListener('input', (e) => {
+      populateTargetDropdown(e.target.value);
+    });
+
+    function confirmSelectedTarget() {
+      const selectedName = targetSelectDropdown.value;
+      if (!selectedName) return;
+
+      activeTargetObject = objects.find(o => o.name === selectedName);
+      closeSearchTargetModal();
+
+      const overlay = document.getElementById('searchArrowOverlay');
+      if (activeTargetObject) {
+        overlay.style.display = 'flex';
+      }
+    }
+
+    function setSearchTarget() {
+      const titleText = document.getElementById('modalTitle').textContent;
+      const objName = titleText.split(' (')[0].trim();
+      
+      activeTargetObject = objects.find(o => o.name === objName);
+      closeModal();
+      
+      const overlay = document.getElementById('searchArrowOverlay');
+      if (activeTargetObject) {
+        overlay.style.display = 'flex';
+      } else {
+        overlay.style.display = 'none';
+      }
+    }
+
     async function loadSavedSkyPrefs() {
       try {
         const res = await fetch('/get_sky_prefs');
@@ -574,92 +667,57 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return val ? new Date(val) : new Date();
     }
 
-    // LIGNES DE CONSTELLATIONS UAI COMPLÈTES ET AMÉLIORÉES
     const CONSTELLATION_LINES = [
-      // Aigle
       ["Tarazed", "Altair"], ["Altair", "Alshain"], ["Altair", "Deneb el Okab"], ["Altair", "Eta Aql"], ["Eta Aql", "Theta Aql"],
-      // Andromède
       ["Alpheratz", "Delta And"], ["Delta And", "Mirach"], ["Mirach", "Almach"], ["Alpheratz", "Adhil"], ["Mirach", "51 And"],
-      // Balance
       ["Zubenelgenubi", "Zubeneschamali"], ["Zubeneschamali", "Zubenelhakrabi"], ["Zubenelhakrabi", "Zubenelgenubi"],
-      // Bélier
       ["Hamal", "Sheratan"], ["Sheratan", "Mesarthim"], ["Hamal", "Botein"],
-      // Bouvier
       ["Arcturus", "Muphrid"], ["Arcturus", "Izar"], ["Izar", "Seginus"], ["Seginus", "Nekkar"], ["Nekkar", "Hozian"], ["Hozian", "Izar"], ["Seginus", "Alkalurops"],
-      // Cancer
       ["Tarf", "Asellus Australis"], ["Asellus Australis", "Asellus Borealis"], ["Asellus Australis", "Acubens"], ["Asellus Borealis", "Iota Cnc"],
-      // Verseau
       ["Sadalmelik", "Sadalsuud"], ["Sadalmelik", "Sadachbia"], ["Sadachbia", "Skat"], ["Skat", "Ancha"],
-      // Cassiopée
       ["Caph", "Shedar"], ["Shedar", "Achird"], ["Shedar", "Navi"], ["Navi", "Ruchbah"], ["Ruchbah", "Segin"],
-      // Céphée
       ["Alderamin", "Alfirk"], ["Alfirk", "Errai"], ["Alderamin", "Zeta Cep"], ["Zeta Cep", "Delta Cep"], ["Delta Cep", "Iota Cep"], ["Iota Cep", "Errai"], ["Alderamin", "Kurhah"],
-      // Chiens de chasse
       ["Cor Caroli", "Chara"],
-      // Chevelure de Bérénice
       ["Diadem", "Beta Com"], ["Beta Com", "Gamma Com"],
-      // Cocher
       ["Capella", "Menkalinan"], ["Menkalinan", "Mahasim"], ["Mahasim", "Hassaleh"], ["Capella", "Almaaz"], ["Almaaz", "Haedus"], ["Haedus", "Hassaleh"],
-      // Couronne boréale
       ["Nusakan", "Alphecca"], ["Alphecca", "Gamma CrB"], ["Gamma CrB", "Epsilon CrB"],
-      // Cygne
       ["Deneb", "Sadr"], ["Sadr", "Albireo"], ["Fawaris", "Sadr"], ["Sadr", "Gienah"], ["Gienah", "Zeta Cyg"], ["Fawaris", "Iota Cyg"],
-      // Dauphin
       ["Rotanev", "Sualocin"], ["Sualocin", "Gamma Del"], ["Gamma Del", "Delta Del"], ["Delta Del", "Rotanev"],
-      // Dragon (Forme sinueuse et tête bien dessinée)
       ["Rastaban", "Eltanin"], ["Eltanin", "Grumium"], ["Grumium", "Kuma"], ["Kuma", "Rastaban"],
       ["Grumium", "Altais"], ["Altais", "Alsafi"], ["Alsafi", "Chi Dra"], ["Chi Dra", "Aldhibah"],
       ["Aldhibah", "Edasich"], ["Edasich", "Thuban"],
-      // Flèche
       ["Sham", "Beta Sge"], ["Beta Sge", "Gamma Sge"],
-      // Gémeaux
       ["Castor", "Pollux"], ["Castor", "Propus"], ["Propus", "Tejat"], ["Tejat", "Mebsuta"], ["Mebsuta", "Castor"],
       ["Pollux", "Wasat"], ["Wasat", "Mekbuda"], ["Mekbuda", "Alhena"], ["Wasat", "Alhena"],
-      // Girafe
       ["Beta Cam", "Alpha Cam"], ["Alpha Cam", "Gamma Cam"],
-      // Grande Ourse
       ["Dubhe", "Merak"], ["Merak", "Phecda"], ["Phecda", "Megrez"], ["Megrez", "Dubhe"],
       ["Megrez", "Alioth"], ["Alioth", "Mizar"], ["Mizar", "Alkaid"],
-      // Hercule
       ["Kornephoros", "Rutilicus"], ["Rutilicus", "Eta Her"], ["Eta Her", "Pi Her"], ["Pi Her", "Epsilon Her"], ["Epsilon Her", "Rutilicus"],
       ["Epsilon Her", "Sujata"], ["Sujata", "Marfik"], ["Kornephoros", "Rasalgethi"],
-      // Lézard
       ["Alpha Lacertae", "Beta Lacertae"],
-      // Lion
       ["Regulus", "Algieba"], ["Algieba", "Adhafera"], ["Adhafera", "Ras Elased Australis"], ["Ras Elased Australis", "Regulus"],
       ["Algieba", "Zosma"], ["Zosma", "Denebola"], ["Denebola", "Chertan"], ["Chertan", "Regulus"],
-      // Petit Lion
       ["Praecipua", "Beta LMi"],
-      // Lynx
       ["Alpha Lyncis", "38 Lyncis"],
-      // Lyre
       ["Vega", "Epsilon Lyr"], ["Vega", "Zeta Lyr"], ["Zeta Lyr", "Sheliak"], ["Sheliak", "Sulafat"], ["Sulafat", "Zeta Lyr"],
-      // Ophiuchus
       ["Rasalhague", "Cebalrai"], ["Rasalhague", "Yed Prior"], ["Yed Prior", "Yed Posterior"], ["Yed Posterior", "Sabik"],
-      // Orion
-      ["Betelgeuse", "Bellatrix"], ["Bellatrix", "Mintaka"], ["Mintaka", "Alnilam"], ["Alnilam", "Alnitak"],
-      ["Alnitak", "Saiph"], ["Saiph", "Rigel"], ["Rigel", "Mintaka"], ["Betelgeuse", "Meissa"], ["Bellatrix", "Meissa"],
-      // Pégase
+      ["Betelgeuse", "Bellatrix"], ["Betelgeuse", "Meissa"], ["Bellatrix", "Meissa"],
+      ["Betelgeuse", "Mintaka"], ["Bellatrix", "Alnitak"],
+      ["Mintaka", "Alnilam"], ["Alnilam", "Alnitak"],
+      ["Alnitak", "Saiph"], ["Mintaka", "Rigel"], ["Rigel", "Saiph"], ["Alnilam", "Hatysa"],
+      ["Betelgeuse", "μ Ori"], ["μ Ori", "ξ Ori"], ["ξ Ori", "ν Ori"], ["μ Ori", "χ² Ori"],
+      ["Bellatrix", "π³ Ori"], ["π¹ Ori", "π² Ori"], ["π² Ori", "π³ Ori"], ["π³ Ori", "π⁴ Ori"], ["π⁴ Ori", "π⁵ Ori"], ["π⁵ Ori", "π⁶ Ori"],
       ["Markab", "Scheat"], ["Scheat", "Alpheratz"], ["Alpheratz", "Algenib"], ["Algenib", "Markab"],
       ["Markab", "Homam"], ["Homam", "Enif"], ["Scheat", "Matar"], ["Matar", "Sadalbari"],
-      // Persée
       ["Mirfak", "Algol"], ["Algol", "Atik"], ["Atik", "Menkib"], ["Mirfak", "Delta Per"], ["Delta Per", "Epsilon Per"], ["Mirfak", "Gamma Per"],
-      // Petit Cheval
       ["Kitalpha", "Beta Equ"],
-      // Petite Ourse
       ["Polaris", "Yildun"], ["Yildun", "Zeta UMi"], ["Zeta UMi", "Epsilon UMi"],
       ["Epsilon UMi", "Pherkad"], ["Pherkad", "Kochab"], ["Kochab", "Zeta UMi"], ["Kochab", "Eta UMi"],
-      // Poissons
       ["Alpherg", "Gamma Piscium"], ["Gamma Piscium", "Iota Psc"], ["Iota Psc", "Omega Psc"], ["Omega Psc", "Alrescha"],
-      // Serpent
-      ["Unukalhai", "Chow"], ["Unukalhai", "Alya"],
-      // Taureau
+      ["Unukalhai", "Beta Ser"], ["Unukalhai", "Alya"],
       ["Aldebaran", "Ain"], ["Ain", "Elnath"], ["Aldebaran", "Gamma Tau"], ["Aldebaran", "Tianguis"], ["Aldebaran", "Alcyone"],
-      // Triangle
       ["Beta Trianguli", "Mothallah"], ["Mothallah", "Gamma Tri"], ["Gamma Tri", "Beta Trianguli"],
-      // Vierge
       ["Spica", "Heze"], ["Heze", "Vindemiatrix"], ["Vindemiatrix", "Porrima"], ["Porrima", "Zavijava"], ["Porrima", "Spica"],
-      // Grand Chien
       ["Sirius", "Mirzam"], ["Sirius", "Adhara"], ["Adhara", "Wezen"], ["Wezen", "Sirius"]
     ];
 
@@ -897,14 +955,77 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       
       const az = currentHeading * Math.PI / 180;
       const el = currentElevation * Math.PI / 180;
+      
       const forward = [Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)];
-      const right = [Math.cos(az), 0, -Math.sin(az)];
-      const up = [-Math.sin(az) * Math.sin(el), Math.cos(el), -Math.cos(az) * Math.sin(el)];
+      
+      const worldUp = [0, 1, 0];
+      let rx = worldUp[1] * forward[2] - worldUp[2] * forward[1];
+      let ry = worldUp[2] * forward[0] - worldUp[0] * forward[2];
+      let rz = worldUp[0] * forward[1] - worldUp[1] * forward[0];
+      const rLen = Math.hypot(rx, ry, rz) || 1;
+      const right = [rx / rLen, ry / rLen, rz / rLen];
+      
+      const up = [
+        forward[1] * right[2] - forward[2] * right[1],
+        forward[2] * right[0] - forward[0] * right[2],
+        forward[0] * right[1] - forward[1] * right[0]
+      ];
+      
       const tanHalfFov = Math.tan(fieldOfView * Math.PI / 180);
       
       const currentSkyDate = getSkyDate();
       const sidereal = siderealDegrees(currentSkyDate);
       const latRadians = latitude * Math.PI / 180;
+
+      // --- GUIDAGE CIBLE 2 ÉTAPES SIMULTANÉES (AZIMUT + ALTITUDE) ---
+      const arrowOverlay = document.getElementById('searchArrowOverlay');
+      if (activeTargetObject) {
+        const targetHoriz = horizontalPosition(activeTargetObject, sidereal, latRadians);
+        
+        let dAz = targetHoriz.azimuth - currentHeading;
+        if (dAz > 180) dAz -= 360;
+        if (dAz < -180) dAz += 360;
+        
+        let dEl = targetHoriz.altitude - currentElevation;
+        const angularDistance = Math.hypot(dAz * Math.cos(currentElevation * Math.PI / 180), dEl);
+
+        const targetNameLabel = document.getElementById('targetNameLabel');
+        const azArrow = document.getElementById('azArrow');
+        const altArrow = document.getElementById('altArrow');
+        const angularDistText = document.getElementById('angularDistText');
+
+        targetNameLabel.textContent = activeTargetObject.name;
+        angularDistText.textContent = `${angularDistance.toFixed(1)}°`;
+
+        if (angularDistance < 1.0) {
+          azArrow.textContent = '🎯';
+          altArrow.textContent = '✨';
+          angularDistText.style.color = '#69ff84';
+          targetNameLabel.style.color = '#69ff84';
+        } else {
+          angularDistText.style.color = '#aab3c2';
+          targetNameLabel.style.color = '#fff';
+
+          // Flèche Azimut (Gauche / Droite)
+          if (Math.abs(dAz) > 0.5) {
+            // Si dAz > 0, l'objet est à l'est, il faut tourner à droite (ou inversement selon le sens des encodeurs)
+            azArrow.textContent = dAz > 0 ? '➡️' : '⬅️';
+            azArrow.style.opacity = '1';
+          } else {
+            azArrow.textContent = '✔️';
+            azArrow.style.opacity = '0.4';
+          }
+
+          // Flèche Altitude (Haut / Bas)
+          if (Math.abs(dEl) > 0.5) {
+            altArrow.textContent = dEl > 0 ? '⬆️' : '⬇️';
+            altArrow.style.opacity = '1';
+          } else {
+            altArrow.textContent = '✔️';
+            altArrow.style.opacity = '0.4';
+          }
+        }
+      }
 
       const objectMap = new Map();
       for (const object of objects) {
@@ -938,7 +1059,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       ctx2d.clearRect(0, 0, width, height);
 
-      // Tracé de la grille AltAz
       const showGrid = document.getElementById('showGrid').checked;
       if (showGrid) {
         for (let altDeg = 0; altDeg <= 80; altDeg += 20) {
@@ -994,7 +1114,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         }
       }
 
-      // Tracé des lignes de constellations
       const showConstellations = document.getElementById('showConstellations').checked;
       if (showConstellations) {
         ctx2d.strokeStyle = "rgba(255, 165, 80, 0.45)";
@@ -1022,7 +1141,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       lastScreenObjects = [];
 
-      // Rendu des astres
       for (const object of objects) {
         if (!matchesFilter(object)) continue;
         const horizontal = horizontalPosition(object, sidereal, latRadians);
@@ -1094,7 +1212,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       viewReadout.textContent = `Vue AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
 
-      // Étiquettes des objets
       const labels = document.createDocumentFragment();
       const labelGal = document.getElementById('labelGal').checked;
       const labelNeb = document.getElementById('labelNeb').checked;
@@ -1123,12 +1240,19 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         label.style.left = `${leftPct}%`;
         label.style.top = `${topPct}%`;
         label.style.transform = `translate(0px, -16px)`;
-        label.textContent = isPolaris ? `★ Polaris (Pôle Nord)` : (item.object.commonName || item.object.name);
+        
+        if (isPolaris) {
+          label.textContent = `★ Polaris (Pôle Nord)`;
+        } else if (item.object.name.startsWith("M") || item.object.name.startsWith("NGC")) {
+          label.textContent = `${item.object.name} (${item.object.commonName})`;
+        } else {
+          label.textContent = `${item.object.name} (${item.object.commonName})`;
+        }
+        
         labels.appendChild(label);
       }
       labelsElement.replaceChildren(labels);
 
-      // Étiquettes des constellations
       const constLabels = document.createDocumentFragment();
       const labelConstellations = document.getElementById('labelConstellations').checked;
       if (labelConstellations) {
@@ -1199,7 +1323,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       if (closestObj) {
         const details = getEnrichedDetails(closestObj);
-        document.getElementById('modalTitle').textContent = closestObj.commonName ? `${closestObj.name} (${closestObj.commonName})` : closestObj.name;
+        document.getElementById('modalTitle').textContent = `${closestObj.name} (${closestObj.commonName})`;
         document.getElementById('modalSub').textContent = `${closestObj.type || 'Objet céleste'}`;
         document.getElementById('modalMag').textContent = closestObj.mag.toFixed(1);
         document.getElementById('modalDist').textContent = details.dist;

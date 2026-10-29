@@ -1,4 +1,4 @@
-// Version Component: ObjectsDB.h v5.2.0
+// Version Component: ObjectsDB.h v5.3.0
 // Version Global System: v1.3.0
 #ifndef OBJECTSDB_H
 #define OBJECTSDB_H
@@ -6,8 +6,8 @@
 #include <pgmspace.h>
 
 struct DSO {
-  const char* name;        // Nom de l'étoile ou objet
-  const char* commonName;  // Constellation ou nom usuel
+  const char* name;        // Nom de l'étoile ou référence Messier/NGC (ex: Betelgeuse, M42)
+  const char* commonName;  // Nom usuel, description ou constellation (ex: α Ori, Nébuleuse d'Orion)
   const char* type;        // Type spectral ou type d'objet
   float ra;                // Ascension Droite (heures)
   float dec;               // Déclinaison (degrés)
@@ -134,7 +134,7 @@ const DSO DSO_CATALOG[] PROGMEM = {
   {"Gamma Del", "γ Del", "Étoile K", 20.78, 16.12, 3.87},
   {"Delta Del", "δ Del", "Étoile A", 20.72, 15.07, 4.43},
 
-  // Dragon (Dra) - Complété pour la boucle serpentiforme
+  // Dragon (Dra)
   {"Eltanin", "γ Dra", "Étoile K", 17.94, 51.49, 2.23},
   {"Rastaban", "β Dra", "Étoile G", 17.50, 52.30, 2.79},
   {"Grumium", "ξ Dra", "Étoile K", 17.89, 56.87, 3.73},
@@ -205,16 +205,29 @@ const DSO DSO_CATALOG[] PROGMEM = {
   {"Yed Posterior", "ε Oph", "Étoile G", 16.31, -4.69, 3.23},
   {"Cebalrai", "β Oph", "Étoile K", 17.72, 4.57, 2.76},
 
-  // Orion (Ori)
-  {"Rigel", "β Ori", "Étoile B", 5.24, -8.20, 0.12},
-  {"Betelgeuse", "α Ori", "Étoile M", 5.92, 7.41, 0.50},
-  {"Bellatrix", "γ Ori", "Étoile B", 5.42, 6.35, 1.64},
-  {"Alnilam", "ε Ori", "Étoile B", 5.93, -1.20, 1.69},
-  {"Alnitak", "ζ Ori", "Étoile O", 5.40, -1.94, 1.77},
-  {"Mintaka", "δ Ori", "Étoile O", 5.53, -0.30, 2.23},
-  {"Saiph", "κ Ori", "Étoile B", 5.79, -9.67, 2.07},
-  {"Meissa", "λ Ori", "Étoile O", 5.58, 9.93, 3.39},
-
+  // Orion (Ori) - Coordonnées exactes et harmonisées
+  {"Rigel", "β Ori", "Étoile B", 5.2423, -8.2017, 0.12},
+  {"Betelgeuse", "α Ori", "Étoile M", 5.9195, 7.4069, 0.50},
+  {"Bellatrix", "γ Ori", "Étoile B", 5.4189, 6.3497, 1.64},
+  {"Mintaka", "δ Ori", "Étoile O", 5.3334, -0.2992, 2.23},
+  {"Alnilam", "ε Ori", "Étoile B", 5.6036, -1.2019, 1.69},
+  {"Alnitak", "ζ Ori", "Étoile O", 5.6793, -1.9428, 1.77},
+  {"Saiph", "κ Ori", "Étoile B", 5.7960, -9.6697, 2.07},
+  {"Meissa", "λ Ori", "Étoile O", 5.5898, 9.9250, 3.39},
+  {"Hatysa", "ι Ori", "Étoile O", 5.5947, -5.9031, 2.77},
+  
+  // Étoiles de la Massue et du Bouclier d'Orion
+  {"μ Ori", "μ Ori", "Étoile B", 6.33, 9.94, 4.12},
+  {"ξ Ori", "ξ Ori", "Étoile B", 6.06, 14.18, 4.45},
+  {"ν Ori", "ν Ori", "Étoile B", 6.14, 14.77, 4.42},
+  {"χ² Ori", "χ² Ori", "Étoile B", 5.84, 20.28, 4.64},
+  {"π¹ Ori", "π¹ Ori", "Étoile B", 4.91, 10.20, 4.64},
+  {"π² Ori", "π² Ori", "Étoile A", 5.04, 8.39, 4.35},
+  {"π³ Ori", "π³ Ori", "Étoile F", 5.14, 6.84, 3.19},
+  {"π⁴ Ori", "π⁴ Ori", "Étoile B", 5.31, 5.94, 3.68},
+  {"π⁵ Ori", "π⁵ Ori", "Étoile B", 5.68, 2.59, 3.71},
+  {"π⁶ Ori", "π⁶ Ori", "Étoile K", 5.81, 1.82, 4.57},
+  
   // Pégase (Peg)
   {"Enif", "ε Peg", "Étoile K", 21.74, 9.87, 2.38},
   {"Scheat", "β Peg", "Étoile M", 23.06, 28.08, 2.44},
@@ -347,7 +360,7 @@ const DSO DSO_CATALOG[] PROGMEM = {
   {"M40", "Étoile Double", "Étoile A", 12.38, 58.08, 8.4},
   {"M41", "Amas Ouvert", "Amas Ouvert", 6.78, -20.73, 4.5},
   {"M42", "Nébuleuse d'Orion", "Nébuleuse", 5.59, -5.39, 4.0},
-  {"M43", "Nébuleuse de de Mairan", "Nébuleuse", 5.59, -5.26, 9.0},
+  {"M43", "Nébuleuse de Mairan", "Nébuleuse", 5.59, -5.26, 9.0},
   {"M44", "La Ruche / Praesepe", "Amas Ouvert", 8.67, 19.68, 3.7},
   {"M45", "Les Pléiades", "Amas Ouvert", 3.78, 24.12, 1.6},
   {"M46", "Amas Ouvert", "Amas Ouvert", 7.69, -14.83, 6.1},
