@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.50.0
+// Version Component: BetaSkyPage.h v5.53.0
 // Version Global System: v1.2.7
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -44,7 +44,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .constellation-label { position: absolute; z-index: 2; color: #ffb366; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.9; }
 
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
-    .time-control-box { grid-column: span 4; display: flex; gap: 6px; align-items: center; background: #151b25; padding: 6px 10px; border: 1px solid #344256; border-radius: 9px; }
+    
+    .time-control-box { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; background: #151b25; padding: 8px 10px; border: 1px solid #344256; border-radius: 9px; }
+    .time-input-group { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px; }
+    .time-step-group { display: flex; align-items: center; gap: 3px; }
+    .time-btn { min-height: 36px; padding: 2px 8px; font-size: 0.85rem; font-weight: bold; background: #1e293b; color: #ffb74d; border: 1px solid #344256; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .time-btn:active { background: #253247; transform: scale(0.95); }
     
     .settings-btn { grid-column: span 2; background: #151b25; border: 1px solid #344256; border-radius: 9px; color: #ffb74d; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 6px; cursor: pointer; font: inherit; }
     
@@ -80,7 +85,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       #manualFullscreenBtn { display: none !important; }
     }
 
-    /* Pop-up Générale (Modal) */
     .object-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px); }
     .object-modal[hidden] { display: none; }
     .modal-content { width: min(100%, 390px); background: #151b25; border: 1px solid #344256; border-radius: 14px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.7); max-height: 85vh; overflow-y: auto; }
@@ -91,7 +95,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .modal-stat-label { font-size: .7rem; color: #8b94a2; display: block; }
     .modal-stat-value { font-size: .95rem; font-weight: bold; color: #f1f3f8; }
     
-    /* Grille de paramètres épurée (Ligne par objet avec colonnes Objet / Nom) */
     .settings-section-title { font-size: 0.72rem; color: #ffb74d; font-weight: bold; margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #273142; padding-bottom: 2px; }
     .settings-table { display: flex; flex-direction: column; gap: 6px; }
     .settings-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 4px 6px; background: #10151d; border-radius: 6px; border: 1px solid #222d3b; font-size: 0.83rem; }
@@ -121,7 +124,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.50.0</span>
+      <span class="beta">PLANÉTARIUM v5.53.0</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -167,9 +170,18 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       </div>
 
       <div class="time-control-box">
-        <span style="font-size: 0.75rem; color: #8b94a2; white-space: nowrap;">Heure ciel :</span>
-        <input type="datetime-local" id="customTimeInput" aria-label="Heure d'affichage du ciel">
-        <button type="button" id="resetTimeBtn" style="min-height: 36px; padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;">Direct</button>
+        <div class="time-input-group">
+          <span style="font-size: 0.75rem; color: #8b94a2; white-space: nowrap;">Heure ciel :</span>
+          <input type="datetime-local" id="customTimeInput" aria-label="Heure d'affichage du ciel">
+        </div>
+        
+        <div class="time-step-group">
+          <button type="button" class="time-btn" id="stepPrevHourBtn" title="-1 Heure">«</button>
+          <button type="button" class="time-btn" id="stepPrev10mBtn" title="-10 Minutes">&lt;</button>
+          <button type="button" id="resetTimeBtn" class="time-btn" style="min-height:36px; color:#fff; background:#263238; border-color:#455a64; font-size:0.75rem;" title="Revenir à l'heure réelle">Direct</button>
+          <button type="button" class="time-btn" id="stepNext10mBtn" title="+10 Minutes">&gt;</button>
+          <button type="button" class="time-btn" id="stepNextHourBtn" title="+1 Heure">»</button>
+        </div>
       </div>
 
       <select id="magFilterSelect" aria-label="Mag. Max" style="grid-column: span 4;">
@@ -333,7 +345,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
     });
 
-    // Gestion de la Pop-up Paramètres
     const settingsModal = document.getElementById('settingsModal');
     document.getElementById('openSettingsModalBtn').addEventListener('click', () => {
       settingsModal.hidden = false;
@@ -342,7 +353,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       settingsModal.hidden = true;
     }
 
-    // Liaison dynamique : si on décoche l'objet, son nom se décoche et se désactive
     document.querySelectorAll('.settings-row input[type="checkbox"][data-name-id]').forEach(objChk => {
       const nameId = objChk.dataset.nameId;
       const nameChk = document.getElementById(nameId);
@@ -356,12 +366,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         }
       };
 
-      // Initialisation au chargement
       updateLinkState();
-
-      objChk.addEventListener('change', () => {
-        updateLinkState();
-      });
+      objChk.addEventListener('change', updateLinkState);
     });
 
     document.getElementById('jogLeftBtn').addEventListener('click', () => {
@@ -388,19 +394,70 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       fieldOfView = Math.min(60, fieldOfView + 4);
     });
 
+    // --- CALCUL DE LA HAUTEUR DU SOLEIL ET INTERPOLATION DYNAMIQUE ---
+    function getSunAltitude(date, lat, lon) {
+      const start = new Date(date.getFullYear(), 0, 0);
+      const diff = (date - start) + ((start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000);
+      const n = Math.floor(diff / (1000 * 60 * 60 * 24));
+      
+      // Déclinaison solaire approximative
+      const declination = 23.45 * Math.sin((2 * Math.PI / 365) * (n - 81)) * Math.PI / 180;
+      
+      // Équation du temps (en minutes)
+      const b = (2 * Math.PI / 365) * (n - 81);
+      const eot = 9.87 * Math.sin(2 * b) - 7.53 * Math.cos(b) - 1.5 * Math.sin(b);
+      
+      const hours = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+      const solarTime = hours + (4 * lon + eot) / 60;
+      const hourAngle = (solarTime - 12) * 15 * Math.PI / 180;
+      const latRad = lat * Math.PI / 180;
+      
+      const sinAlt = Math.sin(latRad) * Math.sin(declination) + Math.cos(latRad) * Math.cos(declination) * Math.cos(hourAngle);
+      return Math.asin(Math.max(-1, Math.min(1, sinAlt))) * 180 / Math.PI;
+    }
+
     function updateSkyBackground(date) {
-      const hours = date.getHours() + date.getMinutes() / 60;
-      let bg = '';
-      if (hours >= 6 && hours < 8) {
-        bg = 'radial-gradient(ellipse at 50% 100%, #3a2e39 0, #1c2331 50%, #08090c 100%)';
-      } else if (hours >= 8 && hours < 18) {
-        bg = 'radial-gradient(ellipse at 50% 100%, #284b63 0, #153243 50%, #08090c 100%)';
-      } else if (hours >= 18 && hours < 20) {
-        bg = 'radial-gradient(ellipse at 50% 100%, #4a2832 0, #22152b 50%, #08090c 100%)';
-      } else {
-        bg = 'radial-gradient(ellipse at 50% 100%, #1b2638 0, #0d1420 47%, #05070b 100%)';
+      const sunAlt = getSunAltitude(date, latitude, longitude);
+
+      const hexToRgb = (hex) => {
+        const num = parseInt(hex.slice(1), 16);
+        return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+      };
+      const rgbToHex = (r, g, b) => `#${((1 << 24) + (Math.round(r) << 16) + (Math.round(g) << 8) + Math.round(b)).toString(16).slice(1)}`;
+      const lerp = (a, b, t) => a + (b - a) * Math.max(0, Math.min(1, t));
+      const lerpRgb = (c1, c2, t) => [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)];
+
+      // Paliers de couleur du ciel selon l'altitude du Soleil
+      const keyframes = [
+        { alt: -18, top: '#020305', mid: '#05080f', bot: '#080c14' }, // Nuit noire
+        { alt: -12, top: '#05080f', mid: '#0f1423', bot: '#1b1b3a' }, // Crépuscule astronomique
+        { alt: -6,  top: '#090d16', mid: '#241b3b', bot: '#4a154b' }, // Crépuscule civil / nautique
+        { alt: 0,   top: '#0f172a', mid: '#4a223f', bot: '#b23a1e' }, // Coucher / Lever (Golden hour)
+        { alt: 6,   top: '#1b365d', mid: '#2a6f97', bot: '#e07a5f' }, // Aurore / Fin de crépuscule
+        { alt: 15,  top: '#0d47a1', mid: '#1565c0', bot: '#2979ff' }  // Plein jour (Bleu azur)
+      ];
+
+      let k1 = keyframes[0], k2 = keyframes[keyframes.length - 1];
+      for (let i = 0; i < keyframes.length - 1; i++) {
+        if (sunAlt >= keyframes[i].alt && sunAlt <= keyframes[i+1].alt) {
+          k1 = keyframes[i];
+          k2 = keyframes[i+1];
+          break;
+        } else if (sunAlt < keyframes[0].alt) {
+          k1 = keyframes[0]; k2 = keyframes[0];
+          break;
+        } else if (sunAlt > keyframes[keyframes.length - 1].alt) {
+          k1 = keyframes[keyframes.length - 1]; k2 = keyframes[keyframes.length - 1];
+          break;
+        }
       }
-      sceneDiv.style.background = bg;
+
+      const t = k2.alt === k1.alt ? 0 : (sunAlt - k1.alt) / (k2.alt - k1.alt);
+      const topColor = rgbToHex(...lerpRgb(hexToRgb(k1.top), hexToRgb(k2.top), t));
+      const midColor = rgbToHex(...lerpRgb(hexToRgb(k1.mid), hexToRgb(k2.mid), t));
+      const botColor = rgbToHex(...lerpRgb(hexToRgb(k1.bot), hexToRgb(k2.bot), t));
+
+      sceneDiv.style.background = `radial-gradient(ellipse at 50% 100%, ${botColor} 0, ${midColor} 50%, ${topColor} 100%)`;
     }
 
     function checkOrientation() {
@@ -428,13 +485,14 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
     });
 
+    function setDateTimeInputValue(d) {
+      const offsetMs = d.getTimezoneOffset() * 60000;
+      const localIso = new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
+      if (customTimeInput) customTimeInput.value = localIso;
+    }
+
     function initDateTimeInput() {
-      const now = new Date();
-      const offsetMs = now.getTimezoneOffset() * 60000;
-      const localIso = new Date(now.getTime() - offsetMs).toISOString().slice(0, 16);
-      if (customTimeInput && !customTimeInput.value) {
-        customTimeInput.value = localIso;
-      }
+      setDateTimeInputValue(new Date());
     }
     initDateTimeInput();
 
@@ -448,6 +506,19 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       initDateTimeInput();
       updateSkyBackground(getSkyDate());
     });
+
+    function adjustTime(minutesDelta) {
+      useSystemTime = false;
+      const currentDate = getSkyDate();
+      currentDate.setMinutes(currentDate.getMinutes() + minutesDelta);
+      setDateTimeInputValue(currentDate);
+      updateSkyBackground(currentDate);
+    }
+
+    document.getElementById('stepPrevHourBtn').addEventListener('click', () => adjustTime(-60));
+    document.getElementById('stepPrev10mBtn').addEventListener('click', () => adjustTime(-10));
+    document.getElementById('stepNext10mBtn').addEventListener('click', () => adjustTime(10));
+    document.getElementById('stepNextHourBtn').addEventListener('click', () => adjustTime(60));
 
     function getSkyDate() {
       if (useSystemTime) return new Date();
@@ -1093,7 +1164,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       document.getElementById('showGal').checked = false;
       document.getElementById('showNeb').checked = false;
       document.getElementById('showAmas').checked = false;
-      document.getElementById('showStars').checked = true; // Étoiles seules visibles
+      document.getElementById('showStars').checked = true;
 
       document.getElementById('labelGal').checked = false;
       document.getElementById('labelNeb').checked = false;
@@ -1103,7 +1174,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       document.getElementById('showConstellations').checked = false;
       document.getElementById('labelConstellations').checked = false;
 
-      // Déclencher la mise à jour des états activés/désactivés des cases de noms
       document.querySelectorAll('.settings-row input[type="checkbox"][data-name-id]').forEach(objChk => {
         const nameChk = document.getElementById(objChk.dataset.nameId);
         nameChk.disabled = !objChk.checked;

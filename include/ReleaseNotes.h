@@ -56,6 +56,99 @@ const char HTTP_RELEASE_NOTES_PAGE[] PROGMEM = R"rawliteral(
       <span class="version-tag">v5.5.1</span>
     </div>
 
+    <!-- v5.53.0 (Calcul Astronomique du Ciel) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.53.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Calcul astronomique précis de la hauteur du Soleil sur l'horizon selon la date, l'heure et la position GPS.</li>
+        <li><span class="badge badge-feat">Feat</span> Transition fluide et continue des couleurs du ciel à travers 6 paliers (du bleu azur de jour, au pourpre crépusculaire, jusqu'à la nuit noire).</li>
+      </ul>
+    </div>
+
+    <!-- v5.52.0 (Thème Dynamique Jour/Nuit) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.52.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Amélioration du rendu visuel de la voûte céleste avec une palette élargie du bleu ciel au noir profond.</li>
+      </ul>
+    </div>
+
+    <!-- v5.51.0 (Navigation Temporelle) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.51.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Ajout de chevrons de navigation temporelle rapide (pas de 10 min et de 1 h) pour défiler facilement dans le passé ou le futur.</li>
+      </ul>
+    </div>
+
+    <!-- v5.50.0 (Refonte Paramètres) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.50.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Pop-up de paramètres repensée : une seule ligne par catégorie d'objets avec deux cases à cocher distinctes (Objet et Nom).</li>
+        <li><span class="badge badge-feat">Feat</span> Liaison intelligente des options : décocher un type d'objet masque et grise automatiquement la case du nom associée.</li>
+        <li><span class="badge badge-feat">Feat</span> Ajout d'un bouton "Tout masquer" / "Restaurer" dans les paramètres d'affichage.</li>
+      </ul>
+    </div>
+
+    <!-- v5.5.1 (Vue 3D - Filtre magnitude & Plein écran auto) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.5.1</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Ajout d'un sélecteur de magnitude maximale pour filtrer dynamiquement les objets affichés (œil nu, jumelles, petits et grands télescopes).</li>
+        <li><span class="badge badge-feat">Feat</span> Basculement automatique en mode plein écran immersif dès que l'appareil passe en orientation paysage, et désactivation automatique en mode portrait.</li>
+        <li><span class="badge badge-feat">Feat</span> Intégration d'un bouton de contrôle manuel du plein écran, disponible uniquement en mode portrait.</li>
+      </ul>
+    </div>
+
+    <!-- v5.5.0 (Catalogue & Constellations) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.5.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Intégration complète du réseau de lignes et de centres pour les 44 constellations majeures de l'hémisphère Nord et de la zone zodiacale.</li>
+      </ul>
+    </div>
+
+    <!-- v5.4.0 (Vue 3D - Simulation Temporelle) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.4.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Ajout d'un sélecteur de date/heure interactif permettant de simuler l'affichage du ciel à n'importe quel moment (avec bouton "Direct").</li>
+      </ul>
+    </div>
+
+    <!-- v5.3.0 (Vue 3D - Grille planétarium & Pôles) -->
+    <div class="release-item">
+      <div class="release-header">
+        <span class="release-version">Vue 3D v5.3.0</span>
+        <span class="release-date">Octobre 2026</span>
+      </div>
+      <ul>
+        <li><span class="badge badge-feat">Feat</span> Intégration d'une grille altazimutale complète et affichage dynamique des points cardinaux (N, S, E, O).</li>
+      </ul>
+    </div>
+
     <!-- v5.24.0 (Vue 3D - Vue 3D avec orientation automatique au nord (sur Pixel )) -->
     <div class="release-item">
       <div class="release-header">
