@@ -129,13 +129,16 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
     <div class="scene" id="scene">
-      <!-- Indicateur de guidage combiné (Azimut + Altitude simultanés) -->
-      <div id="searchArrowOverlay" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10; display: none; background: rgba(5,8,12,0.9); border: 1px solid #ff9800; padding: 5px 14px; border-radius: 20px; color: #ffb74d; font-weight: bold; font-size: 0.85rem; align-items: center; gap: 10px; pointer-events: none; backdrop-filter: blur(4px);">
+      <!-- Indicateur de guidage combiné (Azimut + Altitude avec degrés signés) -->
+      <div id="searchArrowOverlay" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10; display: none; background: rgba(5,8,12,0.92); border: 1px solid #ff9800; padding: 6px 14px; border-radius: 20px; color: #ffb74d; font-weight: bold; font-size: 0.82rem; align-items: center; gap: 10px; pointer-events: none; backdrop-filter: blur(4px);">
         <span id="targetNameLabel" style="color: #fff;">M42</span>
-        <div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #344256; padding-left: 8px;">
-          <span id="azArrow" style="font-size: 1rem;" title="Azimut (Gauche / Droite)">⬅️</span>
-          <span id="altArrow" style="font-size: 1rem;" title="Altitude (Haut / Bas)">⬆️</span>
-          <span id="angularDistText" style="font-size: 0.78rem; color: #aab3c2;">19.8°</span>
+        <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #344256; padding-left: 8px;">
+          <span id="azGuideInfo" style="display: flex; align-items: center; gap: 3px;" title="Écart Azimut">
+            <span id="azArrow">⬅️</span><span id="azVal" style="font-size: 0.78rem;">0.0°</span>
+          </span>
+          <span id="altGuideInfo" style="display: flex; align-items: center; gap: 3px;" title="Écart Altitude">
+            <span id="altArrow">⬆️</span><span id="altVal" style="font-size: 0.78rem;">0.0°</span>
+          </span>
         </div>
       </div>
 
@@ -977,7 +980,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const sidereal = siderealDegrees(currentSkyDate);
       const latRadians = latitude * Math.PI / 180;
 
-      // --- GUIDAGE CIBLE 2 ÉTAPES SIMULTANÉES (AZIMUT + ALTITUDE) ---
+      // --- GUIDAGE CIBLE 2 ÉTAPES (AZIMUT + ALTITUDE AVEC DEGRÉS SIGNÉS) ---
       const arrowOverlay = document.getElementById('searchArrowOverlay');
       if (activeTargetObject) {
         const targetHoriz = horizontalPosition(activeTargetObject, sidereal, latRadians);
@@ -991,38 +994,45 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
         const targetNameLabel = document.getElementById('targetNameLabel');
         const azArrow = document.getElementById('azArrow');
+        const azVal = document.getElementById('azVal');
         const altArrow = document.getElementById('altArrow');
-        const angularDistText = document.getElementById('angularDistText');
+        const altVal = document.getElementById('altVal');
 
-        targetNameLabel.textContent = activeTargetObject.name;
-        angularDistText.textContent = `${angularDistance.toFixed(1)}°`;
+        if (targetNameLabel) targetNameLabel.textContent = activeTargetObject.name;
+
+        // Formatage des valeurs avec le signe explicite (+ / -)
+        const azSign = dAz > 0 ? '+' : '';
+        const elSign = dEl > 0 ? '+' : '';
+        if (azVal) azVal.textContent = `${azSign}${dAz.toFixed(1)}°`;
+        if (altVal) altVal.textContent = `${elSign}${dEl.toFixed(1)}°`;
 
         if (angularDistance < 1.0) {
-          azArrow.textContent = '🎯';
-          altArrow.textContent = '✨';
-          angularDistText.style.color = '#69ff84';
-          targetNameLabel.style.color = '#69ff84';
+          if (azArrow) azArrow.textContent = '🎯';
+          if (altArrow) altArrow.textContent = '✨';
+          if (targetNameLabel) targetNameLabel.style.color = '#69ff84';
         } else {
-          angularDistText.style.color = '#aab3c2';
-          targetNameLabel.style.color = '#fff';
+          if (targetNameLabel) targetNameLabel.style.color = '#fff';
 
           // Flèche Azimut (Gauche / Droite)
-          if (Math.abs(dAz) > 0.5) {
-            // Si dAz > 0, l'objet est à l'est, il faut tourner à droite (ou inversement selon le sens des encodeurs)
-            azArrow.textContent = dAz > 0 ? '➡️' : '⬅️';
-            azArrow.style.opacity = '1';
-          } else {
-            azArrow.textContent = '✔️';
-            azArrow.style.opacity = '0.4';
+          if (azArrow) {
+            if (Math.abs(dAz) > 0.5) {
+              azArrow.textContent = dAz > 0 ? '➡️' : '⬅️';
+              azArrow.style.opacity = '1';
+            } else {
+              azArrow.textContent = '✔️';
+              azArrow.style.opacity = '0.4';
+            }
           }
 
           // Flèche Altitude (Haut / Bas)
-          if (Math.abs(dEl) > 0.5) {
-            altArrow.textContent = dEl > 0 ? '⬆️' : '⬇️';
-            altArrow.style.opacity = '1';
-          } else {
-            altArrow.textContent = '✔️';
-            altArrow.style.opacity = '0.4';
+          if (altArrow) {
+            if (Math.abs(dEl) > 0.5) {
+              altArrow.textContent = dEl > 0 ? '⬆️' : '⬇️';
+              altArrow.style.opacity = '1';
+            } else {
+              altArrow.textContent = '✔️';
+              altArrow.style.opacity = '0.4';
+            }
           }
         }
       }
