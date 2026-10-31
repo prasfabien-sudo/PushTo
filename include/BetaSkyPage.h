@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.64.0
+// Version Component: BetaSkyPage.h v5.65.0
 // Version Global System: v1.3.0
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -124,7 +124,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.64.0</span>
+      <span class="beta">PLANÉTARIUM v5.65.0</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -401,7 +401,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const epsRad = eps * Math.PI / 180;
       const sunEclLongRad = sunEclLong * Math.PI / 180;
 
-      // Soleil
       const sinDecSun = Math.sin(epsRad) * Math.sin(sunEclLongRad);
       const decSun = Math.asin(sinDecSun) * 180 / Math.PI;
       const ySun = Math.cos(epsRad) * Math.sin(sunEclLongRad);
@@ -409,7 +408,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       let raSun = Math.atan2(ySun, xSun) * 180 / Math.PI / 15;
       raSun = (raSun + 24) % 24;
 
-      // Lune
       const moonMeanLong = (218.316 + 13.176396 * d) % 360;
       const moonMeanAnom = (134.963 + 13.064993 * d) % 360;
       const moonAscNode = (125.228 - 0.052954 * d) % 360;
@@ -426,7 +424,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       let raMoon = Math.atan2(yMoon, xMoon) * 180 / Math.PI / 15;
       raMoon = (raMoon + 24) % 24;
 
-      // Planètes (8 planètes majeures du système solaire)
       const planetDefs = [
         { name: "Mercure", period: 87.97, dist: 0.387, long0: 252.25, mag: -0.4, type: "Planète" },
         { name: "Vénus", period: 224.70, dist: 0.723, long0: 181.98, mag: -4.4, type: "Planète" },
@@ -606,11 +603,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     });
     document.getElementById('jogUpBtn').addEventListener('click', () => {
       const step = parseFloat(stepSelect.value) || 1;
-      alignOffsetElevation = Math.max(-45, Math.min(45, alignOffsetElevation + step));
+      alignOffsetElevation = Math.max(-85, Math.min(88, alignOffsetElevation + step));
     });
     document.getElementById('jogDownBtn').addEventListener('click', () => {
       const step = parseFloat(stepSelect.value) || 1;
-      alignOffsetElevation = Math.max(-45, Math.min(45, alignOffsetElevation - step));
+      alignOffsetElevation = Math.max(-85, Math.min(88, alignOffsetElevation - step));
     });
 
     document.getElementById('zoomInBtn').addEventListener('click', () => {
@@ -1053,7 +1050,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       elevation += (targetElevation - elevation) * 0.4;
 
       const currentHeading = (heading + touchHeading + alignOffsetHeading + 360) % 360;
-      const currentElevation = Math.max(-5, Math.min(88, elevation + touchElevation + alignOffsetElevation));
+      // Altitude élargie de -85° à +88° pour explorer l'hémisphère sud en profondeur
+      const currentElevation = Math.max(-85, Math.min(88, elevation + touchElevation + alignOffsetElevation));
       
       const az = currentHeading * Math.PI / 180;
       const el = currentElevation * Math.PI / 180;
@@ -1156,20 +1154,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       const showGrid = document.getElementById('showGrid').checked;
       if (showGrid) {
-        for (let altDeg = 0; altDeg <= 80; altDeg += 20) {
+        // Tracé de la grille AltAz incluant l'hémisphère nord et l'hémisphère sud (de -60° à +80°)
+        for (let altDeg = -60; altDeg <= 80; altDeg += 20) {
+          if (altDeg === 0) continue; // Traité séparément pour l'horizon
           const altRad = altDeg * Math.PI / 180;
-          
-          // Tolérance de profondeur spécifique pour l'horizon (altDeg === 0) 
-          // pour qu'il ne disparaisse pas brutalement lorsqu'on incline la vue
-          const depthThreshold = (altDeg === 0) ? -0.99 : 0.02;
-
-          if (altDeg === 0) {
-            ctx2d.strokeStyle = "rgba(0, 220, 255, 0.95)";
-            ctx2d.lineWidth = 2.5;
-          } else {
-            ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
-            ctx2d.lineWidth = 1.2;
-          }
+          ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
+          ctx2d.lineWidth = 1.2;
           
           let ptsDrawn = 0;
           ctx2d.beginPath();
@@ -1177,8 +1167,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
             const aRad = aDeg * Math.PI / 180;
             const pos = [Math.sin(aRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(aRad) * Math.cos(altRad)];
             const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
-            
-            if (depth > depthThreshold) {
+            if (depth > 0.02) {
               const sx = width / 2 + ((pos[0] * right[0] + pos[1] * right[1] + pos[2] * right[2]) / (depth * tanHalfFov * aspect)) * (width / 2);
               const sy = height / 2 - ((pos[0] * up[0] + pos[1] * up[1] + pos[2] * up[2]) / (depth * tanHalfFov)) * (height / 2);
               if (ptsDrawn === 0) ctx2d.moveTo(sx, sy);
@@ -1191,13 +1180,38 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           if (ptsDrawn > 1) ctx2d.stroke();
         }
 
+        // Ligne d'horizon (Alt = 0°) toujours visible avec tolérance de profondeur étendue
+        {
+          const altRad = 0;
+          ctx2d.strokeStyle = "rgba(0, 220, 255, 0.95)";
+          ctx2d.lineWidth = 2.5;
+          let ptsDrawn = 0;
+          ctx2d.beginPath();
+          for (let aDeg = 0; aDeg <= 360; aDeg += 5) {
+            const aRad = aDeg * Math.PI / 180;
+            const pos = [Math.sin(aRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(aRad) * Math.cos(altRad)];
+            const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
+            if (depth > -0.99) {
+              const sx = width / 2 + ((pos[0] * right[0] + pos[1] * right[1] + pos[2] * right[2]) / (depth * tanHalfFov * aspect)) * (width / 2);
+              const sy = height / 2 - ((pos[0] * up[0] + pos[1] * up[1] + pos[2] * up[2]) / (depth * tanHalfFov)) * (height / 2);
+              if (ptsDrawn === 0) ctx2d.moveTo(sx, sy);
+              else ctx2d.lineTo(sx, sy);
+              ptsDrawn++;
+            } else {
+              ptsDrawn = 0;
+            }
+          }
+          if (ptsDrawn > 1) ctx2d.stroke();
+        }
+
+        // Méridiens verticaux Azimutaux
         for (let azDeg = 0; azDeg < 360; azDeg += 45) {
           const azRad = azDeg * Math.PI / 180;
           ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
           ctx2d.lineWidth = 1.2;
           let ptsDrawn = 0;
           ctx2d.beginPath();
-          for (let altDeg = 0; altDeg <= 90; altDeg += 5) {
+          for (let altDeg = -80; altDeg <= 90; altDeg += 5) {
             const altRad = altDeg * Math.PI / 180;
             const pos = [Math.sin(azRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(azRad) * Math.cos(altRad)];
             const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
@@ -1245,7 +1259,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       for (const object of objects) {
         if (!matchesFilter(object)) continue;
         const horizontal = horizontalPosition(object, sidereal, latRadians);
-        if (horizontal.altitude < 0) continue;
         
         const depth = horizontal.position[0] * forward[0] + horizontal.position[1] * forward[1] + horizontal.position[2] * forward[2];
         if (depth <= 0.0) continue;
@@ -1411,21 +1424,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         
         if (isPolaris) {
           label.textContent = `★ Polaris (Pôle Nord)`;
-        } else if (item.object.name === "Soleil") {
-          label.textContent = `☀️ Soleil`;
-        } else if (item.object.name === "Lune") {
-          label.textContent = `🌙 Lune`;
-        } else if (item.object.name === "Mars") {
-          label.textContent = `♂ Mars`;
-        } else if (item.object.name === "Vénus") {
-          label.textContent = `♀ Vénus`;
-        } else if (item.object.name === "Jupiter") {
-          label.textContent = `♃ Jupiter`;
-        } else if (item.object.name === "Saturne") {
-          label.textContent = `♄ Saturne`;
-        } else if (item.object.name === "Mercure") {
-          label.textContent = `☿ Mercure`;
-        } else if (item.object.name === "Uranus" || item.object.name === "Neptune" || item.object.name === "Pluton") {
+        } else if (isPlanetOrBody) {
           label.textContent = `🪐 ${item.object.name}`;
         } else if (item.object.name.startsWith("M") || item.object.name.startsWith("NGC")) {
           label.textContent = `${item.object.name}${item.object.commonName ? ' (' + item.object.commonName + ')' : ''}`;
@@ -1483,7 +1482,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         longitude = Number(status.lon ?? longitude);
         
         updateSkyBackground(getSkyDate());
-        setStatus(`${objects.length} objets chargés (incl. Système Solaire). Prêt.`, "align-ok");
+        setStatus(`${objects.length} objets chargés (Hémisphères Nord & Sud). Prêt.`, "align-ok");
         
         window.setInterval(pollEncoderStatus, 100);
         render();
