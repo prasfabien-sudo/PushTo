@@ -39,13 +39,13 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .zoom-btn { width: 32px; height: 32px; background: rgba(21, 27, 37, 0.85); border: 1px solid #344256; border-radius: 6px; color: #ffb74d; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); padding: 0; }
     .zoom-btn:active { background: rgba(37, 50, 71, 0.95); transform: scale(0.95); }
 
-    .object-label { position: absolute; z-index: 2; padding: 2px 6px; border-radius: 4px; color: #f4e6be; background: rgba(5,8,12,0.8); font-size: .68rem; white-space: nowrap; text-shadow: 0 1px 3px #000; pointer-events: none; transition: transform 0.1s ease-out; }
-    .object-label.polaris { color: #ffb74d; background: rgba(30,35,45,0.9); border: 1px solid rgba(255,183,77,0.5); font-weight: bold; z-index: 3; }
+    .object-label {position: absolute; z-index: 2; padding: 1px 3px; border-radius: 4px; background: transparent; font-size: 0.65rem; white-space: nowrap; text-shadow: 0 1px 3px #000, 0 0 3px #000, 0 0 5px #000; pointer-events: none; transition: transform 0.1s ease-out; }
+    .object-label.polaris { color: #ffb74d !important; font-weight: bold; z-index: 3; }
     .constellation-label { position: absolute; z-index: 2; color: #ffb366; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.9; }
 
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
     
-    .time-control-box { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; background: #151b25; padding: 8px 10px; border: 1px solid #344256; border-radius: 9px; }
+    .time-control-box { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; background: #151b25; padding: 8px 10px; border: 1px solid #344256; border-radius: 99px; }
     .time-input-group { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px; }
     .time-step-group { display: flex; align-items: center; gap: 3px; }
     .time-btn { min-height: 36px; padding: 2px 8px; font-size: 0.85rem; font-weight: bold; background: #1e293b; color: #ffb74d; border: 1px solid #344256; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -538,10 +538,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     });
 
     document.getElementById('zoomInBtn').addEventListener('click', () => {
-      fieldOfView = Math.max(12, fieldOfView - 4);
+      fieldOfView = Math.max(2, fieldOfView - 4); // Permet de descendre jusqu'à 2° de FOV
     });
     document.getElementById('zoomOutBtn').addEventListener('click', () => {
-      fieldOfView = Math.min(60, fieldOfView + 4);
+      fieldOfView = Math.min(75, fieldOfView + 4); // Permet d'élargir la vue globale
     });
 
     function getSunAltitude(date, lat, lon) {
@@ -884,9 +884,19 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return { isGal, isNeb, isAmas, isStar };
     }
 
-    function matchesFilter(object) {
-      const maxMag = parseFloat(magFilterElement.value);
-      if (object.mag > maxMag) return false;
+   function matchesFilter(object) {
+      const userMaxMag = parseFloat(magFilterElement.value);
+
+      let dynamicMagLimit = userMaxMag;
+      if (fieldOfView > 40) {
+        dynamicMagLimit = Math.min(userMaxMag, 5.0);
+      } else if (fieldOfView > 25) {
+        dynamicMagLimit = Math.min(userMaxMag, 6.5);
+      } else if (fieldOfView < 15) {
+        dynamicMagLimit = Math.max(userMaxMag, 12.0);
+      }
+
+      if (object.mag > dynamicMagLimit) return false;
 
       const { isGal, isNeb, isAmas, isStar } = getObjectType(object);
       
@@ -981,7 +991,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const sidereal = siderealDegrees(currentSkyDate);
       const latRadians = latitude * Math.PI / 180;
 
-      // --- GUIDAGE CIBLE FUSIONNÉ (BOUSSOLE ROTATIVE + VALEURS SIGNÉES) ---
+      // --- GUIDAGE CIBLE FUSIONNÉ ---
       const arrowOverlay = document.getElementById('searchArrowOverlay');
       if (activeTargetObject) {
         const targetHoriz = horizontalPosition(activeTargetObject, sidereal, latRadians);
@@ -1001,7 +1011,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
         if (targetNameLabel) targetNameLabel.textContent = activeTargetObject.name;
 
-        // Mise à jour des textes en degrés
         const azSign = dAz > 0 ? '+' : '';
         const elSign = dEl > 0 ? '+' : '';
         if (azVal) azVal.textContent = `AZ: ${azSign}${dAz.toFixed(1)}°`;
@@ -1015,7 +1024,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           if (targetNameLabel) targetNameLabel.style.color = '#fff';
           if (compassSvg) compassSvg.style.stroke = '#ffb74d';
 
-          // Calcul de la rotation de la flèche unique en fonction des écarts 2D
           let angleDeg = Math.atan2(-dAz * Math.cos(currentElevation * Math.PI / 180), dEl) * (180 / Math.PI);
           if (compassContainer) {
             compassContainer.style.transform = `rotate(${angleDeg}deg)`;
@@ -1192,7 +1200,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           let starSize = Math.max(0.7, Math.min(4.5, (8.5 - object.mag) * 0.5 + 0.8));
           if (object.name === "Polaris") starSize = 2.8;
           const zoomFactor = 34 / fieldOfView;
-          starSize *= Math.min(zoomFactor, 2.0);
+          starSize *= Math.min(zoomFactor, 3.5);
 
           ctx2d.fillStyle = colorHex;
           ctx2d.shadowColor = colorHex;
@@ -1214,25 +1222,70 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const labelAmas = document.getElementById('labelAmas').checked;
       const labelStars = document.getElementById('labelStars').checked;
 
-      for (const item of lastScreenObjects) {
+      const placedLabels = [];
+      const sortedScreenObjects = [...lastScreenObjects].sort((a, b) => a.object.mag - b.object.mag);
+
+      for (const item of sortedScreenObjects) {
         const isPolaris = (item.object.name === "Polaris");
         const { isGal, isNeb, isAmas, isStar } = getObjectType(item.object);
 
         let showThisLabel = false;
-        if (isPolaris) showThisLabel = true;
-        else if (isGal && labelGal) showThisLabel = true;
-        else if (isNeb && labelNeb) showThisLabel = true;
-        else if (isAmas && labelAmas) showThisLabel = true;
-        else if (isStar && labelStars && item.object.mag <= 8.0) showThisLabel = true;
+        
+        let labelMagLimit = 12.0;
+        if (fieldOfView > 40) {
+          labelMagLimit = 2.5;
+        } else if (fieldOfView > 25) {
+          labelMagLimit = 5.0;
+        } else if (fieldOfView > 15) {
+          labelMagLimit = 8.5;
+        } else {
+          labelMagLimit = 13.0;
+        }
+
+        if (isPolaris) {
+          showThisLabel = true;
+        } else if (isGal && labelGal) {
+          showThisLabel = (fieldOfView < 60) || item.object.mag <= labelMagLimit;
+        } else if (isNeb && labelNeb) {
+          showThisLabel = (fieldOfView < 60) || item.object.mag <= labelMagLimit;
+        } else if (isAmas && labelAmas) {
+          showThisLabel = (fieldOfView < 60) || item.object.mag <= labelMagLimit;
+        } else if (isStar && labelStars && item.object.mag <= labelMagLimit) {
+          showThisLabel = true;
+        }
 
         if (!showThisLabel) continue;
+
+        let leftPct = (item.screenX + 1) * 50;
+        let topPct = (1 - item.screenY) * 50;
+
+        // Anti-collision dynamique proportionnelle au niveau de zoom (FOV)
+        const collisionThresholdX = Math.max(1.5, 6.5 * (fieldOfView / 34));
+        const collisionThresholdY = Math.max(1.2, 4.0 * (fieldOfView / 34));
+
+        const overlap = placedLabels.some(p => 
+          Math.abs(p.left - leftPct) < collisionThresholdX && 
+          Math.abs(p.top - topPct) < collisionThresholdY
+        );
+        if (overlap) continue;
+
+        placedLabels.push({ left: leftPct, top: topPct });
 
         const label = document.createElement('span');
         label.className = isPolaris ? 'object-label polaris' : 'object-label';
         
-        let leftPct = (item.screenX + 1) * 50;
-        let topPct = (1 - item.screenY) * 50;
-        
+        if (isPolaris) {
+          label.style.color = '#ffedcc';
+        } else if (isGal) {
+          label.style.color = '#e0b8ff';
+        } else if (isNeb) {
+          label.style.color = '#ff9e84';
+        } else if (isAmas) {
+          label.style.color = '#ffe066';
+        } else {
+          label.style.color = '#c2dcff';
+        }
+
         label.style.left = `${leftPct}%`;
         label.style.top = `${topPct}%`;
         label.style.transform = `translate(0px, -16px)`;
@@ -1240,9 +1293,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         if (isPolaris) {
           label.textContent = `★ Polaris (Pôle Nord)`;
         } else if (item.object.name.startsWith("M") || item.object.name.startsWith("NGC")) {
-          label.textContent = `${item.object.name} (${item.object.commonName})`;
+          label.textContent = `${item.object.name}${item.object.commonName ? ' (' + item.object.commonName + ')' : ''}`;
         } else {
-          label.textContent = `${item.object.name} (${item.object.commonName})`;
+          label.textContent = item.object.name ? item.object.name : item.object.commonName;
         }
         
         labels.appendChild(label);
@@ -1352,14 +1405,17 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       if (activePointers.has(event.pointerId)) activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (activePointers.size >= 2) {
         const distance = pointerDistance();
-        if (distance && pinchDistance) fieldOfView = Math.max(12, Math.min(60, fieldOfView * pinchDistance / distance));
+        if (distance && pinchDistance) fieldOfView = Math.max(2, Math.min(75, fieldOfView * pinchDistance / distance));
         pinchDistance = distance;
         dragPoint = null;
         return;
       }
       if (!dragPoint) return;
-      touchHeading = (touchHeading - (event.clientX - dragPoint.x) * 0.35 + 360) % 360;
-      touchElevation = Math.max(-80, Math.min(80, touchElevation + (event.clientY - dragPoint.y) * 0.25));
+      // Facteur d'échelle basé sur le zoom : plus le FOV est petit, plus le déplacement est doux
+      const panFactor = fieldOfView / 34;
+
+      touchHeading = (touchHeading - (event.clientX - dragPoint.x) * 0.35 * panFactor + 360) % 360;
+      touchElevation = Math.max(-80, Math.min(80, touchElevation + (event.clientY - dragPoint.y) * 0.25 * panFactor));
       dragPoint = { x: event.clientX, y: event.clientY };
     });
     const releasePointer = event => {
@@ -1371,7 +1427,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     scene.addEventListener('pointercancel', releasePointer);
     scene.addEventListener('wheel', event => {
       event.preventDefault();
-      fieldOfView = Math.max(12, Math.min(60, fieldOfView + Math.sign(event.deltaY) * 2));
+      fieldOfView = Math.max(2, Math.min(75, fieldOfView + Math.sign(event.deltaY) * 2));
     }, { passive: false });
 
     const toggleAllMaskBtn = document.getElementById('toggleAllMaskBtn');
