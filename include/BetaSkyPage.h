@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.60.0
+// Version Component: BetaSkyPage.h v5.62.0
 // Version Global System: v1.3.0
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -124,22 +124,23 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.60.0</span>
+      <span class="beta">PLANÉTARIUM v5.62.0</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
     <div class="scene" id="scene">
-      <!-- Indicateur de guidage combiné (Azimut + Altitude avec degrés signés) -->
-      <div id="searchArrowOverlay" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10; display: none; background: rgba(5,8,12,0.92); border: 1px solid #ff9800; padding: 6px 14px; border-radius: 20px; color: #ffb74d; font-weight: bold; font-size: 0.82rem; align-items: center; gap: 10px; pointer-events: none; backdrop-filter: blur(4px);">
-        <span id="targetNameLabel" style="color: #fff;">M42</span>
-        <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #344256; padding-left: 8px;">
-          <span id="azGuideInfo" style="display: flex; align-items: center; gap: 3px;" title="Écart Azimut">
-            <span id="azArrow">⬅️</span><span id="azVal" style="font-size: 0.78rem;">0.0°</span>
-          </span>
-          <span id="altGuideInfo" style="display: flex; align-items: center; gap: 3px;" title="Écart Altitude">
-            <span id="altArrow">⬆️</span><span id="altVal" style="font-size: 0.78rem;">0.0°</span>
-          </span>
+      <!-- Indicateur de guidage centré flottant à côté du viseur -->
+      <div id="searchArrowOverlay" style="position: absolute; top: calc(50% + 14px); left: calc(50% + 14px); z-index: 10; display: none; background: rgba(5,8,12,0.85); border: 1px solid #ff9800; padding: 4px 10px; border-radius: 12px; color: #ffb74d; font-weight: bold; font-size: 0.78rem; align-items: center; gap: 6px; pointer-events: none; backdrop-filter: blur(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+        <!-- Flèche rotative boussole -->
+        <div id="compassArrowContainer" style="display: inline-flex; transition: transform 0.1s ease-out;">
+          <svg id="compassSvgIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="19" x2="12" y2="5"></line>
+            <polyline points="5 12 12 5 19 12"></polyline>
+          </svg>
         </div>
+        <!-- Écarts détaillés signés -->
+        <span id="azVal" style="font-size: 0.72rem;">AZ: +0.0°</span>
+        <span id="altVal" style="font-size: 0.72rem;">ALT: +0.0°</span>
       </div>
 
       <div class="scene-zoom-controls">
@@ -980,7 +981,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const sidereal = siderealDegrees(currentSkyDate);
       const latRadians = latitude * Math.PI / 180;
 
-      // --- GUIDAGE CIBLE 2 ÉTAPES (AZIMUT + ALTITUDE AVEC DEGRÉS SIGNÉS) ---
+      // --- GUIDAGE CIBLE FUSIONNÉ (BOUSSOLE ROTATIVE + VALEURS SIGNÉES) ---
       const arrowOverlay = document.getElementById('searchArrowOverlay');
       if (activeTargetObject) {
         const targetHoriz = horizontalPosition(activeTargetObject, sidereal, latRadians);
@@ -993,46 +994,31 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const angularDistance = Math.hypot(dAz * Math.cos(currentElevation * Math.PI / 180), dEl);
 
         const targetNameLabel = document.getElementById('targetNameLabel');
-        const azArrow = document.getElementById('azArrow');
+        const compassContainer = document.getElementById('compassArrowContainer');
+        const compassSvg = document.getElementById('compassSvgIcon');
         const azVal = document.getElementById('azVal');
-        const altArrow = document.getElementById('altArrow');
         const altVal = document.getElementById('altVal');
 
         if (targetNameLabel) targetNameLabel.textContent = activeTargetObject.name;
 
-        // Formatage des valeurs avec le signe explicite (+ / -)
+        // Mise à jour des textes en degrés
         const azSign = dAz > 0 ? '+' : '';
         const elSign = dEl > 0 ? '+' : '';
-        if (azVal) azVal.textContent = `${azSign}${dAz.toFixed(1)}°`;
-        if (altVal) altVal.textContent = `${elSign}${dEl.toFixed(1)}°`;
+        if (azVal) azVal.textContent = `AZ: ${azSign}${dAz.toFixed(1)}°`;
+        if (altVal) altVal.textContent = `ALT: ${elSign}${dEl.toFixed(1)}°`;
 
         if (angularDistance < 1.0) {
-          if (azArrow) azArrow.textContent = '🎯';
-          if (altArrow) altArrow.textContent = '✨';
+          if (compassContainer) compassContainer.style.transform = `rotate(0deg)`;
+          if (compassSvg) compassSvg.style.stroke = '#69ff84';
           if (targetNameLabel) targetNameLabel.style.color = '#69ff84';
         } else {
           if (targetNameLabel) targetNameLabel.style.color = '#fff';
+          if (compassSvg) compassSvg.style.stroke = '#ffb74d';
 
-          // Flèche Azimut (Gauche / Droite)
-          if (azArrow) {
-            if (Math.abs(dAz) > 0.5) {
-              azArrow.textContent = dAz > 0 ? '➡️' : '⬅️';
-              azArrow.style.opacity = '1';
-            } else {
-              azArrow.textContent = '✔️';
-              azArrow.style.opacity = '0.4';
-            }
-          }
-
-          // Flèche Altitude (Haut / Bas)
-          if (altArrow) {
-            if (Math.abs(dEl) > 0.5) {
-              altArrow.textContent = dEl > 0 ? '⬆️' : '⬇️';
-              altArrow.style.opacity = '1';
-            } else {
-              altArrow.textContent = '✔️';
-              altArrow.style.opacity = '0.4';
-            }
+          // Calcul de la rotation de la flèche unique en fonction des écarts 2D
+          let angleDeg = Math.atan2(-dAz * Math.cos(currentElevation * Math.PI / 180), dEl) * (180 / Math.PI);
+          if (compassContainer) {
+            compassContainer.style.transform = `rotate(${angleDeg}deg)`;
           }
         }
       }
