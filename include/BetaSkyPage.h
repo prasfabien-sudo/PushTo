@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.68.0
+// Version Component: BetaSkyPage.h v5.70.0
 // Version Global System: v1.3.0
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -45,18 +45,22 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-top: 8px; }
     
-    /* Barre de contrôle du temps compacte et fusionnée */
-    .time-control-box { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; background: #151b25; padding: 6px 10px; border: 1px solid #344256; border-radius: 9px; }
-    .time-input-group { display: flex; align-items: center; gap: 8px; flex: 1; flex-wrap: wrap; }
+    /* --- NOUVEAU STYLE DE LA BARRE DE TEMPS (CALENDRIER + FLÈCHES HEURES/MIN) --- */
+    .time-control-box { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; background: #151b25; padding: 8px 12px; border: 1px solid #344256; border-radius: 9px; }
+    .time-picker-wrapper { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     
-    /* Style ultra-compact du sélecteur sans flèches encombrantes */
-    .dt-spinner-container { display: flex; align-items: center; gap: 4px; background: #10151d; border: 1px solid #344256; border-radius: 8px; padding: 4px 10px; }
-    .dt-field-group { display: flex; align-items: center; justify-content: center; cursor: ns-resize; touch-action: pan-y; user-select: none; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; }
-    .dt-field-group:hover { background: rgba(255, 183, 77, 0.1); }
-    .dt-val { font-size: 0.9rem; font-weight: bold; color: #ffb74d; text-align: center; font-variant-numeric: tabular-nums; min-width: 18px; }
-    .dt-val.year { min-width: 36px; }
-    .dt-sep { color: #8b94a2; font-weight: bold; font-size: 0.85rem; margin: 0 1px; }
+    /* Input date stylisé invisible mais cliquable sur le bouton calendrier */
+    .date-btn-container { position: relative; display: inline-flex; align-items: center; }
+    #nativeDatePicker { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; z-index: 2; }
+    .date-display-btn { background: #10151d; border: 1px solid #344256; color: #ffb74d; padding: 6px 10px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
+    .time-segment { display: flex; align-items: center; background: #10151d; border: 1px solid #344256; border-radius: 8px; padding: 2px 6px; gap: 4px; }
+    .time-val { font-size: 0.95rem; font-weight: bold; color: #ffb74d; min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; }
+    
+    .time-steppers { display: flex; flex-direction: column; gap: 1px; }
+    .mini-arrow { background: #1e293b; border: 1px solid #344256; color: #ffb74d; font-size: 0.6rem; width: 18px; height: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; border-radius: 3px; }
+    .mini-arrow:active { background: #344256; }
+    
     .time-step-group { display: flex; align-items: center; gap: 3px; }
     .time-btn { min-height: 36px; padding: 2px 8px; font-size: 0.85rem; font-weight: bold; background: #1e293b; color: #ffb74d; border: 1px solid #344256; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .time-btn:active { background: #253247; transform: scale(0.95); }
@@ -134,7 +138,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.68.0</span>
+      <span class="beta">PLANÉTARIUM v5.70.0</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -176,7 +180,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <button id="openSearchTargetModalBtn" type="button" style="grid-column: span 2; background: #263238; color: #ffb74d; font-weight: bold; font-size: 0.8rem;">Rechercher une cible 🔍</button>
       <button id="openSettingsModalBtn" type="button" class="settings-btn" style="grid-column: span 4;">Paramètres ⚙️</button>
 
-      <!-- Contrôles déportés (Offset) compacts et fusionnés -->
+      <!-- Contrôles déportés (Offset) -->
       <div class="dpad-wrapper">
         <div class="dpad-container">
           <button id="jogUpBtn" type="button" class="jog-btn jog-up" title="Ajuster Altitude">▲</button>
@@ -195,28 +199,39 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         </div>
       </div>
 
-      <!-- Barre de temps ultra-compacte en ligne -->
+      <!-- Barre de temps : Calendrier natif + Heures/Minutes avec flèches haut/bas -->
       <div class="time-control-box">
-        <div class="time-input-group">
-          <span style="font-size: 0.75rem; color: #8b94a2; white-space: nowrap;">Heure :</span>
-          <div class="dt-spinner-container" id="dtSpinner">
-            <div class="dt-field-group" data-field="day" title="Glisser ou défiler pour modifier"><span id="dtDay" class="dt-val">31</span></div>
-            <span class="dt-sep">/</span>
-            <div class="dt-field-group" data-field="month" title="Glisser ou défiler pour modifier"><span id="dtMonth" class="dt-val">10</span></div>
-            <span class="dt-sep">/</span>
-            <div class="dt-field-group" data-field="year" title="Glisser ou défiler pour modifier"><span id="dtYear" class="dt-val year">2026</span></div>
-            <span style="margin: 0 2px; color: #344256;">|</span>
-            <div class="dt-field-group" data-field="hour" title="Glisser ou défiler pour modifier"><span id="dtHour" class="dt-val">11</span></div>
-            <span class="dt-sep">:</span>
-            <div class="dt-field-group" data-field="minute" title="Glisser ou défiler pour modifier"><span id="dtMinute" class="dt-val">00</span></div>
+        <div class="time-picker-wrapper">
+          <!-- Bouton Calendrier Natif -->
+          <div class="date-btn-container">
+            <input type="date" id="nativeDatePicker" onchange="onNativeDateChange(this.value)" title="Choisir la date">
+            <button type="button" class="date-display-btn">
+              📅 <span id="dateDisplayLabel">JJ/MM/AAAA</span>
+            </button>
+          </div>
+
+          <!-- Sélecteur Heure avec flèches haut/bas -->
+          <div class="time-segment">
+            <span id="dtHour" class="time-val">12</span>
+            <div class="time-steppers">
+              <button type="button" class="mini-arrow" onclick="adjustTimeUnit('hour', 1)">▲</button>
+              <button type="button" class="mini-arrow" onclick="adjustTimeUnit('hour', -1)">▼</button>
+            </div>
+          </div>
+          <span style="color:#8b94a2; font-weight:bold;">:</span>
+          <!-- Sélecteur Minute avec flèches haut/bas -->
+          <div class="time-segment">
+            <span id="dtMinute" class="time-val">00</span>
+            <div class="time-steppers">
+              <button type="button" class="mini-arrow" onclick="adjustTimeUnit('minute', 5)">▲</button>
+              <button type="button" class="mini-arrow" onclick="adjustTimeUnit('minute', -5)">▼</button>
+            </div>
           </div>
         </div>
         
         <div class="time-step-group">
           <button type="button" class="time-btn" id="stepPrevHourBtn" title="-1 Heure">«</button>
-          <button type="button" class="time-btn" id="stepPrev10mBtn" title="-10 Minutes">&lt;</button>
           <button type="button" id="resetTimeBtn" class="time-btn" style="min-height:34px; color:#fff; background:#263238; border-color:#455a64; font-size:0.75rem;" title="Revenir à l'heure réelle">Direct</button>
-          <button type="button" class="time-btn" id="stepNext10mBtn" title="+10 Minutes">&gt;</button>
           <button type="button" class="time-btn" id="stepNextHourBtn" title="+1 Heure">»</button>
         </div>
       </div>
@@ -230,10 +245,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       </select>
 
       <button id="centerButton" type="button" style="grid-column: span 4;">Recentrer</button>
-      
       <button id="manualFullscreenBtn" type="button" style="grid-column: span 4;">Plein écran</button>
     </div>
-    <p class="scene-help">Glissez verticalement sur les chiffres de date/heure ou utilisez la molette pour les faire varier.</p>
+    <p class="scene-help">Cliquez sur la date pour ouvrir le calendrier ou utilisez les flèches pour l'heure.</p>
   </main>
 
   <!-- POP-UP RECHERCHE DE CIBLE -->
@@ -244,7 +258,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
         <input type="text" id="targetSearchInput" placeholder="Filtrer par nom (ex: M42, Andromède...)" style="width: 100%; padding: 8px 10px; background: #10151d; border: 1px solid #344256; border-radius: 8px; color: #fff;">
         <select id="targetSelectDropdown" size="6" style="width: 100%; background: #10151d; border: 1px solid #344256; border-radius: 8px; color: #fff; padding: 4px;">
-          <!-- Les options sont générées dynamiquement -->
         </select>
       </div>
       <button type="button" class="btn" style="width: 100%; background: #ff9800; color: #000; font-weight: bold; margin-bottom: 8px;" onclick="confirmSelectedTarget()">Définir comme cible 🚀</button>
@@ -413,7 +426,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     // --- CALCUL DES ÉPHÉMÉRIDES DU SYSTÈME SOLAIRE ---
     function getSolarSystemObjects(date) {
       const jd = date.getTime() / 86400000 + 2440587.5;
-      const d = jd - 2451545.0; // J2000.0
+      const d = jd - 2451545.0;
 
       const sunMeanLong = (280.460 + 0.9856474 * d) % 360;
       const sunMeanAnom = (357.528 + 0.9856003 * d) % 360;
@@ -482,69 +495,45 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       ];
     }
 
-    // --- GESTION DU SÉLECTEUR D'HEURE COMPACT ---
+    // --- GESTION DU TEMPS ET DU CALENDRIER NATIF ---
     function updateDateTimeDisplay() {
-      document.getElementById('dtDay').textContent = String(currentSkyDate.getDate()).padStart(2, '0');
-      document.getElementById('dtMonth').textContent = String(currentSkyDate.getMonth() + 1).padStart(2, '0');
-      document.getElementById('dtYear').textContent = currentSkyDate.getFullYear();
+      const year = currentSkyDate.getFullYear();
+      const month = String(currentSkyDate.getMonth() + 1).padStart(2, '0');
+      const day = String(currentSkyDate.getDate()).padStart(2, '0');
+      
+      // Format pour l'input date (AAAA-MM-JJ)
+      document.getElementById('nativeDatePicker').value = `${year}-${month}-${day}`;
+      // Format affiché sur le bouton
+      document.getElementById('dateDisplayLabel').textContent = `${day}/${month}/${year}`;
+
       document.getElementById('dtHour').textContent = String(currentSkyDate.getHours()).padStart(2, '0');
       document.getElementById('dtMinute').textContent = String(currentSkyDate.getMinutes()).padStart(2, '0');
     }
 
-    function adjustDtField(field, delta) {
+    function onNativeDateChange(dateString) {
+      if (!dateString) return;
       useSystemTime = false;
-      const d = new Date(currentSkyDate.getTime());
-      if (field === 'day') d.setDate(d.getDate() + delta);
-      else if (field === 'month') d.setMonth(d.getMonth() + delta);
-      else if (field === 'year') d.setFullYear(d.getFullYear() + delta);
-      else if (field === 'hour') d.setHours(d.getHours() + delta);
-      else if (field === 'minute') d.setMinutes(d.getMinutes() + delta);
+      const parts = dateString.split('-');
+      currentSkyDate.setFullYear(parseInt(parts[0], 10));
+      currentSkyDate.setMonth(parseInt(parts[1], 10) - 1);
+      currentSkyDate.setDate(parseInt(parts[2], 10));
 
-      currentSkyDate = d;
       updateDateTimeDisplay();
       objects = [...baseObjects, ...getSolarSystemObjects(currentSkyDate)];
       updateSkyBackground(currentSkyDate);
     }
 
-    // Gestion du scroll vertical et du glissement tactile par champ
-    document.querySelectorAll('.dt-field-group').forEach(group => {
-      const field = group.dataset.field;
-      let startY = 0;
-      let accumulatedDelta = 0;
-
-      group.addEventListener('pointerdown', e => {
-        startY = e.clientY;
-        accumulatedDelta = 0;
-        group.setPointerCapture(e.pointerId);
-      });
-
-      group.addEventListener('pointermove', e => {
-        if (startY === 0) return;
-        const deltaY = e.clientY - startY;
-        accumulatedDelta += deltaY;
-        startY = e.clientY;
-
-        if (Math.abs(accumulatedDelta) > 18) {
-          const steps = Math.trunc(accumulatedDelta / 18);
-          adjustDtField(field, -steps);
-          accumulatedDelta = 0;
-        }
-      });
-
-      const endPointer = e => {
-        startY = 0;
-        accumulatedDelta = 0;
-        try { group.releasePointerCapture(e.pointerId); } catch(err) {}
-      };
-      group.addEventListener('pointerup', endPointer);
-      group.addEventListener('pointercancel', endPointer);
-
-      group.addEventListener('wheel', e => {
-        e.preventDefault();
-        const delta = Math.sign(e.deltaY);
-        adjustDtField(field, -delta);
-      }, { passive: false });
-    });
+    function adjustTimeUnit(unit, amount) {
+      useSystemTime = false;
+      if (unit === 'hour') {
+        currentSkyDate.setHours(currentSkyDate.getHours() + amount);
+      } else if (unit === 'minute') {
+        currentSkyDate.setMinutes(currentSkyDate.getMinutes() + amount);
+      }
+      updateDateTimeDisplay();
+      objects = [...baseObjects, ...getSolarSystemObjects(currentSkyDate)];
+      updateSkyBackground(currentSkyDate);
+    }
 
     function initDateTimeInput() {
       currentSkyDate = new Date();
@@ -559,18 +548,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       updateSkyBackground(currentSkyDate);
     });
 
-    function adjustTime(minutesDelta) {
-      useSystemTime = false;
-      currentSkyDate.setMinutes(currentSkyDate.getMinutes() + minutesDelta);
-      updateDateTimeDisplay();
-      objects = [...baseObjects, ...getSolarSystemObjects(currentSkyDate)];
-      updateSkyBackground(currentSkyDate);
-    }
-
-    document.getElementById('stepPrevHourBtn').addEventListener('click', () => adjustTime(-60));
-    document.getElementById('stepPrev10mBtn').addEventListener('click', () => adjustTime(-10));
-    document.getElementById('stepNext10mBtn').addEventListener('click', () => adjustTime(10));
-    document.getElementById('stepNextHourBtn').addEventListener('click', () => adjustTime(60));
+    document.getElementById('stepPrevHourBtn').addEventListener('click', () => adjustTimeUnit('hour', -1));
+    document.getElementById('stepNextHourBtn').addEventListener('click', () => adjustTimeUnit('hour', 1));
 
     function getSkyDate() {
       if (useSystemTime) return new Date();
@@ -720,11 +699,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     });
     document.getElementById('jogUpBtn').addEventListener('click', () => {
       const step = parseFloat(stepSelect.value) || 1;
-      alignOffsetElevation = Math.max(-85, Math.min(88, alignOffsetElevation + step));
+      alignOffsetElevation = Math.max(-90, Math.min(90, alignOffsetElevation + step));
     });
     document.getElementById('jogDownBtn').addEventListener('click', () => {
       const step = parseFloat(stepSelect.value) || 1;
-      alignOffsetElevation = Math.max(-85, Math.min(88, alignOffsetElevation - step));
+      alignOffsetElevation = Math.max(-90, Math.min(90, alignOffsetElevation - step));
     });
 
     document.getElementById('zoomInBtn').addEventListener('click', () => {
@@ -825,7 +804,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       ["Alpheratz", "Delta And"], ["Delta And", "Mirach"], ["Mirach", "Almach"], ["Alpheratz", "Adhil"], ["Mirach", "51 And"],
       ["Zubenelgenubi", "Zubeneschamali"], ["Zubeneschamali", "Zubenelhakrabi"], ["Zubenelhakrabi", "Zubenelgenubi"],
       ["Hamal", "Sheratan"], ["Sheratan", "Mesarthim"], ["Hamal", "Botein"],
-      ["Arcturus", "Muphrid"], ["Arcturus", "Izar"], ["Izar", "Seginus"], ["Seginus", "Nekkar"], ["Nekkar", "Hozian"], ["Hozian", "Izar"], ["Seginus", "Alkalurops"],
+      ["Arcturus", "Muphrid"], ["Muphrid", "Izar"], ["Izar", "Seginus"], ["Seginus", "Nekkar"], ["Nekkar", "Hozian"], ["Hozian", "Izar"], ["Seginus", "Alkalurops"],
       ["Tarf", "Asellus Australis"], ["Asellus Australis", "Asellus Borealis"], ["Asellus Australis", "Acubens"], ["Asellus Borealis", "Iota Cnc"],
       ["Sadalmelik", "Sadalsuud"], ["Sadalmelik", "Sadachbia"], ["Sadachbia", "Skat"], ["Skat", "Ancha"],
       ["Caph", "Shedar"], ["Shedar", "Achird"], ["Shedar", "Navi"], ["Navi", "Ruchbah"], ["Ruchbah", "Segin"],
@@ -1040,7 +1019,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return { isGal, isNeb, isAmas, isStar };
     }
 
-   function matchesFilter(object) {
+    function matchesFilter(object) {
       const userMaxMag = parseFloat(magFilterElement.value);
 
       let dynamicMagLimit = userMaxMag;
@@ -1121,7 +1100,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       elevation += (targetElevation - elevation) * 0.4;
 
       const currentHeading = (heading + touchHeading + alignOffsetHeading + 360) % 360;
-      const currentElevation = Math.max(-85, Math.min(88, elevation + touchElevation + alignOffsetElevation));
+      const currentElevation = Math.max(-90, Math.min(90, elevation + touchElevation + alignOffsetElevation));
       
       const az = currentHeading * Math.PI / 180;
       const el = currentElevation * Math.PI / 180;
@@ -1618,7 +1597,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const panFactor = fieldOfView / 34;
 
       touchHeading = (touchHeading - (event.clientX - dragPoint.x) * 0.35 * panFactor + 360) % 360;
-      touchElevation = Math.max(-80, Math.min(80, touchElevation + (event.clientY - dragPoint.y) * 0.25 * panFactor));
+      touchElevation = Math.max(-90, Math.min(90, touchElevation + (event.clientY - dragPoint.y) * 0.25 * panFactor));
       dragPoint = { x: event.clientX, y: event.clientY };
     });
     const releasePointer = event => {
