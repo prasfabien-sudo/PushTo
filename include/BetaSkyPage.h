@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.62.0
+// Version Component: BetaSkyPage.h v5.64.0
 // Version Global System: v1.3.0
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -39,13 +39,13 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .zoom-btn { width: 32px; height: 32px; background: rgba(21, 27, 37, 0.85); border: 1px solid #344256; border-radius: 6px; color: #ffb74d; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); padding: 0; }
     .zoom-btn:active { background: rgba(37, 50, 71, 0.95); transform: scale(0.95); }
 
-    .object-label {position: absolute; z-index: 2; padding: 1px 3px; border-radius: 4px; background: transparent; font-size: 0.65rem; white-space: nowrap; text-shadow: 0 1px 3px #000, 0 0 3px #000, 0 0 5px #000; pointer-events: none; transition: transform 0.1s ease-out; }
+    .object-label { position: absolute; z-index: 2; padding: 1px 3px; border-radius: 4px; background: transparent; font-size: 0.65rem; white-space: nowrap; text-shadow: 0 1px 3px #000, 0 0 3px #000, 0 0 5px #000; pointer-events: none; transition: transform 0.1s ease-out; }
     .object-label.polaris { color: #ffb74d !important; font-weight: bold; z-index: 3; }
     .constellation-label { position: absolute; z-index: 2; color: #ffb366; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.9; }
 
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
     
-    .time-control-box { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; background: #151b25; padding: 8px 10px; border: 1px solid #344256; border-radius: 99px; }
+    .time-control-box { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; background: #151b25; padding: 8px 10px; border: 1px solid #344256; border-radius: 9px; }
     .time-input-group { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px; }
     .time-step-group { display: flex; align-items: center; gap: 3px; }
     .time-btn { min-height: 36px; padding: 2px 8px; font-size: 0.85rem; font-weight: bold; background: #1e293b; color: #ffb74d; border: 1px solid #344256; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -124,7 +124,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.62.0</span>
+      <span class="beta">PLANÉTARIUM v5.64.0</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -338,6 +338,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const customTimeInput = document.getElementById('customTimeInput');
     const stepSelect = document.getElementById('stepSelect');
     
+    let baseObjects = [];
     let objects = [];
     let latitude = 45.89;
     let longitude = 6.05;
@@ -385,6 +386,81 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     });
     function closeSettingsModal() {
       settingsModal.hidden = true;
+    }
+
+    // --- CALCUL DES ÉPHÉMÉRIDES DU SYSTÈME SOLAIRE ---
+    function getSolarSystemObjects(date) {
+      const jd = date.getTime() / 86400000 + 2440587.5;
+      const d = jd - 2451545.0; // J2000.0
+
+      const sunMeanLong = (280.460 + 0.9856474 * d) % 360;
+      const sunMeanAnom = (357.528 + 0.9856003 * d) % 360;
+      const sunEclLong = sunMeanLong + 1.915 * Math.sin(sunMeanAnom * Math.PI / 180) + 0.020 * Math.sin(2 * sunMeanAnom * Math.PI / 180);
+      
+      const eps = 23.439 - 0.0000004 * d;
+      const epsRad = eps * Math.PI / 180;
+      const sunEclLongRad = sunEclLong * Math.PI / 180;
+
+      // Soleil
+      const sinDecSun = Math.sin(epsRad) * Math.sin(sunEclLongRad);
+      const decSun = Math.asin(sinDecSun) * 180 / Math.PI;
+      const ySun = Math.cos(epsRad) * Math.sin(sunEclLongRad);
+      const xSun = Math.cos(sunEclLongRad);
+      let raSun = Math.atan2(ySun, xSun) * 180 / Math.PI / 15;
+      raSun = (raSun + 24) % 24;
+
+      // Lune
+      const moonMeanLong = (218.316 + 13.176396 * d) % 360;
+      const moonMeanAnom = (134.963 + 13.064993 * d) % 360;
+      const moonAscNode = (125.228 - 0.052954 * d) % 360;
+      const moonEclLong = moonMeanLong + 6.289 * Math.sin(moonMeanAnom * Math.PI / 180);
+      const moonEclLat = 5.128 * Math.sin((moonMeanLong - moonAscNode) * Math.PI / 180);
+      
+      const lRad = moonEclLong * Math.PI / 180;
+      const bRad = moonEclLat * Math.PI / 180;
+      
+      const sinDecMoon = Math.sin(bRad) * Math.cos(epsRad) + Math.cos(bRad) * Math.sin(epsRad) * Math.sin(lRad);
+      const decMoon = Math.asin(sinDecMoon) * 180 / Math.PI;
+      const yMoon = Math.sin(lRad) * Math.cos(epsRad) - Math.tan(bRad) * Math.sin(epsRad);
+      const xMoon = Math.cos(lRad);
+      let raMoon = Math.atan2(yMoon, xMoon) * 180 / Math.PI / 15;
+      raMoon = (raMoon + 24) % 24;
+
+      // Planètes (8 planètes majeures du système solaire)
+      const planetDefs = [
+        { name: "Mercure", period: 87.97, dist: 0.387, long0: 252.25, mag: -0.4, type: "Planète" },
+        { name: "Vénus", period: 224.70, dist: 0.723, long0: 181.98, mag: -4.4, type: "Planète" },
+        { name: "Mars", period: 686.98, dist: 1.524, long0: 355.45, mag: 1.0, type: "Planète" },
+        { name: "Jupiter", period: 4332.59, dist: 5.204, long0: 34.40, mag: -2.2, type: "Planète" },
+        { name: "Saturne", period: 10759.22, dist: 9.582, long0: 49.94, mag: 0.7, type: "Planète" },
+        { name: "Uranus", period: 30685.4, dist: 19.218, long0: 313.23, mag: 5.5, type: "Planète" },
+        { name: "Neptune", period: 60189.0, dist: 30.11, long0: 304.88, mag: 7.8, type: "Planète" },
+        { name: "Pluton", period: 90560.0, dist: 39.48, long0: 238.95, mag: 14.0, type: "Planète" }
+      ];
+
+      const planets = planetDefs.map(p => {
+        const meanLong = (p.long0 + (360 / p.period) * d) % 360;
+        const eclLong = (sunEclLong + (meanLong - sunMeanLong) * (0.8 / p.dist) + 360) % 360;
+        const eclLat = 0;
+        
+        const plRad = eclLong * Math.PI / 180;
+        const pbRad = eclLat * Math.PI / 180;
+        
+        const sinDec = Math.sin(pbRad) * Math.cos(epsRad) + Math.cos(pbRad) * Math.sin(epsRad) * Math.sin(plRad);
+        const dec = Math.asin(sinDec) * 180 / Math.PI;
+        const y = Math.sin(plRad) * Math.cos(epsRad) - Math.tan(pbRad) * Math.sin(epsRad);
+        const x = Math.cos(plRad);
+        let ra = Math.atan2(y, x) * 180 / Math.PI / 15;
+        ra = (ra + 24) % 24;
+
+        return { name: p.name, commonName: p.name, type: p.type, ra: ra, dec: dec, mag: p.mag };
+      });
+
+      return [
+        { name: "Soleil", commonName: "Soleil", type: "Étoile", ra: raSun, dec: decSun, mag: -26.7 },
+        { name: "Lune", commonName: "Lune", type: "Satellite", ra: raMoon, dec: decMoon, mag: -12.5 },
+        ...planets
+      ];
     }
 
     // --- LOGIQUE RECHERCHE GLOBALE DE CIBLE ---
@@ -538,10 +614,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     });
 
     document.getElementById('zoomInBtn').addEventListener('click', () => {
-      fieldOfView = Math.max(2, fieldOfView - 4); // Permet de descendre jusqu'à 2° de FOV
+      fieldOfView = Math.max(2, fieldOfView - 4);
     });
     document.getElementById('zoomOutBtn').addEventListener('click', () => {
-      fieldOfView = Math.min(75, fieldOfView + 4); // Permet d'élargir la vue globale
+      fieldOfView = Math.min(75, fieldOfView + 4);
     });
 
     function getSunAltitude(date, lat, lon) {
@@ -643,13 +719,17 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     customTimeInput.addEventListener('change', () => {
       useSystemTime = false;
-      updateSkyBackground(getSkyDate());
+      const newDate = getSkyDate();
+      objects = [...baseObjects, ...getSolarSystemObjects(newDate)];
+      updateSkyBackground(newDate);
     });
 
     document.getElementById('resetTimeBtn').addEventListener('click', () => {
       useSystemTime = true;
       initDateTimeInput();
-      updateSkyBackground(getSkyDate());
+      const newDate = getSkyDate();
+      objects = [...baseObjects, ...getSolarSystemObjects(newDate)];
+      updateSkyBackground(newDate);
     });
 
     function adjustTime(minutesDelta) {
@@ -657,6 +737,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const currentDate = getSkyDate();
       currentDate.setMinutes(currentDate.getMinutes() + minutesDelta);
       setDateTimeInputValue(currentDate);
+      objects = [...baseObjects, ...getSolarSystemObjects(currentDate)];
       updateSkyBackground(currentDate);
     }
 
@@ -783,6 +864,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       else if (name.includes("M42")) { dist = "1 340 al"; size = "65' × 60'"; }
       else if (name.includes("M13")) { dist = "22 200 al"; size = "20'"; }
       else if (name.includes("M57")) { dist = "2 300 al"; size = "1.4' × 1.0'"; }
+      else if (type.includes("planète") || type.includes("planete")) { dist = "Système Solaire"; size = "Diamètre variable"; }
+      else if (name === "LUNE") { dist = "384 400 km"; size = "31'"; }
+      else if (name === "SOLEIL") { dist = "149.6 millions km"; size = "32'"; }
       else if (type.includes("galaxie")) { dist = "15 - 50 millions al"; size = "8' × 5'"; }
       else if (type.includes("nebuleuse")) { dist = "2 000 - 5 000 al"; size = "30'"; }
       else if (type.includes("amas")) { dist = "5 000 - 15 000 al"; size = "15'"; }
@@ -858,17 +942,21 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const name = (object.name || '').toUpperCase();
 
       if (name === 'POLARIS') return '#ffedcc';
+      if (name === 'SOLEIL') return '#ffcc00';
+      if (name === 'LUNE') return '#f5f5f0';
+      if (name === 'MERCURE') return '#b0bec5';
+      if (name === 'VÉNUS' || name === 'VENUS') return '#fff59d';
+      if (name === 'MARS') return '#ff8a65';
+      if (name === 'JUPITER') return '#ffb74d';
+      if (name === 'SATURNE') return '#ffe082';
+      if (name === 'URANUS') return '#80deea';
+      if (name === 'NEPTUNE') return '#4fc3f7';
+      if (name === 'PLUTON') return '#b0bec5';
+
       if (type.includes('PLAN')) return '#80d8ff';
       if (type.includes('GAL')) return '#e0b8ff';
       if (type.includes('NEB')) return '#ff9e84';
       if (type.includes('AMAS') || type.includes('GLOB')) return '#ffe066';
-
-      if (type.includes('O') || type.includes('B')) return '#9ec5ff';
-      if (type.includes('A')) return '#d8eaff';
-      if (type.includes('F')) return '#fffde6';
-      if (type.includes('G')) return '#ffee66';
-      if (type.includes('K')) return '#ffad42';
-      if (type.includes('M')) return '#ff6b42';
 
       if (object.mag < 1.0) return '#ffffff';
       if (object.mag < 2.5) return '#e0f0ff';
@@ -1026,7 +1114,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           if (targetNameLabel) targetNameLabel.style.color = '#fff';
           if (compassSvg) compassSvg.style.stroke = '#ffb74d';
 
-          // Calcul corrigé de la rotation de la flèche de recherche
           const scaledAz = dAz * Math.cos(currentElevation * Math.PI / 180);
           let angleDeg = Math.atan2(scaledAz, dEl) * (180 / Math.PI);
           if (compassContainer) {
@@ -1166,11 +1253,34 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const sy = height / 2 - screenYNorm * (height / 2);
         
         const type = (object.type || '').toLowerCase();
+        const name = (object.name || '').toUpperCase();
         const colorHex = objectColorHex(object);
 
         ctx2d.save();
         
-        if (type.includes('gal')) {
+        if (name === 'LUNE') {
+          ctx2d.fillStyle = '#f5f5f0';
+          ctx2d.strokeStyle = '#d1d1c7';
+          ctx2d.lineWidth = 1.5;
+          ctx2d.beginPath();
+          ctx2d.arc(sx, sy, Math.max(6, 10 * (34 / fieldOfView)), 0, 2 * Math.PI);
+          ctx2d.fill();
+          ctx2d.stroke();
+        } else if (name === 'SOLEIL') {
+          ctx2d.fillStyle = '#ffcc00';
+          ctx2d.shadowColor = '#ff9900';
+          ctx2d.shadowBlur = 15;
+          ctx2d.beginPath();
+          ctx2d.arc(sx, sy, 8, 0, 2 * Math.PI);
+          ctx2d.fill();
+        } else if (type.includes('planète') || type.includes('planete')) {
+          ctx2d.fillStyle = '#80d8ff';
+          ctx2d.shadowColor = '#80d8ff';
+          ctx2d.shadowBlur = 8;
+          ctx2d.beginPath();
+          ctx2d.arc(sx, sy, Math.max(3, 4.5 * Math.min(34 / fieldOfView, 2)), 0, 2 * Math.PI);
+          ctx2d.fill();
+        } else if (type.includes('gal')) {
           ctx2d.strokeStyle = colorHex;
           ctx2d.fillStyle = colorHex;
           ctx2d.lineWidth = 1.2;
@@ -1201,10 +1311,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           ctx2d.stroke();
           ctx2d.setLineDash([]);
         } else {
-          let starSize = Math.max(0.7, Math.min(4.5, (8.5 - object.mag) * 0.5 + 0.8));
-          if (object.name === "Polaris") starSize = 2.8;
+          const magContrast = Math.max(0.3, Math.min(1.2, 0.7 * (34 / fieldOfView))); 
+          let starSize = Math.max(0.4, Math.min(3.5, (7.5 - object.mag) * (0.35 * magContrast) + 0.5));
+          if (object.name === "Polaris") starSize = 2.0;
           const zoomFactor = 34 / fieldOfView;
-          starSize *= Math.min(zoomFactor, 3.5);
+          starSize *= Math.min(zoomFactor, 1.8);
 
           ctx2d.fillStyle = colorHex;
           ctx2d.shadowColor = colorHex;
@@ -1231,6 +1342,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       for (const item of sortedScreenObjects) {
         const isPolaris = (item.object.name === "Polaris");
+        const isPlanetOrBody = (item.object.type === "Planète" || item.object.name === "Lune" || item.object.name === "Soleil");
         const { isGal, isNeb, isAmas, isStar } = getObjectType(item.object);
 
         let showThisLabel = false;
@@ -1246,7 +1358,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           labelMagLimit = 13.0;
         }
 
-        if (isPolaris) {
+        if (isPolaris || isPlanetOrBody) {
           showThisLabel = true;
         } else if (isGal && labelGal) {
           showThisLabel = (fieldOfView < 60) || item.object.mag <= labelMagLimit;
@@ -1263,14 +1375,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         let leftPct = (item.screenX + 1) * 50;
         let topPct = (1 - item.screenY) * 50;
 
-        // Anti-collision dynamique proportionnelle au niveau de zoom (FOV)
-        const collisionThresholdX = Math.max(1.5, 6.5 * (fieldOfView / 34));
-        const collisionThresholdY = Math.max(1.2, 4.0 * (fieldOfView / 34));
-
-        const overlap = placedLabels.some(p => 
-          Math.abs(p.left - leftPct) < collisionThresholdX && 
-          Math.abs(p.top - topPct) < collisionThresholdY
-        );
+        const thresholdX = Math.max(1.0, 6.5 * (fieldOfView / 34));
+        const thresholdY = Math.max(0.8, 4.0 * (fieldOfView / 34));
+        const overlap = placedLabels.some(p => Math.abs(p.left - leftPct) < thresholdX && Math.abs(p.top - topPct) < thresholdY);
         if (overlap) continue;
 
         placedLabels.push({ left: leftPct, top: topPct });
@@ -1280,6 +1387,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         
         if (isPolaris) {
           label.style.color = '#ffedcc';
+        } else if (isPlanetOrBody) {
+          label.style.color = '#80d8ff';
         } else if (isGal) {
           label.style.color = '#e0b8ff';
         } else if (isNeb) {
@@ -1296,6 +1405,22 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         
         if (isPolaris) {
           label.textContent = `★ Polaris (Pôle Nord)`;
+        } else if (item.object.name === "Soleil") {
+          label.textContent = `☀️ Soleil`;
+        } else if (item.object.name === "Lune") {
+          label.textContent = `🌙 Lune`;
+        } else if (item.object.name === "Mars") {
+          label.textContent = `♂ Mars`;
+        } else if (item.object.name === "Vénus") {
+          label.textContent = `♀ Vénus`;
+        } else if (item.object.name === "Jupiter") {
+          label.textContent = `♃ Jupiter`;
+        } else if (item.object.name === "Saturne") {
+          label.textContent = `♄ Saturne`;
+        } else if (item.object.name === "Mercure") {
+          label.textContent = `☿ Mercure`;
+        } else if (item.object.name === "Uranus" || item.object.name === "Neptune" || item.object.name === "Pluton") {
+          label.textContent = `🪐 ${item.object.name}`;
         } else if (item.object.name.startsWith("M") || item.object.name.startsWith("NGC")) {
           label.textContent = `${item.object.name}${item.object.commonName ? ' (' + item.object.commonName + ')' : ''}`;
         } else {
@@ -1338,7 +1463,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         resizeCanvas();
 
         const [catalogRes, statusRes] = await Promise.all([fetch('/catalog'), fetch('/status')]);
-        objects = await catalogRes.json();
+        baseObjects = await catalogRes.json();
+        const solarSystem = getSolarSystemObjects(getSkyDate());
+        objects = [...baseObjects, ...solarSystem];
+
         const status = await statusRes.json();
         
         applyEncoderStatus(status);
@@ -1349,7 +1477,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         longitude = Number(status.lon ?? longitude);
         
         updateSkyBackground(getSkyDate());
-        setStatus(`${objects.length} objets chargés. Planétarium prêt.`, "align-ok");
+        setStatus(`${objects.length} objets chargés (incl. Système Solaire). Prêt.`, "align-ok");
         
         window.setInterval(pollEncoderStatus, 100);
         render();
@@ -1376,12 +1504,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       if (closestObj) {
         const details = getEnrichedDetails(closestObj);
-        document.getElementById('modalTitle').textContent = `${closestObj.name} (${closestObj.commonName})`;
+        document.getElementById('modalTitle').textContent = `${closestObj.name} (${closestObj.commonName || closestObj.type})`;
         document.getElementById('modalSub').textContent = `${closestObj.type || 'Objet céleste'}`;
         document.getElementById('modalMag').textContent = closestObj.mag.toFixed(1);
         document.getElementById('modalDist').textContent = details.dist;
         document.getElementById('modalSize').textContent = details.size;
-        document.getElementById('modalCoords').textContent = `AD ${closestObj.ra}h · Dec ${closestObj.dec}°`;
+        document.getElementById('modalCoords').textContent = `AD ${closestObj.ra.toFixed(2)}h · Dec ${closestObj.dec.toFixed(2)}°`;
         document.getElementById('objectModal').hidden = false;
       }
     });
@@ -1415,7 +1543,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         return;
       }
       if (!dragPoint) return;
-      // Facteur d'échelle basé sur le zoom : plus le FOV est petit, plus le déplacement est doux
       const panFactor = fieldOfView / 34;
 
       touchHeading = (touchHeading - (event.clientX - dragPoint.x) * 0.35 * panFactor + 360) % 360;
