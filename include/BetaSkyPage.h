@@ -1016,7 +1016,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         if (azVal) azVal.textContent = `AZ: ${azSign}${dAz.toFixed(1)}°`;
         if (altVal) altVal.textContent = `ALT: ${elSign}${dEl.toFixed(1)}°`;
 
-        if (angularDistance < 1.0) {
+        const dynamicTolerance = Math.max(0.1, Math.min(2.0, (fieldOfView / 34) * 0.5));
+
+        if (angularDistance < dynamicTolerance) {
           if (compassContainer) compassContainer.style.transform = `rotate(0deg)`;
           if (compassSvg) compassSvg.style.stroke = '#69ff84';
           if (targetNameLabel) targetNameLabel.style.color = '#69ff84';
@@ -1024,7 +1026,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           if (targetNameLabel) targetNameLabel.style.color = '#fff';
           if (compassSvg) compassSvg.style.stroke = '#ffb74d';
 
-          let angleDeg = Math.atan2(-dAz * Math.cos(currentElevation * Math.PI / 180), dEl) * (180 / Math.PI);
+          // Calcul corrigé de la rotation de la flèche de recherche
+          const scaledAz = dAz * Math.cos(currentElevation * Math.PI / 180);
+          let angleDeg = Math.atan2(scaledAz, dEl) * (180 / Math.PI);
           if (compassContainer) {
             compassContainer.style.transform = `rotate(${angleDeg}deg)`;
           }
