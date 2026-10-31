@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.65.0
+// Version Component: BetaSkyPage.h v5.68.0
 // Version Global System: v1.3.0
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -24,7 +24,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .sky-status.error { color: #ff7777; }
     .sky-status.align-ok { color: #69ff84; }
     
-    .scene { position: relative; height: min(60vh, 500px); min-height: 300px; overflow: hidden; border: 1px solid #273142; border-radius: 14px; background: radial-gradient(ellipse at 50% 100%, #1b2638 0, #0d1420 47%, #05070b 100%); touch-action: none; transition: height 0.3s, background 0.5s; }
+    .scene { position: relative; height: min(55vh, 450px); min-height: 280px; overflow: hidden; border: 1px solid #273142; border-radius: 14px; background: radial-gradient(ellipse at 50% 100%, #1b2638 0, #0d1420 47%, #05070b 100%); touch-action: none; transition: height 0.3s, background 0.5s; }
     canvas { display: block; width: 100%; height: 100%; cursor: grab; position: relative; z-index: 1; background: transparent; }
     canvas:active { cursor: grabbing; }
     .scene-label { position: absolute; z-index: 2; color: #acb8c8; font-size: .72rem; text-shadow: 0 1px 4px #000; pointer-events: none; }
@@ -43,33 +43,43 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .object-label.polaris { color: #ffb74d !important; font-weight: bold; z-index: 3; }
     .constellation-label { position: absolute; z-index: 2; color: #ffb366; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.9; }
 
-    .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+    .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-top: 8px; }
     
-    .time-control-box { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; background: #151b25; padding: 8px 10px; border: 1px solid #344256; border-radius: 9px; }
-    .time-input-group { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px; }
+    /* Barre de contrôle du temps compacte et fusionnée */
+    .time-control-box { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; background: #151b25; padding: 6px 10px; border: 1px solid #344256; border-radius: 9px; }
+    .time-input-group { display: flex; align-items: center; gap: 8px; flex: 1; flex-wrap: wrap; }
+    
+    /* Style ultra-compact du sélecteur sans flèches encombrantes */
+    .dt-spinner-container { display: flex; align-items: center; gap: 4px; background: #10151d; border: 1px solid #344256; border-radius: 8px; padding: 4px 10px; }
+    .dt-field-group { display: flex; align-items: center; justify-content: center; cursor: ns-resize; touch-action: pan-y; user-select: none; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; }
+    .dt-field-group:hover { background: rgba(255, 183, 77, 0.1); }
+    .dt-val { font-size: 0.9rem; font-weight: bold; color: #ffb74d; text-align: center; font-variant-numeric: tabular-nums; min-width: 18px; }
+    .dt-val.year { min-width: 36px; }
+    .dt-sep { color: #8b94a2; font-weight: bold; font-size: 0.85rem; margin: 0 1px; }
+
     .time-step-group { display: flex; align-items: center; gap: 3px; }
     .time-btn { min-height: 36px; padding: 2px 8px; font-size: 0.85rem; font-weight: bold; background: #1e293b; color: #ffb74d; border: 1px solid #344256; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .time-btn:active { background: #253247; transform: scale(0.95); }
     
     .settings-btn { grid-column: span 2; background: #151b25; border: 1px solid #344256; border-radius: 9px; color: #ffb74d; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 6px; cursor: pointer; font: inherit; }
     
-    button, select, input { min-height: 44px; border: 1px solid #344256; border-radius: 9px; background: #151b25; color: #e6eaf2; font: inherit; }
-    button { padding: 8px 10px; cursor: pointer; }
+    button, select, input { min-height: 40px; border: 1px solid #344256; border-radius: 8px; background: #151b25; color: #e6eaf2; font: inherit; }
+    button { padding: 6px 10px; cursor: pointer; }
     button:active { background: #253247; }
-    select, input[type="datetime-local"] { width: 100%; padding: 8px 10px; background: #10151d; }
-    .scene-help { margin: 9px 2px; color: #929cac; font-size: .78rem; line-height: 1.45; text-align: center; }
+    select { width: 100%; padding: 6px 10px; background: #10151d; }
+    .scene-help { margin: 6px 2px; color: #929cac; font-size: .75rem; line-height: 1.4; text-align: center; }
 
-    .dpad-wrapper { grid-column: span 4; display: flex; align-items: center; justify-content: center; gap: 12px; background: #121822; padding: 8px; border: 1px solid #273142; border-radius: 12px; margin-bottom: 4px; }
-    .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 180px; }
-    .jog-btn { background: #1e293b !important; font-weight: bold; color: #ffb74d !important; font-size: 1rem; display: flex; align-items: center; justify-content: center; min-height: 38px; }
+    .dpad-wrapper { grid-column: span 4; display: flex; align-items: center; justify-content: center; gap: 12px; background: #121822; padding: 6px 10px; border: 1px solid #273142; border-radius: 10px; }
+    .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; width: 150px; }
+    .jog-btn { background: #1e293b !important; font-weight: bold; color: #ffb74d !important; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; min-height: 32px; }
     .jog-up { grid-column: 2; grid-row: 1; }
     .jog-left { grid-column: 1; grid-row: 2; }
-    .jog-center { grid-column: 2; grid-row: 2; background: #10151d !important; border: 1px dashed #344256; font-size: 0.6rem; color: #8b94a2 !important; cursor: default; display: flex; align-items: center; justify-content: center; }
+    .jog-center { grid-column: 2; grid-row: 2; background: #10151d !important; border: 1px dashed #344256; font-size: 0.55rem; color: #8b94a2 !important; cursor: default; display: flex; align-items: center; justify-content: center; }
     .jog-right { grid-column: 3; grid-row: 2; }
     .jog-down { grid-column: 2; grid-row: 3; }
     
-    .sens-box { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; color: #8b94a2; }
-    .sens-box select { min-height: 36px; padding: 4px 8px; font-size: 0.8rem; background: #151b25; color: #ffb74d; font-weight: bold; }
+    .sens-box { display: flex; flex-direction: column; gap: 2px; font-size: 0.72rem; color: #8b94a2; }
+    .sens-box select { min-height: 34px; padding: 2px 6px; font-size: 0.78rem; background: #151b25; color: #ffb74d; font-weight: bold; }
 
     body.landscape-fullscreen { padding: 0 !important; background: #000; overflow: hidden; }
     body.landscape-fullscreen .sky-heading,
@@ -124,7 +134,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.65.0</span>
+      <span class="beta">PLANÉTARIUM v5.68.0</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -166,6 +176,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <button id="openSearchTargetModalBtn" type="button" style="grid-column: span 2; background: #263238; color: #ffb74d; font-weight: bold; font-size: 0.8rem;">Rechercher une cible 🔍</button>
       <button id="openSettingsModalBtn" type="button" class="settings-btn" style="grid-column: span 4;">Paramètres ⚙️</button>
 
+      <!-- Contrôles déportés (Offset) compacts et fusionnés -->
       <div class="dpad-wrapper">
         <div class="dpad-container">
           <button id="jogUpBtn" type="button" class="jog-btn jog-up" title="Ajuster Altitude">▲</button>
@@ -175,7 +186,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           <button id="jogDownBtn" type="button" class="jog-btn jog-down" title="Ajuster Altitude">▼</button>
         </div>
         <div class="sens-box">
-          <label for="stepSelect">Pas (sensibilité) :</label>
+          <label for="stepSelect">Pas :</label>
           <select id="stepSelect" aria-label="Sensibilité du pas d'offset">
             <option value="0.1">0.1° (Fin)</option>
             <option value="1" selected>1.0° (Normal)</option>
@@ -184,16 +195,27 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         </div>
       </div>
 
+      <!-- Barre de temps ultra-compacte en ligne -->
       <div class="time-control-box">
         <div class="time-input-group">
-          <span style="font-size: 0.75rem; color: #8b94a2; white-space: nowrap;">Heure ciel :</span>
-          <input type="datetime-local" id="customTimeInput" aria-label="Heure d'affichage du ciel">
+          <span style="font-size: 0.75rem; color: #8b94a2; white-space: nowrap;">Heure :</span>
+          <div class="dt-spinner-container" id="dtSpinner">
+            <div class="dt-field-group" data-field="day" title="Glisser ou défiler pour modifier"><span id="dtDay" class="dt-val">31</span></div>
+            <span class="dt-sep">/</span>
+            <div class="dt-field-group" data-field="month" title="Glisser ou défiler pour modifier"><span id="dtMonth" class="dt-val">10</span></div>
+            <span class="dt-sep">/</span>
+            <div class="dt-field-group" data-field="year" title="Glisser ou défiler pour modifier"><span id="dtYear" class="dt-val year">2026</span></div>
+            <span style="margin: 0 2px; color: #344256;">|</span>
+            <div class="dt-field-group" data-field="hour" title="Glisser ou défiler pour modifier"><span id="dtHour" class="dt-val">11</span></div>
+            <span class="dt-sep">:</span>
+            <div class="dt-field-group" data-field="minute" title="Glisser ou défiler pour modifier"><span id="dtMinute" class="dt-val">00</span></div>
+          </div>
         </div>
         
         <div class="time-step-group">
           <button type="button" class="time-btn" id="stepPrevHourBtn" title="-1 Heure">«</button>
           <button type="button" class="time-btn" id="stepPrev10mBtn" title="-10 Minutes">&lt;</button>
-          <button type="button" id="resetTimeBtn" class="time-btn" style="min-height:36px; color:#fff; background:#263238; border-color:#455a64; font-size:0.75rem;" title="Revenir à l'heure réelle">Direct</button>
+          <button type="button" id="resetTimeBtn" class="time-btn" style="min-height:34px; color:#fff; background:#263238; border-color:#455a64; font-size:0.75rem;" title="Revenir à l'heure réelle">Direct</button>
           <button type="button" class="time-btn" id="stepNext10mBtn" title="+10 Minutes">&gt;</button>
           <button type="button" class="time-btn" id="stepNextHourBtn" title="+1 Heure">»</button>
         </div>
@@ -211,7 +233,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       
       <button id="manualFullscreenBtn" type="button" style="grid-column: span 4;">Plein écran</button>
     </div>
-    <p class="scene-help">Utilisez la croix pour appliquer un offset permanent. Le déplacement tactile est temporaire.</p>
+    <p class="scene-help">Glissez verticalement sur les chiffres de date/heure ou utilisez la molette pour les faire varier.</p>
   </main>
 
   <!-- POP-UP RECHERCHE DE CIBLE -->
@@ -335,7 +357,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const constLabelsElement = document.getElementById('constellationLabels');
     const viewReadout = document.getElementById('viewReadout');
     const telescopeReadout = document.getElementById('telescopeReadout');
-    const customTimeInput = document.getElementById('customTimeInput');
     const stepSelect = document.getElementById('stepSelect');
     
     let baseObjects = [];
@@ -358,6 +379,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let encoderRequestInFlight = false;
     let lastScreenObjects = [];
     let useSystemTime = true;
+    let currentSkyDate = new Date();
     
     let lastRawAZ = null;
     let lastRawALT = null;
@@ -458,6 +480,101 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         { name: "Lune", commonName: "Lune", type: "Satellite", ra: raMoon, dec: decMoon, mag: -12.5 },
         ...planets
       ];
+    }
+
+    // --- GESTION DU SÉLECTEUR D'HEURE COMPACT ---
+    function updateDateTimeDisplay() {
+      document.getElementById('dtDay').textContent = String(currentSkyDate.getDate()).padStart(2, '0');
+      document.getElementById('dtMonth').textContent = String(currentSkyDate.getMonth() + 1).padStart(2, '0');
+      document.getElementById('dtYear').textContent = currentSkyDate.getFullYear();
+      document.getElementById('dtHour').textContent = String(currentSkyDate.getHours()).padStart(2, '0');
+      document.getElementById('dtMinute').textContent = String(currentSkyDate.getMinutes()).padStart(2, '0');
+    }
+
+    function adjustDtField(field, delta) {
+      useSystemTime = false;
+      const d = new Date(currentSkyDate.getTime());
+      if (field === 'day') d.setDate(d.getDate() + delta);
+      else if (field === 'month') d.setMonth(d.getMonth() + delta);
+      else if (field === 'year') d.setFullYear(d.getFullYear() + delta);
+      else if (field === 'hour') d.setHours(d.getHours() + delta);
+      else if (field === 'minute') d.setMinutes(d.getMinutes() + delta);
+
+      currentSkyDate = d;
+      updateDateTimeDisplay();
+      objects = [...baseObjects, ...getSolarSystemObjects(currentSkyDate)];
+      updateSkyBackground(currentSkyDate);
+    }
+
+    // Gestion du scroll vertical et du glissement tactile par champ
+    document.querySelectorAll('.dt-field-group').forEach(group => {
+      const field = group.dataset.field;
+      let startY = 0;
+      let accumulatedDelta = 0;
+
+      group.addEventListener('pointerdown', e => {
+        startY = e.clientY;
+        accumulatedDelta = 0;
+        group.setPointerCapture(e.pointerId);
+      });
+
+      group.addEventListener('pointermove', e => {
+        if (startY === 0) return;
+        const deltaY = e.clientY - startY;
+        accumulatedDelta += deltaY;
+        startY = e.clientY;
+
+        if (Math.abs(accumulatedDelta) > 18) {
+          const steps = Math.trunc(accumulatedDelta / 18);
+          adjustDtField(field, -steps);
+          accumulatedDelta = 0;
+        }
+      });
+
+      const endPointer = e => {
+        startY = 0;
+        accumulatedDelta = 0;
+        try { group.releasePointerCapture(e.pointerId); } catch(err) {}
+      };
+      group.addEventListener('pointerup', endPointer);
+      group.addEventListener('pointercancel', endPointer);
+
+      group.addEventListener('wheel', e => {
+        e.preventDefault();
+        const delta = Math.sign(e.deltaY);
+        adjustDtField(field, -delta);
+      }, { passive: false });
+    });
+
+    function initDateTimeInput() {
+      currentSkyDate = new Date();
+      updateDateTimeDisplay();
+    }
+    initDateTimeInput();
+
+    document.getElementById('resetTimeBtn').addEventListener('click', () => {
+      useSystemTime = true;
+      initDateTimeInput();
+      objects = [...baseObjects, ...getSolarSystemObjects(currentSkyDate)];
+      updateSkyBackground(currentSkyDate);
+    });
+
+    function adjustTime(minutesDelta) {
+      useSystemTime = false;
+      currentSkyDate.setMinutes(currentSkyDate.getMinutes() + minutesDelta);
+      updateDateTimeDisplay();
+      objects = [...baseObjects, ...getSolarSystemObjects(currentSkyDate)];
+      updateSkyBackground(currentSkyDate);
+    }
+
+    document.getElementById('stepPrevHourBtn').addEventListener('click', () => adjustTime(-60));
+    document.getElementById('stepPrev10mBtn').addEventListener('click', () => adjustTime(-10));
+    document.getElementById('stepNext10mBtn').addEventListener('click', () => adjustTime(10));
+    document.getElementById('stepNextHourBtn').addEventListener('click', () => adjustTime(60));
+
+    function getSkyDate() {
+      if (useSystemTime) return new Date();
+      return currentSkyDate;
     }
 
     // --- LOGIQUE RECHERCHE GLOBALE DE CIBLE ---
@@ -702,52 +819,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         document.exitFullscreen().catch(() => {});
       }
     });
-
-    function setDateTimeInputValue(d) {
-      const offsetMs = d.getTimezoneOffset() * 60000;
-      const localIso = new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
-      if (customTimeInput) customTimeInput.value = localIso;
-    }
-
-    function initDateTimeInput() {
-      setDateTimeInputValue(new Date());
-    }
-    initDateTimeInput();
-
-    customTimeInput.addEventListener('change', () => {
-      useSystemTime = false;
-      const newDate = getSkyDate();
-      objects = [...baseObjects, ...getSolarSystemObjects(newDate)];
-      updateSkyBackground(newDate);
-    });
-
-    document.getElementById('resetTimeBtn').addEventListener('click', () => {
-      useSystemTime = true;
-      initDateTimeInput();
-      const newDate = getSkyDate();
-      objects = [...baseObjects, ...getSolarSystemObjects(newDate)];
-      updateSkyBackground(newDate);
-    });
-
-    function adjustTime(minutesDelta) {
-      useSystemTime = false;
-      const currentDate = getSkyDate();
-      currentDate.setMinutes(currentDate.getMinutes() + minutesDelta);
-      setDateTimeInputValue(currentDate);
-      objects = [...baseObjects, ...getSolarSystemObjects(currentDate)];
-      updateSkyBackground(currentDate);
-    }
-
-    document.getElementById('stepPrevHourBtn').addEventListener('click', () => adjustTime(-60));
-    document.getElementById('stepPrev10mBtn').addEventListener('click', () => adjustTime(-10));
-    document.getElementById('stepNext10mBtn').addEventListener('click', () => adjustTime(10));
-    document.getElementById('stepNextHourBtn').addEventListener('click', () => adjustTime(60));
-
-    function getSkyDate() {
-      if (useSystemTime) return new Date();
-      const val = customTimeInput.value;
-      return val ? new Date(val) : new Date();
-    }
 
     const CONSTELLATION_LINES = [
       ["Tarazed", "Altair"], ["Altair", "Alshain"], ["Altair", "Deneb el Okab"], ["Altair", "Eta Aql"], ["Eta Aql", "Theta Aql"],
@@ -1050,7 +1121,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       elevation += (targetElevation - elevation) * 0.4;
 
       const currentHeading = (heading + touchHeading + alignOffsetHeading + 360) % 360;
-      // Altitude élargie de -85° à +88° pour explorer l'hémisphère sud en profondeur
       const currentElevation = Math.max(-85, Math.min(88, elevation + touchElevation + alignOffsetElevation));
       
       const az = currentHeading * Math.PI / 180;
@@ -1154,9 +1224,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       const showGrid = document.getElementById('showGrid').checked;
       if (showGrid) {
-        // Tracé de la grille AltAz incluant l'hémisphère nord et l'hémisphère sud (de -60° à +80°)
         for (let altDeg = -60; altDeg <= 80; altDeg += 20) {
-          if (altDeg === 0) continue; // Traité séparément pour l'horizon
+          if (altDeg === 0) continue;
           const altRad = altDeg * Math.PI / 180;
           ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
           ctx2d.lineWidth = 1.2;
@@ -1180,7 +1249,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           if (ptsDrawn > 1) ctx2d.stroke();
         }
 
-        // Ligne d'horizon (Alt = 0°) toujours visible avec tolérance de profondeur étendue
         {
           const altRad = 0;
           ctx2d.strokeStyle = "rgba(0, 220, 255, 0.95)";
@@ -1204,7 +1272,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           if (ptsDrawn > 1) ctx2d.stroke();
         }
 
-        // Méridiens verticaux Azimutaux
         for (let azDeg = 0; azDeg < 360; azDeg += 45) {
           const azRad = azDeg * Math.PI / 180;
           ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
