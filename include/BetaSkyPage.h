@@ -1158,9 +1158,14 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       if (showGrid) {
         for (let altDeg = 0; altDeg <= 80; altDeg += 20) {
           const altRad = altDeg * Math.PI / 180;
+          
+          // Tolérance de profondeur spécifique pour l'horizon (altDeg === 0) 
+          // pour qu'il ne disparaisse pas brutalement lorsqu'on incline la vue
+          const depthThreshold = (altDeg === 0) ? -0.99 : 0.02;
+
           if (altDeg === 0) {
-            ctx2d.strokeStyle = "rgba(0, 220, 255, 0.9)";
-            ctx2d.lineWidth = 2.2;
+            ctx2d.strokeStyle = "rgba(0, 220, 255, 0.95)";
+            ctx2d.lineWidth = 2.5;
           } else {
             ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
             ctx2d.lineWidth = 1.2;
@@ -1172,7 +1177,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
             const aRad = aDeg * Math.PI / 180;
             const pos = [Math.sin(aRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(aRad) * Math.cos(altRad)];
             const depth = pos[0] * forward[0] + pos[1] * forward[1] + pos[2] * forward[2];
-            if (depth > 0.02) {
+            
+            if (depth > depthThreshold) {
               const sx = width / 2 + ((pos[0] * right[0] + pos[1] * right[1] + pos[2] * right[2]) / (depth * tanHalfFov * aspect)) * (width / 2);
               const sy = height / 2 - ((pos[0] * up[0] + pos[1] * up[1] + pos[2] * up[2]) / (depth * tanHalfFov)) * (height / 2);
               if (ptsDrawn === 0) ctx2d.moveTo(sx, sy);
