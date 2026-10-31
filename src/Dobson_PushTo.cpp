@@ -386,7 +386,7 @@ void handleStationPage() {
   webServer.send(200, "text/html", HTTP_STATION_PAGE);
 }
 void handleBetaSkyPage() {
-  webServer.send(200, "text/html", HTTP_BETA_SKY_PAGE);
+  webServer.send_P(200, "text/html", HTTP_BETA_SKY_PAGE);
 }
 
 void setup() {
