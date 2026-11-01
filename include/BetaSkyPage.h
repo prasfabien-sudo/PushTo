@@ -54,7 +54,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .magnitude-filter-label { color: #e6eaf2; font-weight: bold; }
     .magnitude-filter-label output { color: #ffb74d; font-variant-numeric: tabular-nums; }
     .magnitude-filter input[type="range"] { display: block; width: 100%; min-height: 28px; margin: 4px 0 0; padding: 0; border: 0; border-radius: 0; background: transparent; accent-color: #ffb74d; cursor: pointer; }
-    .magnitude-filter-scale { color: #8b94a2; font-size: .72rem; }
+    .magnitude-filter-scale { position: relative; height: 1em; color: #8b94a2; font-size: .72rem; }
+    .magnitude-filter-scale span { position: absolute; transform: translateX(-50%); }
+    .magnitude-filter-scale span:first-child { left: 0; transform: none; }
+    .magnitude-filter-scale span:nth-child(2) { left: 70%; }
+    .magnitude-filter-scale span:nth-child(3) { left: 85%; }
+    .magnitude-filter-scale span:last-child { right: 0; transform: none; }
 
     /* --- BARRE UNIQUE UNIFIÉE --- */
     .unified-toolbar { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; background: #151b25; padding: 8px 10px; border: 1px solid #344256; border-radius: 9px; }
@@ -269,8 +274,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           <span>Magnitude maximale</span>
           <output id="magFilterValue" for="magFilterSelect">Toutes</output>
         </label>
-        <input id="magFilterSelect" type="range" min="6" max="13" step="0.1" value="13" aria-valuetext="Toutes les magnitudes">
-        <div class="magnitude-filter-scale" aria-hidden="true"><span>6</span><span>Toutes</span></div>
+        <input id="magFilterSelect" type="range" min="0" max="1000" step="1" value="1000" aria-valuetext="Toutes les magnitudes">
+        <div class="magnitude-filter-scale" aria-hidden="true"><span>0</span><span>6</span><span>8</span><span>Toutes</span></div>
       </div>
     </div>
     <p class="scene-help">Utilisez les contrôles pour régler l'heure, choisir la projection et filtrer les objets.</p>
@@ -653,7 +658,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const res = await fetch('/get_sky_prefs');
         if (res.ok) {
           const p = await res.json();
-          if (p.mag !== undefined) magFilterElement.value = p.mag;
+          if (p.mag !== undefined) {
+            magFilterElement.value = getSliderPositionForMagnitude(Number(p.mag));
+            updateMagnitudeFilterLabel();
+          }
           if (p.showGrid !== undefined) document.getElementById('showGrid').checked = p.showGrid;
           if (p.showGal !== undefined) document.getElementById('showGal').checked = p.showGal;
           if (p.showNeb !== undefined) document.getElementById('showNeb').checked = p.showNeb;
@@ -678,7 +686,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     async function saveSkyPrefs() {
       try {
         const p = {
-          mag: magFilterElement.value,
+          mag: getSelectedMagnitude(),
           showGrid: document.getElementById('showGrid').checked ? 1 : 0,
           showGal: document.getElementById('showGal').checked ? 1 : 0,
           showNeb: document.getElementById('showNeb').checked ? 1 : 0,
@@ -699,6 +707,35 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
     }
 
+    function getSelectedMagnitude() {
+      const position = Number(magFilterElement.value);
+      if (position >= 1000) return 99;
+      if (position <= 700) return position * 6 / 700;
+      if (position <= 850) return 6 + (position - 700) * 2 / 150;
+      return 8 + (position - 850) * 4 / 149;
+    }
+
+    function getSliderPositionForMagnitude(magnitude) {
+      if (!Number.isFinite(magnitude) || magnitude >= 13) return 1000;
+      const boundedMagnitude = Math.max(0, Math.min(12, magnitude));
+      if (boundedMagnitude <= 6) return Math.round(boundedMagnitude * 700 / 6);
+      if (boundedMagnitude <= 8) return Math.round(700 + (boundedMagnitude - 6) * 150 / 2);
+      return Math.round(850 + (boundedMagnitude - 8) * 149 / 4);
+    }
+
+    function updateMagnitudeFilterLabel() {
+      const position = Number(magFilterElement.value);
+      const showAllMagnitudes = position >= 1000;
+      const selectedMagnitude = getSelectedMagnitude();
+      magFilterValueElement.textContent = showAllMagnitudes ? 'Toutes' : `≤ ${selectedMagnitude.toFixed(2)}`;
+      magFilterElement.setAttribute(
+        'aria-valuetext',
+        showAllMagnitudes ? 'Toutes les magnitudes' : `Magnitude maximale ${selectedMagnitude.toFixed(2)}`
+      );
+    }
+
+    updateMagnitudeFilterLabel();
+    magFilterElement.addEventListener('input', updateMagnitudeFilterLabel);
     magFilterElement.addEventListener('change', saveSkyPrefs);
     document.querySelectorAll('#settingsModal input[type="checkbox"]').forEach(chk => {
       chk.addEventListener('change', saveSkyPrefs);
@@ -1070,18 +1107,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     }
 
     function matchesFilter(object) {
-      const userMaxMag = parseFloat(magFilterElement.value);
+      const userMaxMag = getSelectedMagnitude();
 
-      let dynamicMagLimit = userMaxMag;
-      if (fieldOfView > 40) {
-        dynamicMagLimit = Math.min(userMaxMag, 5.0);
-      } else if (fieldOfView > 25) {
-        dynamicMagLimit = Math.min(userMaxMag, 6.5);
-      } else if (fieldOfView < 15) {
-        dynamicMagLimit = Math.max(userMaxMag, 12.0);
-      }
-
-      if (object.mag > dynamicMagLimit) return false;
+      if (object.mag > userMaxMag) return false;
 
       const { isGal, isNeb, isAmas, isStar } = getObjectType(object);
       
@@ -1329,6 +1357,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       const showGrid = document.getElementById('showGrid').checked;
       if (showGrid) {
+        const gridSampleStep = Math.min(5, Math.max(0.25, fieldOfView / 4));
         ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
         ctx2d.lineWidth = 1.2;
         
@@ -1338,7 +1367,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           const altRad = altDeg * Math.PI / 180;
           let ptsDrawn = 0;
           ctx2d.beginPath();
-          for (let aDeg = 0; aDeg <= 360; aDeg += 5) {
+          for (let aDeg = 0; aDeg <= 360; aDeg += gridSampleStep) {
             const aRad = aDeg * Math.PI / 180;
             const pos3D = [Math.sin(aRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(aRad) * Math.cos(altRad)];
             const proj = projectPoint(pos3D, { alt: altRad, az: aRad });
@@ -1361,7 +1390,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           ctx2d.lineWidth = 2.5;
           let ptsDrawn = 0;
           ctx2d.beginPath();
-          for (let aDeg = 0; aDeg <= 360; aDeg += 5) {
+          for (let aDeg = 0; aDeg <= 360; aDeg += gridSampleStep) {
             const aRad = aDeg * Math.PI / 180;
             const pos3D = [Math.sin(aRad), 0, Math.cos(aRad)];
             const proj = projectPoint(pos3D, { alt: altRad, az: aRad });
@@ -1382,7 +1411,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           const azRad = azDeg * Math.PI / 180;
           let ptsDrawn = 0;
           ctx2d.beginPath();
-          for (let altDeg = -80; altDeg <= 90; altDeg += 5) {
+          for (let altDeg = -80; altDeg <= 90; altDeg += gridSampleStep) {
             const altRad = altDeg * Math.PI / 180;
             const pos3D = [Math.sin(azRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(azRad) * Math.cos(altRad)];
             const proj = projectPoint(pos3D, { alt: altRad, az: azRad });
@@ -1681,6 +1710,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     
     const scene = document.getElementById('scene');
     scene.addEventListener('pointerdown', event => {
+      if (event.target instanceof Element && event.target.closest('.scene-zoom-controls')) return;
       activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       dragPoint = { x: event.clientX, y: event.clientY };
       scene.setPointerCapture(event.pointerId);
