@@ -45,6 +45,17 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-top: 8px; }
     
+    .scene-action-toolbar { grid-column: span 4; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+    .scene-action-btn { min-height: 48px; display: flex; align-items: center; justify-content: center; padding: 6px; background: #263238; color: #ffb74d; border: 1px solid #455a64; }
+    .scene-action-btn .ui-icon { width: 26px; height: 26px; }
+
+    .magnitude-filter { grid-column: span 4; padding: 8px 12px; background: #151b25; border: 1px solid #344256; border-radius: 9px; }
+    .magnitude-filter-label, .magnitude-filter-scale { display: flex; align-items: center; justify-content: space-between; }
+    .magnitude-filter-label { color: #e6eaf2; font-weight: bold; }
+    .magnitude-filter-label output { color: #ffb74d; font-variant-numeric: tabular-nums; }
+    .magnitude-filter input[type="range"] { display: block; width: 100%; min-height: 28px; margin: 4px 0 0; padding: 0; border: 0; border-radius: 0; background: transparent; accent-color: #ffb74d; cursor: pointer; }
+    .magnitude-filter-scale { color: #8b94a2; font-size: .72rem; }
+
     /* --- BARRE UNIQUE UNIFIÉE --- */
     .unified-toolbar { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; background: #151b25; padding: 8px 10px; border: 1px solid #344256; border-radius: 9px; }
     
@@ -83,8 +94,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .proj-btn:hover { background: #253247; color: #fff; }
     .proj-btn.active { background: #74531e; color: #ffc66d; border-color: #ffc66d; box-shadow: 0 0 6px rgba(116,83,30,0.6); }
 
-    .settings-btn { grid-column: span 2; background: #151b25; border: 1px solid #344256; border-radius: 9px; color: #ffb74d; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 6px; cursor: pointer; font: inherit; }
-    
     button, select, input { min-height: 40px; border: 1px solid #344256; border-radius: 8px; background: #151b25; color: #e6eaf2; font: inherit; }
     button { padding: 6px 10px; cursor: pointer; }
     button:active { background: #253247; }
@@ -100,7 +109,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     body.landscape-fullscreen .sky-card { width: 100% !important; max-width: none !important; margin: 0; }
     body.landscape-fullscreen .scene { height: 100vh !important; border: none; border-radius: 0; }
 
-    #manualFullscreenBtn { display: inline-block; background: #263238; color: #ffb74d; border: 1px solid #455a64; font-weight: bold; }
     @media (orientation: landscape) {
       #manualFullscreenBtn { display: none !important; }
     }
@@ -182,8 +190,20 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     </div>
     
     <div class="controls">
-      <button id="toggleAllMaskBtn" type="button" style="grid-column: span 2; background: #263238; color: #ffb74d; font-weight: bold; font-size: 0.8rem;">Tout masquer</button>
-      <button id="openSearchTargetModalBtn" type="button" style="grid-column: span 2; background: #263238; color: #ffb74d; font-weight: bold; font-size: 0.8rem;">Rechercher une cible 🔍</button>
+      <div class="scene-action-toolbar" role="group" aria-label="Commandes de la vue du ciel">
+        <button id="openSearchTargetModalBtn" type="button" class="scene-action-btn" aria-label="Rechercher une cible" title="Rechercher une cible">
+          <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-search"></use></svg>
+        </button>
+        <button id="openSettingsModalBtn" type="button" class="scene-action-btn" aria-label="Paramètres" title="Paramètres">
+          <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-settings"></use></svg>
+        </button>
+        <button id="centerButton" type="button" class="scene-action-btn" aria-label="Recentrer" title="Recentrer">
+          <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-crosshair"></use></svg>
+        </button>
+        <button id="manualFullscreenBtn" type="button" class="scene-action-btn" aria-label="Plein écran" title="Plein écran">
+          <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-expand"></use></svg>
+        </button>
+      </div>
       
       <!-- LIGNE UNIQUE UNIFIÉE V5.73.0 -->
       <div class="unified-toolbar">
@@ -244,18 +264,14 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         </div>
       </div>
 
-      <button id="openSettingsModalBtn" type="button" class="settings-btn" style="grid-column: span 4;">Paramètres ⚙️</button>
-
-      <select id="magFilterSelect" aria-label="Mag. Max" style="grid-column: span 4;">
-        <option value="99" selected>Mag. Max : Toutes</option>
-        <option value="6">Mag. ≤ 6 (Œil nu)</option>
-        <option value="8">Mag. ≤ 8 (Jumelles)</option>
-        <option value="10">Mag. ≤ 10 (Petit télescope)</option>
-        <option value="12">Mag. ≤ 12 (Grand télescope)</option>
-      </select>
-
-      <button id="centerButton" type="button" style="grid-column: span 4;">Recentrer</button>
-      <button id="manualFullscreenBtn" type="button" style="grid-column: span 4;">Plein écran</button>
+      <div class="magnitude-filter">
+        <label class="magnitude-filter-label" for="magFilterSelect">
+          <span>Magnitude maximale</span>
+          <output id="magFilterValue" for="magFilterSelect">Toutes</output>
+        </label>
+        <input id="magFilterSelect" type="range" min="6" max="13" step="0.1" value="13" aria-valuetext="Toutes les magnitudes">
+        <div class="magnitude-filter-scale" aria-hidden="true"><span>6</span><span>Toutes</span></div>
+      </div>
     </div>
     <p class="scene-help">Utilisez les contrôles pour régler l'heure, choisir la projection et filtrer les objets.</p>
   </main>
@@ -263,7 +279,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <!-- POP-UP RECHERCHE DE CIBLE -->
   <div class="object-modal" id="searchTargetModal" hidden>
     <div class="modal-content">
-      <h2>Rechercher un objet cible 🎯</h2>
+      <h2>Rechercher un objet cible</h2>
       <div class="modal-sub">Sélectionnez un objet du catalogue pour activer le guidage</div>
       <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
         <input type="text" id="targetSearchInput" placeholder="Filtrer par nom (ex: M42, Andromède...)" style="width: 100%; padding: 8px 10px; background: #10151d; border: 1px solid #344256; border-radius: 8px; color: #fff;">
@@ -376,6 +392,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const ctx2d = canvas.getContext('2d');
     const statusElement = document.getElementById('skyStatus');
     const magFilterElement = document.getElementById('magFilterSelect');
+    const magFilterValueElement = document.getElementById('magFilterValue');
     const labelsElement = document.getElementById('objectLabels');
     const constLabelsElement = document.getElementById('constellationLabels');
     const viewReadout = document.getElementById('viewReadout');
@@ -1697,35 +1714,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       event.preventDefault();
       fieldOfView = Math.max(2, Math.min(75, fieldOfView + Math.sign(event.deltaY) * 2));
     }, { passive: false });
-
-    const toggleAllMaskBtn = document.getElementById('toggleAllMaskBtn');
-    let allMaskedState = false;
-
-    toggleAllMaskBtn.addEventListener('click', () => {
-      allMaskedState = !allMaskedState;
-      
-      document.getElementById('showGrid').checked = !allMaskedState;
-      document.getElementById('showGal').checked = false;
-      document.getElementById('showNeb').checked = false;
-      document.getElementById('showAmas').checked = false;
-      document.getElementById('showStars').checked = true;
-
-      document.getElementById('labelGal').checked = false;
-      document.getElementById('labelNeb').checked = false;
-      document.getElementById('labelAmas').checked = false;
-      document.getElementById('labelStars').checked = false;
-
-      document.getElementById('showConstellations').checked = false;
-      document.getElementById('labelConstellations').checked = false;
-
-      document.querySelectorAll('.settings-row input[type="checkbox"][data-name-id]').forEach(objChk => {
-        const nameChk = document.getElementById(objChk.dataset.nameId);
-        nameChk.disabled = !objChk.checked;
-      });
-
-      toggleAllMaskBtn.textContent = allMaskedState ? "Restaurer" : " Tout masquer";
-      saveSkyPrefs();
-    });
 
     document.getElementById('centerButton').addEventListener('click', () => {
       touchHeading = 0;
