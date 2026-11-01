@@ -21,7 +21,17 @@ const char HTTP_SIMU_PAGE[] PROGMEM = R"rawliteral(
     .btn { padding: 10px 14px; background: #2196f3; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 4px; transition: all 0.15s ease-in-out; }
     .btn:hover { filter: brightness(1.15); }
     .btn:active { transform: scale(0.95); filter: brightness(0.85); }
-    .btn-group { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-bottom: 15px; }
+    .step-picker { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 12px 0 18px; }
+    .step-picker label { color: #ccc; font-size: .9em; }
+    .step-picker select { min-height: 42px; min-width: 90px; padding: 6px 10px; border: 1px solid #455a64; border-radius: 8px; background: #121212; color: #ffb74d; font: inherit; }
+    .direction-pad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 56px); justify-content: center; gap: 6px; margin-bottom: 15px; }
+    .direction-btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 8px; margin: 0; }
+    .direction-btn .ui-icon { width: 28px; height: 28px; }
+    .direction-up { grid-column: 2; grid-row: 1; }
+    .direction-left { grid-column: 1; grid-row: 2; }
+    .direction-down { grid-column: 2; grid-row: 3; }
+    .direction-right { grid-column: 3; grid-row: 2; }
+    .direction-center { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: center; color: #607d8b; font-size: .75em; }
     .val { font-size: 1.2em; color: #ffb74d; margin: 10px 0; font-weight: bold; }
     .val-neg { color: #ff5252 !important; }
     .sim-status { min-height: 1.2em; color: #ff5252; font-size: 0.85em; margin-top: 10px; }
@@ -42,37 +52,33 @@ const char HTTP_SIMU_PAGE[] PROGMEM = R"rawliteral(
 <body>
   <div class="card">
     <h2>Simulateur en Degrés</h2>
+    <div class="step-picker">
+      <label for="simulationStep">Pas de déplacement :</label>
+      <select id="simulationStep">
+        <option value="0.1">0,1°</option>
+        <option value="0.5">0,5°</option>
+        <option value="1" selected>1°</option>
+        <option value="5">5°</option>
+        <option value="10">10°</option>
+      </select>
+    </div>
 
     <div class="axis-title">Axe Azimut (AZ)</div>
     <div class="info-res" id="infoAZ">Résolution AZ: -- pas/rev</div>
     <div class="val" id="valAZ">0.0° (0 pas)</div>
-    <div class="btn-group">
-      <button class="btn" onclick="stepDeg('az', -90)">-90°</button>
-      <button class="btn" onclick="stepDeg('az', -45)">-45°</button>
-      <button class="btn" onclick="stepDeg('az', -10)">-10°</button>
-      <button class="btn" onclick="stepDeg('az', -1)">-1°</button>
-      <button class="btn" onclick="stepDeg('az', -0.1)">-0.1°</button>
-      <button class="btn" onclick="stepDeg('az', 0.1)">+0.1°</button>
-      <button class="btn" onclick="stepDeg('az', 1)">+1°</button>
-      <button class="btn" onclick="stepDeg('az', 10)">+10°</button>
-      <button class="btn" onclick="stepDeg('az', 45)">+45°</button>
-      <button class="btn" onclick="stepDeg('az', 90)">+90°</button>
+    <div class="direction-pad" role="group" aria-label="Déplacer l'axe azimut">
+      <button class="btn direction-btn direction-left" type="button" aria-label="Tourner l'azimut vers la gauche" title="Azimut gauche" onclick="stepSelected('az', -1)"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-arrow-left"></use></svg></button>
+      <span class="direction-center" aria-hidden="true">AZ</span>
+      <button class="btn direction-btn direction-right" type="button" aria-label="Tourner l'azimut vers la droite" title="Azimut droite" onclick="stepSelected('az', 1)"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-arrow-right"></use></svg></button>
     </div>
 
     <div class="axis-title">Axe Altitude (ALT)</div>
     <div class="info-res" id="infoALT">Résolution ALT: -- pas/rev</div>
     <div class="val" id="valALT">0.0° (0 pas)</div>
-    <div class="btn-group">
-      <button class="btn" onclick="stepDeg('alt', -90)">-90°</button>
-      <button class="btn" onclick="stepDeg('alt', -45)">-45°</button>
-      <button class="btn" onclick="stepDeg('alt', -10)">-10°</button>
-      <button class="btn" onclick="stepDeg('alt', -1)">-1°</button>
-      <button class="btn" onclick="stepDeg('alt', -0.1)">-0.1°</button>
-      <button class="btn" onclick="stepDeg('alt', 0.1)">+0.1°</button>
-      <button class="btn" onclick="stepDeg('alt', 1)">+1°</button>
-      <button class="btn" onclick="stepDeg('alt', 10)">+10°</button>
-      <button class="btn" onclick="stepDeg('alt', 45)">+45°</button>
-      <button class="btn" onclick="stepDeg('alt', 90)">+90°</button>
+    <div class="direction-pad" role="group" aria-label="Déplacer l'axe altitude">
+      <button class="btn direction-btn direction-up" type="button" aria-label="Monter l'altitude" title="Altitude haut" onclick="stepSelected('alt', 1)"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-arrow-up"></use></svg></button>
+      <span class="direction-center" aria-hidden="true">ALT</span>
+      <button class="btn direction-btn direction-down" type="button" aria-label="Descendre l'altitude" title="Altitude bas" onclick="stepSelected('alt', -1)"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-arrow-down"></use></svg></button>
     </div>
     
     <button class="btn" style="background: #e53935; width: 100%; margin-top: 10px;" onclick="resetSimulation()">Remettre les deux axes à zéro</button>
@@ -83,12 +89,7 @@ const char HTTP_SIMU_PAGE[] PROGMEM = R"rawliteral(
     <a class="nav-item" href="/beta_sky" title="Vue 3D du ciel"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-globe-2'></use></svg></span></a>
     <a class="nav-item" href="/" title="Mode Encodeurs"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-telescope'></use></svg></span></a>
     <a class="nav-item" href="/station" title="Mise en station"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-compass'></use></svg></span></a>
-    <a class="nav-item" href="/calib_page" title="Calibration"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-ruler'></use></svg></span></a>
     <a class="nav-item" href="/config" title="Configuration"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-settings'></use></svg></span></a>
-    <a class="nav-item" href="/help" title="Aide SkySafari"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-book-open'></use></svg></span></a>
-    <a class="nav-item" href="/simu" aria-current="page" title="Simulation"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-gamepad-2'></use></svg></span></a>
-    <a class="nav-item" href="/test" title="Tests système"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-flask-conical'></use></svg></span></a>
-    <a class="nav-item" href="/releasenotes" title="Notes de version"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-clipboard-list'></use></svg></span></a>
     <button class="nav-item night-mode-toggle" id="nightModeToggle" type="button" aria-label="Activer le mode nuit" title="Activer le mode nuit" aria-pressed="false" onclick="toggleNightMode()"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-moon'></use></svg></span></a>
   </nav>
 
@@ -143,9 +144,19 @@ const char HTTP_SIMU_PAGE[] PROGMEM = R"rawliteral(
       });
     }
 
+    function stepSelected(axis, direction) {
+      const step = Number(document.getElementById('simulationStep').value);
+      if (![0.1, 0.5, 1, 5, 10].includes(step) || ![-1, 1].includes(direction)) {
+        document.getElementById('simStatus').innerText = 'Pas de déplacement invalide.';
+        return;
+      }
+
+      stepDeg(axis, step * direction);
+    }
+
     function stepDeg(axis, deg) {
       let ticks = (axis === 'az') ? ticksAZ : ticksALT;
-      let deltaTicks = Math.round((deg / 360.0) * ticks);
+      let deltaTicks = Math.sign(deg) * Math.max(1, Math.round((Math.abs(deg) / 360.0) * ticks));
       fetch(`/simstep?axis=${axis}&delta=${deltaTicks}`)
         .then(r => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`);

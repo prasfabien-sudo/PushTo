@@ -148,18 +148,15 @@ Lorsque l'ESP32 est démarré, il est accessible sur :
 Depuis un navigateur, il est possible d'accéder aux pages suivantes :
 
 - `/` : page principale
-- `/station` : station de contrôle
-- `/calib_page` : calibration
-- `/config` : paramètres de configuration
-- `/simu` : simulation
+- `/station` : mise en station avec alignement guidé sur deux étoiles visibles, suivi de la position et calibration des encodeurs
+- `/calib_page` : calibration (accessible depuis Paramètres > Outils avancés)
+- `/config` : paramètres de configuration, dont le choix de projection du ciel
+- `/simu` : simulation (accessible depuis Paramètres > Outils avancés)
 - `/beta_sky` : vue 3D interactive du ciel (bêta)
-- `/help` : aide
-- `/releasenotes` : notes de version
-- `/test` : page de test
+- `/help` : aide (accessible depuis la page Push-To)
+- `/releasenotes` : notes de version (accessible depuis Paramètres > Outils avancés)
 
-La navigation de l'interface est accessible depuis une barre fixe en bas de l'écran : Menu principal, Mise en station, Vue 3D du ciel et Aide sont directement accessibles ; les pages de calibration, configuration, simulation, tests et notes de version se trouvent dans le menu « Plus ». Le bouton de mode nuit reste accessible depuis la barre.
-
-La page **Tests système** vérifie le format et les valeurs de `/status`, la configuration des encodeurs, le contenu du catalogue astronomique, les lieux enregistrés, l'accès aux neuf pages HTML et le rejet des commandes invalides. La suite est conçue pour être non destructive : elle ne déplace pas les axes et ne modifie pas la configuration.
+La navigation de l'interface est accessible depuis une barre fixe en bas de l'écran. La calibration des encodeurs, la simulation et les notes de version sont accessibles uniquement depuis la section « Outils avancés » de Paramètres. L'aide est accessible uniquement depuis la page Push-To.
 
 ### 3. API serveur
 
@@ -214,7 +211,6 @@ Dobson_PushTo/
 │   ├── ReleaseNotes.h
 │   ├── SimuPage.h
 │   ├── StationPage.h
-│   ├── TestPage.h
 │   └── WebPage.h
 ├── src/
 │   └── Dobson_PushTo.cpp    # Point d'entrée principal

@@ -12,7 +12,6 @@
 #include "StationPage.h"
 #include "ConfigPage.h"
 #include "HelpPage.h"
-#include "TestPage.h"
 #include "ReleaseNotes.h"
 #include "Icons.h"
 #include "BetaSkyPage.h"
@@ -105,6 +104,7 @@ void handleGetSkyPrefs() {
   skyPrefs.begin("sky_prefs", true);
   String json = "{";
   json += "\"mag\":\"" + skyPrefs.getString("mag", "99") + "\",";
+  json += "\"projMode\":\"" + skyPrefs.getString("projMode", "actuel") + "\",";
   json += "\"showGrid\":" + String(skyPrefs.getBool("grid", true) ? "true" : "false") + ",";
   json += "\"showGal\":" + String(skyPrefs.getBool("gal", true) ? "true" : "false") + ",";
   json += "\"showNeb\":" + String(skyPrefs.getBool("neb", true) ? "true" : "false") + ",";
@@ -124,6 +124,7 @@ void handleGetSkyPrefs() {
 void handleSaveSkyPrefs() {
   skyPrefs.begin("sky_prefs", false);
   if (webServer.hasArg("mag")) skyPrefs.putString("mag", webServer.arg("mag"));
+  if (webServer.hasArg("projMode")) skyPrefs.putString("projMode", webServer.arg("projMode"));
   if (webServer.hasArg("showGrid")) skyPrefs.putBool("grid", webServer.arg("showGrid").toInt() == 1);
   if (webServer.hasArg("showGal")) skyPrefs.putBool("gal", webServer.arg("showGal").toInt() == 1);
   if (webServer.hasArg("showNeb")) skyPrefs.putBool("neb", webServer.arg("showNeb").toInt() == 1);
@@ -273,8 +274,14 @@ void handleCmd() {
 
   } else if (act == "align_star1") {
     if (webServer.hasArg("az") && webServer.hasArg("alt")) {
-      star1_az = webServer.arg("az").toFloat();
-      star1_alt = webServer.arg("alt").toFloat();
+      const float az = webServer.arg("az").toFloat();
+      const float alt = webServer.arg("alt").toFloat();
+      if (!isfinite(az) || !isfinite(alt) || az < 0 || az >= 360 || alt < 0 || alt > 90) {
+        webServer.send(400, "text/plain", "Coordonnées de l'étoile 1 invalides");
+        return;
+      }
+      star1_az = az;
+      star1_alt = alt;
       star1_countAZ = countAZ;
       star1_countALT = countALT;
       star1_set = true;
@@ -294,16 +301,52 @@ void handleCmd() {
     if (webServer.hasArg("az") && webServer.hasArg("alt")) {
       float star2_az = webServer.arg("az").toFloat();
       float star2_alt = webServer.arg("alt").toFloat();
+      if (!isfinite(star2_az) || !isfinite(star2_alt) || star2_az < 0 || star2_az >= 360 || star2_alt < 0 || star2_alt > 90) {
+        webServer.send(400, "text/plain", "Coordonnées de l'étoile 2 invalides");
+        return;
+      }
 
-      float targetAZ = (star1_az + star2_az) / 2.0f;
-      float targetALT = (star1_alt + star2_alt) / 2.0f;
+      float deltaAZ = star2_az - star1_az;
+      if (deltaAZ > 180) deltaAZ -= 360;
+      if (deltaAZ < -180) deltaAZ += 360;
+      const float deltaALT = star2_alt - star1_alt;
+      const long deltaCountAZ = countAZ - star1_countAZ;
+      const long deltaCountALT = countALT - star1_countALT;
 
-      countAZ = lroundf(((targetAZ / 360.0f) * ticksPerRevAZ) * dirAZ);
-      countALT = lroundf(((targetALT / 360.0f) * ticksPerRevALT) * dirALT);
+      if (fabsf(deltaAZ) < 5.0f || fabsf(deltaALT) < 5.0f || deltaCountAZ == 0 || deltaCountALT == 0) {
+        webServer.send(400, "text/plain", "Écart insuffisant sur un axe. Choisissez deux étoiles séparées d'au moins 5° en azimut et en altitude.");
+        return;
+      }
+      if ((deltaCountAZ * dirAZ * deltaAZ) <= 0 || (deltaCountALT * dirALT * deltaALT) <= 0) {
+        webServer.send(400, "text/plain", "Sens d'encodeur incohérent. Vérifiez le sens de rotation dans les paramètres.");
+        return;
+      }
+
+      const float calibratedTicksAZ = fabsf((static_cast<float>(deltaCountAZ) * 360.0f) / deltaAZ);
+      const float calibratedTicksALT = fabsf((static_cast<float>(deltaCountALT) * 360.0f) / deltaALT);
+      if (!isfinite(calibratedTicksAZ) || !isfinite(calibratedTicksALT)
+          || calibratedTicksAZ < 100 || calibratedTicksAZ > 10000000
+          || calibratedTicksALT < 100 || calibratedTicksALT > 10000000) {
+        webServer.send(400, "text/plain", "Calibration incohérente. Vérifiez les coordonnées et recommencez l'alignement.");
+        return;
+      }
+
+      ticksPerRevAZ = calibratedTicksAZ;
+      ticksPerRevALT = calibratedTicksALT;
+      countAZ = lroundf(((star2_az / 360.0f) * ticksPerRevAZ) * dirAZ);
+      countALT = lroundf(((star2_alt / 360.0f) * ticksPerRevALT) * dirALT);
+
+      prefs.begin("dobson", false);
+      prefs.putFloat("ticksAZ", ticksPerRevAZ);
+      prefs.putFloat("ticksALT", ticksPerRevALT);
+      prefs.end();
 
       star1_set = false;
-      Serial.printf("[ALIGN 2-STARS] Alignement finalise : AZ=%.2f deg, ALT=%.2f deg\n", targetAZ, targetALT);
-      webServer.send(200, "application/json", "{\"status\":\"OK\",\"step\":2}");
+      Serial.printf("[ALIGN 2-STARS] Calibration : AZ=%.0f pas/tour, ALT=%.0f pas/tour\n",
+                    ticksPerRevAZ, ticksPerRevALT);
+      String response = "{\"status\":\"OK\",\"step\":2,\"ticksAZ\":" + String(ticksPerRevAZ, 0)
+        + ",\"ticksALT\":" + String(ticksPerRevALT, 0) + "}";
+      webServer.send(200, "application/json", response);
     } else {
       webServer.send(400, "text/plain", "Bad Request: Missing az or alt");
     }
@@ -428,9 +471,6 @@ void setup() {
   webServer.on("/cmd", handleCmd);
   webServer.on("/calib", handleCalib);
   webServer.on("/simstep", handleSimStep);
-  webServer.on("/test", []() {
-    webServer.send(200, "text/html", HTTP_TEST_PAGE);
-  });
   webServer.on("/help", []() {
     webServer.send(200, "text/html", HTTP_HELP_PAGE);
   });

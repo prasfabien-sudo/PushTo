@@ -21,7 +21,6 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
     .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
     h1 { color: #ff5252; margin: 0; font-size: 1.5em; text-align: left; }
     .version-tag { font-size: 0.75em; color: #ffb74d; font-weight: bold; background: #2a2a2a; padding: 3px 8px; border-radius: 4px; border: 1px solid #333; text-decoration: none; display: inline-block; }
-    .version-tag:hover { background: #37474f; border-color: #ffb74d; }
     
     .grid { display: block; width: 100%; margin-bottom: 15px; }
     .metric { background: #2a2a2a; border-radius: 8px; padding: 10px; text-align: center; display: flex; flex-direction: column; justify-content: center; width: 100%; box-sizing: border-box; max-width: none; }
@@ -100,7 +99,7 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
   <div class="card">
     <div class="header-row">
       <h1>Dobson Push-To</h1>
-      <a href="/releasenotes" class="version-tag" title="Voir l'historique des versions">v1.2.7</a>
+      <span class="version-tag">v1.2.7</span>
     </div>
     
     <div class="geo-row">
@@ -208,12 +207,8 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
     <a class="nav-item" href="/beta_sky" title="Vue 3D du ciel"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-globe-2'></use></svg></span></a>
     <a class="nav-item" href="/" aria-current="page" title="Mode Encodeurs"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-telescope'></use></svg></span></a>
     <a class="nav-item" href="/station" title="Mise en station"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-compass'></use></svg></span></a>
-    <a class="nav-item" href="/calib_page" title="Calibration"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-ruler'></use></svg></span></a>
     <a class="nav-item" href="/config" title="Configuration"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-settings'></use></svg></span></a>
     <a class="nav-item" href="/help" title="Aide SkySafari"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-book-open'></use></svg></span></a>
-    <a class="nav-item" href="/simu" title="Simulation"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-gamepad-2'></use></svg></span></a>
-    <a class="nav-item" href="/test" title="Tests système"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-flask-conical'></use></svg></span></a>
-    <a class="nav-item" href="/releasenotes" title="Notes de version"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-clipboard-list'></use></svg></span></a>
     <button class="nav-item night-mode-toggle" id="nightModeToggle" type="button" aria-label="Activer le mode nuit" title="Activer le mode nuit" aria-pressed="false" onclick="toggleNightMode()"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-moon'></use></svg></span></button>
   </nav>
 
@@ -339,11 +334,24 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
       });
     }
 
-    function selectTarget(displayName, ra, dec, mag) {
+    function selectTarget(displayName, ra, dec, mag, catalogName, type, commonName) {
       const p = getPrecessedCoords(ra, dec);
       selectedTarget = { name: displayName, ra: ra, dec: dec, raNow: p.ra, decNow: p.dec, mag: mag };
       alignRefAZ = null;
       alignRefALT = null;
+      try {
+        localStorage.setItem('dobson-selected-target', JSON.stringify({
+          name: catalogName || displayName,
+          displayName,
+          type: type || '',
+          commonName: commonName || '',
+          ra: p.ra,
+          dec: p.dec,
+          mag
+        }));
+      } catch (error) {
+        console.warn('Impossible de mémoriser la cible pour la vue 3D.', error);
+      }
 
       document.getElementById('targetName').innerText = displayName;
       
@@ -359,6 +367,43 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
       document.getElementById('btnAlignActive').disabled = false;
 
       fetch(`/cmd?action=select_target&name=${encodeURIComponent(displayName)}&ra=${p.ra}&dec=${p.dec}`);
+    }
+
+    function restoreSelectedTarget() {
+      try {
+        const savedTarget = JSON.parse(localStorage.getItem('dobson-selected-target') || 'null');
+        if (!savedTarget
+            || typeof savedTarget.displayName !== 'string'
+            || !Number.isFinite(Number(savedTarget.ra))
+            || !Number.isFinite(Number(savedTarget.dec))) return;
+
+        selectedTarget = {
+          name: savedTarget.displayName,
+          ra: Number(savedTarget.ra),
+          dec: Number(savedTarget.dec),
+          raNow: Number(savedTarget.ra),
+          decNow: Number(savedTarget.dec),
+          mag: Number.isFinite(Number(savedTarget.mag)) ? Number(savedTarget.mag) : undefined
+        };
+
+        document.getElementById('targetName').innerText = selectedTarget.name;
+        document.getElementById('targetMag').innerText = selectedTarget.mag !== undefined
+          ? selectedTarget.mag.toFixed(1)
+          : '--';
+        document.getElementById('targetRaDec').innerText =
+          `${formatRA(selectedTarget.raNow)} / ${formatDEC(selectedTarget.decNow)}`;
+        const targetAzDeg = getAzimuth(selectedTarget.raNow, selectedTarget.decNow);
+        const targetAltDeg = getAltitude(selectedTarget.raNow, selectedTarget.decNow);
+        document.getElementById('targetVis').innerText = targetAltDeg >= 10
+          ? `Oui (${targetAltDeg.toFixed(0)}°)`
+          : `Non (${targetAltDeg.toFixed(0)}°)`;
+        document.getElementById('targetAzAlt').innerText =
+          `${formatDegMin(targetAzDeg)} / ${formatDegMin(targetAltDeg)}`;
+        document.getElementById('targetDetails').style.display = 'grid';
+        document.getElementById('btnAlignActive').disabled = false;
+      } catch (error) {
+        console.warn('Impossible de restaurer la cible mémorisée.', error);
+      }
     }
 
     function alignOnCurrentTarget() {
@@ -780,7 +825,7 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
           targetButton.className = 'btn btn-sm';
           targetButton.textContent = 'Cible';
           const displayName = o.commonName ? `${o.commonName} (${o.name})` : o.name;
-          targetButton.addEventListener('click', () => selectTarget(displayName, o.ra, o.dec, o.mag));
+          targetButton.addEventListener('click', () => selectTarget(displayName, o.ra, o.dec, o.mag, o.name, o.type, o.commonName));
           targetCell.appendChild(targetButton);
 
           row.append(nameCell, typeCell, magnitudeCell, visibilityCell, targetCell);
@@ -811,6 +856,7 @@ const char HTTP_PAGE[] PROGMEM = R"rawliteral(
     }
 
     initGeolocation();
+    restoreSelectedTarget();
     setInterval(updateStatus, 250);
     setInterval(applyFilters, 60000);
     drawGuidanceGauges(0, 0);

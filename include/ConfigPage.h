@@ -9,7 +9,7 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Configuration ESP32</title>
+  <title>Paramètres</title>
   <style>
     .ui-icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .nav-icon .ui-icon { vertical-align: middle; }
@@ -23,7 +23,12 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
     .btn-add { background: #00897b; margin-top: 8px; }
     .btn-del { background: #e53935; margin-top: 8px; padding: 8px 12px; font-size: 0.85em; }
     
-    .section-title { font-weight: bold; color: #80cbc4; border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px; }
+    .settings-section { margin: 12px 0; border: 1px solid #333; border-radius: 8px; padding: 0 12px 10px; background: #191919; }
+    .settings-section > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 0; color: #80cbc4; font-weight: bold; cursor: pointer; list-style: none; }
+    .settings-section > summary::-webkit-details-marker { display: none; }
+    .settings-section > summary .ui-icon { transition: transform .2s ease; }
+    .settings-section[open] > summary .ui-icon { transform: rotate(180deg); }
+    .settings-content { padding-top: 4px; }
     .form-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     label { font-size: 0.9em; color: #ccc; }
     input[type="number"], input[type="text"], select { background: #121212; color: #ffb74d; border: 1px solid #444; padding: 8px; border-radius: 6px; font-size: 0.95em; box-sizing: border-box; }
@@ -54,11 +59,26 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <div class="card">
-    <h2><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-settings'></use></svg> Paramètres ESP32</h2>
+    <h2><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-settings'></use></svg> Paramètres</h2>
 
     <form id="configForm" onsubmit="saveConfig(event)">
-      <!-- Section Encodeurs -->
-      <div class="section-title">Encodeurs & Résolution</div>
+      <details class="settings-section">
+        <summary>Mode d'affichage du ciel<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-chevron-down"></use></svg></summary>
+        <div class="settings-content">
+          <div class="form-group">
+            <label for="projectionModeSelect">Projection :</label>
+            <select id="projectionModeSelect">
+              <option value="actuel">Perspective</option>
+              <option value="stéréo">Stéréographique</option>
+              <option value="gnomon">Gnomonique</option>
+            </select>
+          </div>
+        </div>
+      </details>
+
+      <details class="settings-section">
+        <summary>Encodeurs & Résolution<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-chevron-down"></use></svg></summary>
+        <div class="settings-content">
       
       <div class="form-group">
         <label for="ticksAZ">Pas par tour AZ :</label>
@@ -69,9 +89,12 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
         <label for="ticksALT">Pas par tour ALT :</label>
         <input type="number" id="ticksALT" name="ticksALT" required>
       </div>
+        </div>
+      </details>
 
-      <!-- Section Broches GPIO des Encodeurs (Consultation) -->
-      <div class="section-title">Broches GPIO (Fixes)</div>
+      <details class="settings-section">
+        <summary>Broches GPIO (fixes)<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-chevron-down"></use></svg></summary>
+        <div class="settings-content">
 
       <div class="form-group">
         <label for="pinAzA">Pin AZ Phase A :</label>
@@ -92,9 +115,12 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
         <label for="pinAltB">Pin ALT Phase B :</label>
         <input type="number" id="pinAltB" readonly>
       </div>
+        </div>
+      </details>
 
-      <!-- Sens de Rotation -->
-      <div class="section-title">Sens de Rotation</div>
+      <details class="settings-section">
+        <summary>Sens de rotation<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-chevron-down"></use></svg></summary>
+        <div class="settings-content">
 
       <div class="form-group">
         <label>Inverser le sens AZ :</label>
@@ -111,9 +137,12 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
           <span class="slider"></span>
         </label>
       </div>
+        </div>
+      </details>
 
-      <!-- Gestion des Lieux d'Observation -->
-      <div class="section-title">Lieu d'Observation Actif</div>
+      <details class="settings-section">
+        <summary>Lieu d'observation actif<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-chevron-down"></use></svg></summary>
+        <div class="settings-content">
 
       <div style="margin-bottom: 8px;">
         <label for="siteSelect">Sélectionner le lieu :</label>
@@ -131,34 +160,39 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
         <label for="lon">Longitude (°E) :</label>
         <input type="number" step="0.0001" id="lon" name="lon" required>
       </div>
+        </div>
+      </details>
 
-      <!-- Ajouter un Nouveau Lieu -->
-      <div class="section-title">Ajouter un Nouveau Lieu</div>
-      <div>
+      <details class="settings-section">
+        <summary>Ajouter un nouveau lieu<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-chevron-down"></use></svg></summary>
+        <div class="settings-content">
         <input type="text" id="newSiteName" placeholder="Nom du lieu (ex: Observatoire)">
         <div style="display: flex; gap: 8px;">
           <input type="number" step="0.0001" id="newSiteLat" placeholder="Lat (°N)">
           <input type="number" step="0.0001" id="newSiteLon" placeholder="Lon (°E)">
         </div>
         <button type="button" class="btn btn-add" onclick="addNewSite()"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-plus'></use></svg> Ajouter ce lieu</button>
-      </div>
-
-      <a href="/test" class="btn btn-sec"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-flask-conical'></use></svg> Tests Automatisés</a>
+        </div>
+      </details>
 
       <button type="submit" class="btn"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-save'></use></svg> Enregistrer la configuration</button>
     </form>
+
+    <details class="settings-section">
+      <summary>Outils avancés<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-chevron-down"></use></svg></summary>
+      <div class="settings-content">
+        <a href="/calib_page" class="btn btn-sec"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-ruler'></use></svg> Étalonnage des encodeurs</a>
+        <a href="/simu" class="btn btn-sec"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-gamepad-2'></use></svg> Simulation</a>
+        <a href="/releasenotes" class="btn btn-sec"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-clipboard-list'></use></svg> Notes de version</a>
+      </div>
+    </details>
   </div>
 
   <nav class="bottom-nav" aria-label="Navigation principale">
     <a class="nav-item" href="/beta_sky" title="Vue 3D du ciel"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-globe-2'></use></svg></span></a>
     <a class="nav-item" href="/" title="Mode Encodeurs"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-telescope'></use></svg></span></a>
     <a class="nav-item" href="/station" title="Mise en station"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-compass'></use></svg></span></a>
-    <a class="nav-item" href="/calib_page" title="Calibration"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-ruler'></use></svg></span></a>
     <a class="nav-item" href="/config" aria-current="page" title="Configuration"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-settings'></use></svg></span></a>
-    <a class="nav-item" href="/help" title="Aide SkySafari"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-book-open'></use></svg></span></a>
-    <a class="nav-item" href="/simu" title="Simulation"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-gamepad-2'></use></svg></span></a>
-    <a class="nav-item" href="/test" title="Tests système"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-flask-conical'></use></svg></span></a>
-    <a class="nav-item" href="/releasenotes" title="Notes de version"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-clipboard-list'></use></svg></span></a>
     <button class="nav-item night-mode-toggle" id="nightModeToggle" type="button" aria-label="Activer le mode nuit" title="Activer le mode nuit" aria-pressed="false" onclick="toggleNightMode()"><span class="nav-icon"><svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-moon'></use></svg></span></button>
   </nav>
 
@@ -178,6 +212,30 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
     }
 
     setNightMode(localStorage.getItem('dobson-night-mode') === 'true');
+
+    const projectionModeSelect = document.getElementById('projectionModeSelect');
+    fetch('/get_sky_prefs')
+      .then(r => {
+        if (!r.ok) throw new Error('Impossible de charger les préférences du ciel.');
+        return r.json();
+      })
+      .then(p => {
+        if (['actuel', 'stéréo', 'gnomon'].includes(p.projMode)) {
+          projectionModeSelect.value = p.projMode;
+        }
+      })
+      .catch(error => console.warn(error));
+
+    projectionModeSelect.addEventListener('change', () => {
+      fetch(`/save_sky_prefs?projMode=${encodeURIComponent(projectionModeSelect.value)}`)
+        .then(r => {
+          if (!r.ok) throw new Error('Impossible d’enregistrer la projection.');
+        })
+        .catch(error => {
+          console.error(error);
+          alert(error.message);
+        });
+    });
 
     let sitesData = {};
 

@@ -7,19 +7,14 @@ se connecter à : http://127.0.0.1:8000/
 
 Général
 -------
-ajout des planetes et de la lune (avec la luminosité et la phase)
 
 VUE 3D
 -------
-Fonction de recherche d'objet dans le planétarium avec les fleches qui indiquent la direction
-
-
 platesolving (astronometry)==> Ca peut pas fonctionner il faut une application mobile.Car pas d'internet vu que que c'est l'ESP 32 qui est le point d'acces
 
 
 optimisation
 ----------
-toutes les données des objets doivent etre en base de donnés (rregarder référence en dur dans la page BetaSkyPage)
 
 
 

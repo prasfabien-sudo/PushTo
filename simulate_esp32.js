@@ -14,7 +14,6 @@ const pages = {
   "/config": ["ConfigPage.h", "HTTP_CONFIG_PAGE"],
   "/releasenotes": ["ReleaseNotes.h", "HTTP_RELEASE_NOTES_PAGE"],
   "/simu": ["SimuPage.h", "HTTP_SIMU_PAGE"],
-  "/test": ["TestPage.h", "HTTP_TEST_PAGE"],
   "/help": ["HelpPage.h", "HTTP_HELP_PAGE"],
   "/beta_sky": ["BetaSkyPage.h", "HTTP_BETA_SKY_PAGE"],
 };
@@ -38,6 +37,7 @@ const state = {
   siteName: "Chavanod",
   sites: { ...defaultSites },
   star1: null,
+  projectionMode: "actuel",
 };
 
 function readEmbeddedPage(headerName, symbol) {
@@ -166,14 +166,36 @@ function handleCommand(url, response) {
       setPosition(az, alt);
       sendText(response, 200, "OK");
     } else if (action === "align_star1") {
-      state.star1 = [az, alt];
+      state.star1 = [az, alt, state.rawAZ, state.rawALT];
       sendJson(response, { status: "OK", step: 1 });
     } else if (!state.star1) {
       sendText(response, 400, "Veuillez valider l'etoile 1 d'abord");
     } else {
-      setPosition((state.star1[0] + az) / 2, (state.star1[1] + alt) / 2);
+      let deltaAz = az - state.star1[0];
+      if (deltaAz > 180) deltaAz -= 360;
+      if (deltaAz < -180) deltaAz += 360;
+      const deltaAlt = alt - state.star1[1];
+      const deltaCountAz = state.rawAZ - state.star1[2];
+      const deltaCountAlt = state.rawALT - state.star1[3];
+      if (Math.abs(deltaAz) < 5 || Math.abs(deltaAlt) < 5 || deltaCountAz === 0 || deltaCountAlt === 0) {
+        sendText(response, 400, "Écart insuffisant sur un axe. Choisissez deux étoiles séparées d'au moins 5° en azimut et en altitude.");
+        return;
+      }
+      if (deltaCountAz * state.dirAZ * deltaAz <= 0 || deltaCountAlt * state.dirALT * deltaAlt <= 0) {
+        sendText(response, 400, "Sens d'encodeur incohérent. Vérifiez le sens de rotation dans les paramètres.");
+        return;
+      }
+      const ticksAz = Math.abs(deltaCountAz * 360 / deltaAz);
+      const ticksAlt = Math.abs(deltaCountAlt * 360 / deltaAlt);
+      if (![ticksAz, ticksAlt].every((ticks) => Number.isFinite(ticks) && ticks >= 100 && ticks <= 10000000)) {
+        sendText(response, 400, "Calibration incohérente. Vérifiez les coordonnées et recommencez l'alignement.");
+        return;
+      }
+      state.ticksAZ = ticksAz;
+      state.ticksALT = ticksAlt;
+      setPosition(az, alt);
       state.star1 = null;
-      sendJson(response, { status: "OK", step: 2 });
+      sendJson(response, { status: "OK", step: 2, ticksAZ: Math.round(ticksAz), ticksALT: Math.round(ticksAlt) });
     }
   } else if (action === "align") {
     state.rawAZ = 0;
@@ -245,6 +267,12 @@ const server = http.createServer((request, response) => {
     sendJson(response, catalog);
   } else if (url.pathname === "/get_sites") {
     sendJson(response, state.sites);
+  } else if (url.pathname === "/get_sky_prefs") {
+    sendJson(response, { projMode: state.projectionMode, mag: "99" });
+  } else if (url.pathname === "/save_sky_prefs") {
+    const projectionMode = url.searchParams.get("projMode");
+    if (projectionMode !== null) state.projectionMode = projectionMode;
+    sendJson(response, { status: "OK" });
   } else if (url.pathname === "/cmd") {
     handleCommand(url, response);
   } else if (url.pathname === "/calib") {

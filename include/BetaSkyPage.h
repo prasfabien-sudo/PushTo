@@ -93,23 +93,14 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     .sens-inline-select { min-height: 38px !important; padding: 2px 6px !important; font-size: 0.78rem !important; background: #10151d !important; color: #ffb74d !important; font-weight: bold; width: auto !important; }
 
-    /* --- SÉLECTEUR DE PROJECTION V5.73.0 --- */
-    .projection-selector-group { display: flex; align-items: center; gap: 4px; background: #10151d; border: 1px solid #344256; border-radius: 8px; padding: 3px; }
-    .proj-btn { min-height: 32px; padding: 0 8px; font-size: 0.75rem; font-weight: bold; background: #1e293b; color: #8b94a2; border: 1px solid transparent; border-radius: 5px; cursor: pointer; transition: all 0.2s; }
-    .proj-btn:hover { background: #253247; color: #fff; }
-    .proj-btn.active { background: #74531e; color: #ffc66d; border-color: #ffc66d; box-shadow: 0 0 6px rgba(116,83,30,0.6); }
-
     button, select, input { min-height: 40px; border: 1px solid #344256; border-radius: 8px; background: #151b25; color: #e6eaf2; font: inherit; }
     button { padding: 6px 10px; cursor: pointer; }
     button:active { background: #253247; }
     select { width: 100%; padding: 6px 10px; background: #10151d; }
-    .scene-help { margin: 6px 2px; color: #929cac; font-size: .75rem; line-height: 1.4; text-align: center; }
-
     body.landscape-fullscreen { padding: 0 !important; background: #000; overflow: hidden; }
     body.landscape-fullscreen .sky-heading,
     body.landscape-fullscreen .sky-status,
     body.landscape-fullscreen .controls,
-    body.landscape-fullscreen .scene-help,
     body.landscape-fullscreen .bottom-nav { display: none !important; }
     body.landscape-fullscreen .sky-card { width: 100% !important; max-width: none !important; margin: 0; }
     body.landscape-fullscreen .scene { height: 100vh !important; border: none; border-radius: 0; }
@@ -171,6 +162,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
             <polyline points="5 12 12 5 19 12"></polyline>
           </svg>
         </div>
+        <span id="targetNameLabel" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff;"></span>
         <!-- Écarts détaillés signés -->
         <span id="azVal" style="font-size: 0.72rem;">AZ: +0.0°</span>
         <span id="altVal" style="font-size: 0.72rem;">ALT: +0.0°</span>
@@ -196,7 +188,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     
     <div class="controls">
       <div class="scene-action-toolbar" role="group" aria-label="Commandes de la vue du ciel">
-        <button id="openSearchTargetModalBtn" type="button" class="scene-action-btn" aria-label="Rechercher une cible" title="Rechercher une cible">
+        <button id="openSearchTargetModalBtn" type="button" class="scene-action-btn" aria-label="Rechercher une cible" title="Rechercher une cible" aria-pressed="false">
           <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-search"></use></svg>
         </button>
         <button id="openSettingsModalBtn" type="button" class="scene-action-btn" aria-label="Paramètres" title="Paramètres">
@@ -245,13 +237,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           <button type="button" class="time-btn" id="stepNextHourBtn" title="+1 Heure">»</button>
         </div>
 
-        <!-- SÉLECTEUR DE PROJECTION INTEGREE V5.73.0 -->
-        <div class="projection-selector-group" title="Modèle de projection">
-          <button type="button" class="proj-btn active" id="projActuelBtn" onclick="setProjectionMode('actuel')" title="Modèle actuel (Perspective réaliste)">Actuel</button>
-          <button type="button" class="proj-btn" id="projStéréoBtn" onclick="setProjectionMode('stéréo')" title="Projection Cartographique (Stéréographique conforme)">Carte</button>
-          <button type="button" class="proj-btn" id="projGnomonBtn" onclick="setProjectionMode('gnomon')" title="Projection Gnomonique (Lignes droites)">Gnomon</button>
-        </div>
-
         <!-- Contrôles d'offset intégrés -->
         <div class="offset-inline-group">
           <div class="dpad-inline">
@@ -278,7 +263,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         <div class="magnitude-filter-scale" aria-hidden="true"><span>0</span><span>6</span><span>8</span><span>Toutes</span></div>
       </div>
     </div>
-    <p class="scene-help">Utilisez les contrôles pour régler l'heure, choisir la projection et filtrer les objets.</p>
   </main>
 
   <!-- POP-UP RECHERCHE DE CIBLE -->
@@ -382,12 +366,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     <a class="nav-item" href="/beta_sky" aria-current="page" title="Vue du ciel"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg></span></a>
     <a class="nav-item" href="/" title="Mode Encodeurs"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-telescope"></use></svg></span></a>
     <a class="nav-item" href="/station" title="Mise en station"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-crosshair"></use></svg></span></a>
-    <a class="nav-item" href="/calib_page" title="Calibration"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-ruler"></use></svg></span></a>
     <a class="nav-item" href="/config" title="Configuration"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-settings"></use></svg></span></a>
-    <a class="nav-item" href="/help" title="Aide SkySafari"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-book-open"></use></svg></span></a>
-    <a class="nav-item" href="/simu" title="Simulation"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-gamepad-2"></use></svg></span></a>
-    <a class="nav-item" href="/test" title="Tests système"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-flask-conical"></use></svg></span></a>
-    <a class="nav-item" href="/releasenotes" title="Notes de version"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-clipboard-list"></use></svg></span></a>
     <button class="nav-item night-mode-toggle" id="nightModeToggle" type="button" aria-label="Activer le mode nuit" title="Activer le mode nuit" aria-pressed="false" onclick="toggleNightMode()"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-moon"></use></svg></span></a>
   </nav>
 
@@ -593,10 +572,55 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     const searchTargetModal = document.getElementById('searchTargetModal');
     const targetSearchInput = document.getElementById('targetSearchInput');
     const targetSelectDropdown = document.getElementById('targetSelectDropdown');
+    const searchTargetButton = document.getElementById('openSearchTargetModalBtn');
+    const dismissedTargetStorageKey = 'dobson-dismissed-sky-target';
 
-    document.getElementById('openSearchTargetModalBtn').addEventListener('click', () => {
+    function targetIdentity(target) {
+      return JSON.stringify([target.name, Number(target.ra), Number(target.dec)]);
+    }
+
+    function updateTargetSearchButton(isActive) {
+      const icon = searchTargetButton.querySelector('use');
+      icon.setAttribute('href', isActive ? '/icons.svg#icon-circle-x' : '/icons.svg#icon-search');
+      const label = isActive ? 'Arrêter la recherche de cible' : 'Rechercher une cible';
+      searchTargetButton.setAttribute('aria-label', label);
+      searchTargetButton.setAttribute('title', label);
+      searchTargetButton.setAttribute('aria-pressed', String(isActive));
+    }
+
+    function activateTargetSearch(target) {
+      activeTargetObject = target;
+      document.getElementById('searchArrowOverlay').style.display = target ? 'flex' : 'none';
+      updateTargetSearchButton(Boolean(target));
+      if (target) {
+        try {
+          localStorage.removeItem(dismissedTargetStorageKey);
+        } catch (error) {
+          console.warn('Impossible de mettre à jour l’état de recherche de la cible.', error);
+        }
+      }
+    }
+
+    function stopTargetSearch() {
+      if (activeTargetObject) {
+        try {
+          localStorage.setItem(dismissedTargetStorageKey, targetIdentity(activeTargetObject));
+        } catch (error) {
+          console.warn('Impossible de mémoriser l’arrêt de la recherche de cible.', error);
+        }
+      }
+      activateTargetSearch(null);
+    }
+
+    searchTargetButton.addEventListener('click', () => {
+      if (activeTargetObject) {
+        stopTargetSearch();
+        return;
+      }
       populateTargetDropdown('');
+      targetSearchInput.value = '';
       searchTargetModal.hidden = false;
+      targetSearchInput.focus();
     });
 
     function closeSearchTargetModal() {
@@ -629,28 +653,18 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const selectedName = targetSelectDropdown.value;
       if (!selectedName) return;
 
-      activeTargetObject = objects.find(o => o.name === selectedName);
+      const target = objects.find(o => o.name === selectedName);
       closeSearchTargetModal();
-
-      const overlay = document.getElementById('searchArrowOverlay');
-      if (activeTargetObject) {
-        overlay.style.display = 'flex';
-      }
+      activateTargetSearch(target);
     }
 
     function setSearchTarget() {
       const titleText = document.getElementById('modalTitle').textContent;
       const objName = titleText.split(' (')[0].trim();
       
-      activeTargetObject = objects.find(o => o.name === objName);
+      const target = objects.find(o => o.name === objName);
       closeModal();
-      
-      const overlay = document.getElementById('searchArrowOverlay');
-      if (activeTargetObject) {
-        overlay.style.display = 'flex';
-      } else {
-        overlay.style.display = 'none';
-      }
+      activateTargetSearch(target);
     }
 
     async function loadSavedSkyPrefs() {
@@ -676,7 +690,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           if (p.labelConst !== undefined) document.getElementById('labelConstellations').checked = p.labelConst;
           
           // V5.73.0 Restauration du mode de projection
-          if (p.projMode) setProjectionMode(p.projMode, false); 
+          if (p.projMode) setProjectionMode(p.projMode);
         }
       } catch (e) {
         console.warn("Préférences ESP32 non disponibles:", e);
@@ -701,7 +715,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           projMode: projectionMode // V5.73.0 Sauvegarde du mode
         };
         const query = new URLSearchParams(p).toString();
-        await fetch('/save_sky_prefs?' + query, { method: 'POST' });
+        await fetch('/save_sky_prefs?' + query);
       } catch (e) {
         console.warn("Erreur sauvegarde ESP32:", e);
       }
@@ -783,21 +797,14 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     });
 
     // --- GESTION DU MODE DE PROJECTION V5.73.0 ---
-    function setProjectionMode(mode, doSave = true) {
+    function setProjectionMode(mode) {
+      if (!['actuel', 'stéréo', 'gnomon'].includes(mode)) return;
       projectionMode = mode;
-      
-      // Mise à jour de l'UI
-      document.querySelectorAll('.proj-btn').forEach(btn => btn.classList.remove('active'));
-      if (mode === 'actuel') document.getElementById('projActuelBtn').classList.add('active');
-      else if (mode === 'stéréo') document.getElementById('projStéréoBtn').classList.add('active');
-      else if (mode === 'gnomon') document.getElementById('projGnomonBtn').classList.add('active');
       
       // Mise à jour du FOV par défaut selon le mode
       if (mode === 'stéréo') fieldOfView = 60; // Plus large pour la carte
       else if (mode === 'gnomon') fieldOfView = 45; // Compromis
       else fieldOfView = 34; // Actuel / Perspective
-      
-      if (doSave) saveSkyPrefs();
     }
 
     function getSunAltitude(date, lat, lon) {
@@ -1652,6 +1659,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         baseObjects = await catalogRes.json();
         const solarSystem = getSolarSystemObjects(getSkyDate());
         objects = [...baseObjects, ...solarSystem];
+        restoreSelectedTarget();
 
         const status = await statusRes.json();
         
@@ -1668,6 +1676,31 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         window.setInterval(pollEncoderStatus, 100);
         render();
       } catch (error) {setStatus(error.message, true); }
+    }
+
+    function restoreSelectedTarget() {
+      try {
+        const savedTarget = JSON.parse(localStorage.getItem('dobson-selected-target') || 'null');
+        if (!savedTarget || !Number.isFinite(Number(savedTarget.ra)) || !Number.isFinite(Number(savedTarget.dec))) return;
+        const catalogObject = objects.find(object => object.name === savedTarget.name);
+        const restoredTarget = {
+          ...(catalogObject || {}),
+          name: savedTarget.displayName || savedTarget.name,
+          commonName: savedTarget.commonName || catalogObject?.commonName || '',
+          type: savedTarget.type || catalogObject?.type || '',
+          ra: Number(savedTarget.ra),
+          dec: Number(savedTarget.dec),
+          mag: Number(savedTarget.mag ?? catalogObject?.mag ?? 99)
+        };
+        const dismissedTarget = localStorage.getItem(dismissedTargetStorageKey);
+        if (dismissedTarget === targetIdentity(restoredTarget)) {
+          activateTargetSearch(null);
+          return;
+        }
+        activateTargetSearch(restoredTarget);
+      } catch (error) {
+        console.warn('Impossible de restaurer la cible de la vue encodeurs.', error);
+      }
     }
 
     canvas.addEventListener('click', event => {
