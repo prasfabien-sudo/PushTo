@@ -1,4 +1,4 @@
-// Version Component: BetaSkyPage.h v5.70.0
+// Version Component: BetaSkyPage.h v5.72.0
 // Version Global System: v1.3.0
 #ifndef BETASKYPAGE_H
 #define BETASKYPAGE_H
@@ -45,26 +45,38 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-top: 8px; }
     
-    /* --- NOUVEAU STYLE DE LA BARRE DE TEMPS (CALENDRIER + FLÈCHES HEURES/MIN) --- */
-    .time-control-box { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; background: #151b25; padding: 8px 12px; border: 1px solid #344256; border-radius: 9px; }
+    /* --- BARRE UNIQUE UNIFIÉE --- */
+    .unified-toolbar { grid-column: span 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; background: #151b25; padding: 8px 10px; border: 1px solid #344256; border-radius: 9px; }
+    
     .time-picker-wrapper { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     
-    /* Input date stylisé invisible mais cliquable sur le bouton calendrier */
     .date-btn-container { position: relative; display: inline-flex; align-items: center; }
     #nativeDatePicker { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; z-index: 2; }
-    .date-display-btn { background: #10151d; border: 1px solid #344256; color: #ffb74d; padding: 6px 10px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .date-display-btn { background: #10151d; border: 1px solid #344256; color: #ffb74d; padding: 5px 8px; border-radius: 8px; font-weight: bold; font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; min-height: 38px; }
 
-    .time-segment { display: flex; align-items: center; background: #10151d; border: 1px solid #344256; border-radius: 8px; padding: 2px 6px; gap: 4px; }
-    .time-val { font-size: 0.95rem; font-weight: bold; color: #ffb74d; min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; }
-    
-    .time-steppers { display: flex; flex-direction: column; gap: 1px; }
-    .mini-arrow { background: #1e293b; border: 1px solid #344256; color: #ffb74d; font-size: 0.6rem; width: 18px; height: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; border-radius: 3px; }
-    .mini-arrow:active { background: #344256; }
-    
-    .time-step-group { display: flex; align-items: center; gap: 3px; }
-    .time-btn { min-height: 36px; padding: 2px 8px; font-size: 0.85rem; font-weight: bold; background: #1e293b; color: #ffb74d; border: 1px solid #344256; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    /* Sélecteur vertical d'heure / minute avec flèches au-dessus et en dessous */
+    .time-col-group { display: flex; flex-direction: column; align-items: center; background: #10151d; border: 1px solid #344256; border-radius: 8px; padding: 2px 4px; gap: 1px; }
+    .time-val { font-size: 0.9rem; font-weight: bold; color: #ffb74d; text-align: center; font-variant-numeric: tabular-nums; min-width: 20px; }
+    .vert-arrow { background: #1e293b; border: 1px solid #344256; color: #ffb74d; font-size: 0.55rem; width: 100%; height: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; border-radius: 3px; }
+    .vert-arrow:active { background: #344256; }
+
+    /* Groupe de contrôle du temps (chevrons fins, direct, chevrons larges) */
+    .time-step-group { display: flex; align-items: center; gap: 2px; }
+    .time-btn { min-height: 38px; padding: 2px 7px; font-size: 0.85rem; font-weight: bold; background: #1e293b; color: #ffb74d; border: 1px solid #344256; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .time-btn:active { background: #253247; transform: scale(0.95); }
-    
+
+    /* Contrôles d'offset intégrés */
+    .offset-inline-group { display: flex; align-items: center; gap: 4px; }
+    .dpad-inline { display: grid; grid-template-columns: repeat(3, 26px); grid-template-rows: repeat(3, 26px); gap: 2px; align-items: center; justify-content: center; background: #10151d; padding: 3px; border: 1px solid #344256; border-radius: 8px; }
+    .jog-btn-inline { background: #1e293b !important; color: #ffb74d !important; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; justify-content: center; min-height: 26px !important; min-width: 26px !important; padding: 0 !important; border-radius: 4px; border: 1px solid #344256; }
+    .jog-up-inline { grid-column: 2; grid-row: 1; }
+    .jog-left-inline { grid-column: 1; grid-row: 2; }
+    .jog-center-inline { grid-column: 2; grid-row: 2; background: #151b25 !important; font-size: 0.45rem; color: #8b94a2 !important; display: flex; align-items: center; justify-content: center; border: 1px dashed #344256; }
+    .jog-right-inline { grid-column: 3; grid-row: 2; }
+    .jog-down-inline { grid-column: 2; grid-row: 3; }
+
+    .sens-inline-select { min-height: 38px !important; padding: 2px 6px !important; font-size: 0.78rem !important; background: #10151d !important; color: #ffb74d !important; font-weight: bold; width: auto !important; }
+
     .settings-btn { grid-column: span 2; background: #151b25; border: 1px solid #344256; border-radius: 9px; color: #ffb74d; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 6px; cursor: pointer; font: inherit; }
     
     button, select, input { min-height: 40px; border: 1px solid #344256; border-radius: 8px; background: #151b25; color: #e6eaf2; font: inherit; }
@@ -72,18 +84,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     button:active { background: #253247; }
     select { width: 100%; padding: 6px 10px; background: #10151d; }
     .scene-help { margin: 6px 2px; color: #929cac; font-size: .75rem; line-height: 1.4; text-align: center; }
-
-    .dpad-wrapper { grid-column: span 4; display: flex; align-items: center; justify-content: center; gap: 12px; background: #121822; padding: 6px 10px; border: 1px solid #273142; border-radius: 10px; }
-    .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; width: 150px; }
-    .jog-btn { background: #1e293b !important; font-weight: bold; color: #ffb74d !important; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; min-height: 32px; }
-    .jog-up { grid-column: 2; grid-row: 1; }
-    .jog-left { grid-column: 1; grid-row: 2; }
-    .jog-center { grid-column: 2; grid-row: 2; background: #10151d !important; border: 1px dashed #344256; font-size: 0.55rem; color: #8b94a2 !important; cursor: default; display: flex; align-items: center; justify-content: center; }
-    .jog-right { grid-column: 3; grid-row: 2; }
-    .jog-down { grid-column: 2; grid-row: 3; }
-    
-    .sens-box { display: flex; flex-direction: column; gap: 2px; font-size: 0.72rem; color: #8b94a2; }
-    .sens-box select { min-height: 34px; padding: 2px 6px; font-size: 0.78rem; background: #151b25; color: #ffb74d; font-weight: bold; }
 
     body.landscape-fullscreen { padding: 0 !important; background: #000; overflow: hidden; }
     body.landscape-fullscreen .sky-heading,
@@ -138,7 +138,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   <main class="sky-card">
     <header class="sky-heading">
       <h1><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg> Vue 3D du ciel</h1>
-      <span class="beta">PLANÉTARIUM v5.70.0</span>
+      <span class="beta">PLANÉTARIUM v5.72.0</span>
     </header>
     <p id="skyStatus" class="sky-status" role="status">Initialisation du planétarium 3D...</p>
     
@@ -178,31 +178,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     <div class="controls">
       <button id="toggleAllMaskBtn" type="button" style="grid-column: span 2; background: #263238; color: #ffb74d; font-weight: bold; font-size: 0.8rem;">Tout masquer</button>
       <button id="openSearchTargetModalBtn" type="button" style="grid-column: span 2; background: #263238; color: #ffb74d; font-weight: bold; font-size: 0.8rem;">Rechercher une cible 🔍</button>
-      <button id="openSettingsModalBtn" type="button" class="settings-btn" style="grid-column: span 4;">Paramètres ⚙️</button>
-
-      <!-- Contrôles déportés (Offset) -->
-      <div class="dpad-wrapper">
-        <div class="dpad-container">
-          <button id="jogUpBtn" type="button" class="jog-btn jog-up" title="Ajuster Altitude">▲</button>
-          <button id="jogLeftBtn" type="button" class="jog-btn jog-left" title="Ajuster Azimut">◀</button>
-          <div class="jog-center">Offset</div>
-          <button id="jogRightBtn" type="button" class="jog-btn jog-right" title="Ajuster Azimut">▶</button>
-          <button id="jogDownBtn" type="button" class="jog-btn jog-down" title="Ajuster Altitude">▼</button>
-        </div>
-        <div class="sens-box">
-          <label for="stepSelect">Pas :</label>
-          <select id="stepSelect" aria-label="Sensibilité du pas d'offset">
-            <option value="0.1">0.1° (Fin)</option>
-            <option value="1" selected>1.0° (Normal)</option>
-            <option value="5">5.0° (Large)</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Barre de temps : Calendrier natif + Heures/Minutes avec flèches haut/bas -->
-      <div class="time-control-box">
+      
+      <!-- LIGNE UNIQUE UNIFIÉE V5.72.0 -->
+      <div class="unified-toolbar">
         <div class="time-picker-wrapper">
-          <!-- Bouton Calendrier Natif -->
+          <!-- Calendrier Natif -->
           <div class="date-btn-container">
             <input type="date" id="nativeDatePicker" onchange="onNativeDateChange(this.value)" title="Choisir la date">
             <button type="button" class="date-display-btn">
@@ -210,31 +190,48 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
             </button>
           </div>
 
-          <!-- Sélecteur Heure avec flèches haut/bas -->
-          <div class="time-segment">
+          <!-- Heure (Flèches au-dessus et en dessous) -->
+          <div class="time-col-group">
+            <button type="button" class="vert-arrow" onclick="adjustTimeUnit('hour', 1)">▲</button>
             <span id="dtHour" class="time-val">12</span>
-            <div class="time-steppers">
-              <button type="button" class="mini-arrow" onclick="adjustTimeUnit('hour', 1)">▲</button>
-              <button type="button" class="mini-arrow" onclick="adjustTimeUnit('hour', -1)">▼</button>
-            </div>
+            <button type="button" class="vert-arrow" onclick="adjustTimeUnit('hour', -1)">▼</button>
           </div>
           <span style="color:#8b94a2; font-weight:bold;">:</span>
-          <!-- Sélecteur Minute avec flèches haut/bas -->
-          <div class="time-segment">
+          <!-- Minutes (Flèches au-dessus et en dessous) -->
+          <div class="time-col-group">
+            <button type="button" class="vert-arrow" onclick="adjustTimeUnit('minute', 5)">▲</button>
             <span id="dtMinute" class="time-val">00</span>
-            <div class="time-steppers">
-              <button type="button" class="mini-arrow" onclick="adjustTimeUnit('minute', 5)">▲</button>
-              <button type="button" class="mini-arrow" onclick="adjustTimeUnit('minute', -5)">▼</button>
-            </div>
+            <button type="button" class="vert-arrow" onclick="adjustTimeUnit('minute', -5)">▼</button>
           </div>
         </div>
         
+        <!-- Contrôles temporels avec chevrons fins (-10 min / +10 min) et larges (-1H / +1H) autour du Direct -->
         <div class="time-step-group">
           <button type="button" class="time-btn" id="stepPrevHourBtn" title="-1 Heure">«</button>
-          <button type="button" id="resetTimeBtn" class="time-btn" style="min-height:34px; color:#fff; background:#263238; border-color:#455a64; font-size:0.75rem;" title="Revenir à l'heure réelle">Direct</button>
+          <button type="button" class="time-btn" id="stepPrevMinBtn" title="-10 Minutes">‹</button>
+          <button type="button" id="resetTimeBtn" class="time-btn" style="color:#fff; background:#263238; border-color:#455a64; font-size:0.75rem;" title="Revenir à l'heure réelle">Direct</button>
+          <button type="button" class="time-btn" id="stepNextMinBtn" title="+10 Minutes">›</button>
           <button type="button" class="time-btn" id="stepNextHourBtn" title="+1 Heure">»</button>
         </div>
+
+        <!-- Contrôles d'offset (D-Pad + Choix du pas) -->
+        <div class="offset-inline-group">
+          <div class="dpad-inline">
+            <button id="jogUpBtn" type="button" class="jog-btn-inline jog-up-inline" title="Ajuster Altitude">▲</button>
+            <button id="jogLeftBtn" type="button" class="jog-btn-inline jog-left-inline" title="Ajuster Azimut">◀</button>
+            <div class="jog-center-inline">Off</div>
+            <button id="jogRightBtn" type="button" class="jog-btn-inline jog-right-inline" title="Ajuster Azimut">▶</button>
+            <button id="jogDownBtn" type="button" class="jog-btn-inline jog-down-inline" title="Ajuster Altitude">▼</button>
+          </div>
+          <select id="stepSelect" class="sens-inline-select" aria-label="Sensibilité du pas d'offset">
+            <option value="0.1">0.1°</option>
+            <option value="1" selected>1.0°</option>
+            <option value="5">5.0°</option>
+          </select>
+        </div>
       </div>
+
+      <button id="openSettingsModalBtn" type="button" class="settings-btn" style="grid-column: span 4;">Paramètres ⚙️</button>
 
       <select id="magFilterSelect" aria-label="Mag. Max" style="grid-column: span 4;">
         <option value="99" selected>Mag. Max : Toutes</option>
@@ -501,9 +498,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const month = String(currentSkyDate.getMonth() + 1).padStart(2, '0');
       const day = String(currentSkyDate.getDate()).padStart(2, '0');
       
-      // Format pour l'input date (AAAA-MM-JJ)
       document.getElementById('nativeDatePicker').value = `${year}-${month}-${day}`;
-      // Format affiché sur le bouton
       document.getElementById('dateDisplayLabel').textContent = `${day}/${month}/${year}`;
 
       document.getElementById('dtHour').textContent = String(currentSkyDate.getHours()).padStart(2, '0');
@@ -550,6 +545,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     document.getElementById('stepPrevHourBtn').addEventListener('click', () => adjustTimeUnit('hour', -1));
     document.getElementById('stepNextHourBtn').addEventListener('click', () => adjustTimeUnit('hour', 1));
+    document.getElementById('stepPrevMinBtn').addEventListener('click', () => adjustTimeUnit('minute', -10));
+    document.getElementById('stepNextMinBtn').addEventListener('click', () => adjustTimeUnit('minute', 10));
 
     function getSkyDate() {
       if (useSystemTime) return new Date();
