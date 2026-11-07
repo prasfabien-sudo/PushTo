@@ -1,0 +1,10 @@
+{
+  "appId": "fr.dobsonpushto.mobile",
+  "appName": "Dobson Push-To",
+  "webDir": "www",
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

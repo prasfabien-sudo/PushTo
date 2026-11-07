@@ -1,0 +1,7 @@
+node_modules/
+www/
+src/*.html
+src/pages/
+src/catalog.generated.js
+public/icons.svg
+**/build/

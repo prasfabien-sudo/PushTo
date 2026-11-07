@@ -104,7 +104,13 @@ La barre de navigation propose un mode nuit rouge pour préserver la vision noct
 
 ### Vue 3D du ciel (bêta)
 
-La page `/beta_sky`, directement accessible depuis la barre de navigation, affiche les objets du catalogue dans une vue du ciel rendue localement avec WebGL. Elle utilise les coordonnées du lieu configuré et l'heure du téléphone, propose un filtre par type et se pilote par gestes tactiles. Le point de vue suit en temps réel les encodeurs AZ/ALT ; le glissement ajoute un décalage manuel et le bouton de recentrage revient au pointage du télescope. Le pilotage par capteurs d'orientation n'est pas disponible. La page ne charge aucune bibliothèque 3D distante.
+La page `/beta_sky`, directement accessible depuis la barre de navigation, affiche le catalogue dans une projection céleste rendue sur Canvas 2D, sans bibliothèque 3D distante. Dans le navigateur du firmware, elle utilise la position configurée et les encodeurs AZ/ALT de l'ESP32. Dans l'application mobile, le catalogue, les préférences et la position du téléphone sont locaux; l'ESP32 n'est interrogé pour les encodeurs qu'après connexion explicite. Le glissement tactile ajoute un décalage manuel.
+
+### Application mobile native
+
+Le dossier [`mobile-v2`](./mobile-v2/README.md) contient une application Capacitor pour Android et iOS. Ses écrans sont extraits des pages HTML actuelles du firmware pendant la compilation, sans changer le catalogue de l'ESP32. Le catalogue mobile local comprend aussi plus de 8 700 étoiles HYG. La vue ciel mobile propose une caméra en superposition, des capteurs d'orientation commandés séparément et une résolution astrométrique en ligne Astrometry.net; la clé API est conservée dans Android Keystore/iOS Keychain. La résolution hors ligne et le téléchargement d'index ne sont pas encore intégrés.
+
+La connexion à un réseau local est soumise aux confirmations et restrictions du système mobile. La préparation, les dépendances, la compilation et les prérequis iOS/Android sont décrits dans le guide de l'application mobile.
 
 ## Configuration du projet
 

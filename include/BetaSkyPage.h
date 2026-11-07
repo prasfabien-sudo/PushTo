@@ -114,6 +114,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .modal-content { width: min(100%, 390px); background: #151b25; border: 1px solid #344256; border-radius: 14px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.7); max-height: 85vh; overflow-y: auto; }
     .modal-content h2 { margin: 0 0 12px; font-size: 1.1rem; color: #ffb74d; border-bottom: 1px solid #273142; padding-bottom: 8px; }
     .modal-sub { color: #8b94a2; font-size: .85rem; margin-bottom: 12px; }
+    .modal-object-preview { height: 126px; margin: 0 0 14px; overflow: hidden; border: 1px solid #273142; border-radius: 9px; background: #0b1026; }
+    .modal-object-preview svg { display: block; width: 100%; height: 100%; }
     .modal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
     .modal-stat { background: #10151d; padding: 8px 10px; border-radius: 8px; border: 1px solid #222d3b; }
     .modal-stat-label { font-size: .7rem; color: #8b94a2; display: block; }
@@ -179,7 +181,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <span class="scene-label cardinal" id="labelE" style="display:none">E</span>
       <span class="scene-label cardinal" id="labelW" style="display:none">O</span>
       <span class="scene-label telescope" id="telescopeReadout">Télescope : connexion...</span>
-      <span class="scene-label view" id="viewReadout">Vue AZ 0° · ALT 0°</span>
+      <span class="scene-label view" id="viewReadout">Offset AZ 0° · ALT 0°</span>
       <span class="scene-label horizon">Grille AltAz & Heure</span>
       <span class="scene-center" aria-hidden="true"></span>
       <div id="objectLabels" aria-hidden="true"></div>
@@ -194,7 +196,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         <button id="openSettingsModalBtn" type="button" class="scene-action-btn" aria-label="Paramètres" title="Paramètres">
           <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-settings"></use></svg>
         </button>
-        <button id="centerButton" type="button" class="scene-action-btn" aria-label="Recentrer" title="Recentrer">
+        <button id="centerButton" type="button" class="scene-action-btn" aria-label="Réaligner la vue" title="Réaligner la vue">
           <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-crosshair"></use></svg>
         </button>
         <button id="manualFullscreenBtn" type="button" class="scene-action-btn" aria-label="Plein écran" title="Plein écran">
@@ -209,7 +211,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           <div class="date-btn-container">
             <input type="date" id="nativeDatePicker" onchange="onNativeDateChange(this.value)" title="Choisir la date">
             <button type="button" class="date-display-btn">
-              📅 <span id="dateDisplayLabel">JJ/MM/AAAA</span>
+              <span id="dateDisplayLabel">JJ/MM/AAAA</span>
             </button>
           </div>
 
@@ -275,7 +277,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         <select id="targetSelectDropdown" size="6" style="width: 100%; background: #10151d; border: 1px solid #344256; border-radius: 8px; color: #fff; padding: 4px;">
         </select>
       </div>
-      <button type="button" class="btn" style="width: 100%; background: #ff9800; color: #000; font-weight: bold; margin-bottom: 8px;" onclick="confirmSelectedTarget()">Définir comme cible 🚀</button>
+      <button type="button" class="btn" style="width: 100%; background: #ff9800; color: #000; font-weight: bold; margin-bottom: 8px;" onclick="confirmSelectedTarget()">Définir comme cible</button>
       <button class="modal-close" type="button" onclick="closeSearchTargetModal()">Fermer</button>
     </div>
   </div>
@@ -339,6 +341,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     <div class="modal-content">
       <h2 id="modalTitle">Nom de l'objet</h2>
       <div class="modal-sub" id="modalSub">Constellation · Type</div>
+      <div class="modal-object-preview" id="objectPreview" aria-live="polite"></div>
       <div class="modal-grid">
         <div class="modal-stat">
           <span class="modal-stat-label">Magnitude</span>
@@ -357,7 +360,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           <span class="modal-stat-value" id="modalCoords" style="font-size:0.8rem">-</span>
         </div>
       </div>
-      <button type="button" class="btn" id="targetBtn" style="width:100%; background:#ff9800; color:#000; font-weight:bold; margin-bottom:8px;" onclick="setSearchTarget()">Rechercher cet objet 🎯</button>
+      <button type="button" class="btn" id="targetBtn" style="width:100%; background:#ff9800; color:#000; font-weight:bold; margin-bottom:8px;" onclick="setSearchTarget()">Rechercher cet objet</button>
       <button class="modal-close" type="button" onclick="closeModal()">Fermer</button>
     </div>
   </div>
@@ -367,7 +370,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     <a class="nav-item" href="/" title="Mode Encodeurs"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-telescope"></use></svg></span></a>
     <a class="nav-item" href="/station" title="Mise en station"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-crosshair"></use></svg></span></a>
     <a class="nav-item" href="/config" title="Configuration"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-settings"></use></svg></span></a>
-    <button class="nav-item night-mode-toggle" id="nightModeToggle" type="button" aria-label="Activer le mode nuit" title="Activer le mode nuit" aria-pressed="false" onclick="toggleNightMode()"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-moon"></use></svg></span></a>
+    <button class="nav-item night-mode-toggle" id="nightModeToggle" type="button" aria-label="Activer le mode nuit" title="Activer le mode nuit" aria-pressed="false" onclick="toggleNightMode()"><span class="nav-icon"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-moon"></use></svg></span></button>
   </nav>
 
   <script>
@@ -385,6 +388,14 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     
     let baseObjects = [];
     let objects = [];
+    const objectsByName = new Map();
+    function setObjects(nextObjects) {
+      objects = nextObjects;
+      objectsByName.clear();
+      for (const object of objects) {
+        if (!objectsByName.has(object.name)) objectsByName.set(object.name, object);
+      }
+    }
     let latitude = 45.89;
     let longitude = 6.05;
     
@@ -405,9 +416,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let useSystemTime = true;
     let currentSkyDate = new Date();
     
-    let lastRawAZ = null;
-    let lastRawALT = null;
-
     let activeTargetObject = null;
     let projectionMode = 'actuel'; // V5.73.0 Mode par défaut
 
@@ -529,7 +537,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       currentSkyDate.setDate(parseInt(parts[2], 10));
 
       updateDateTimeDisplay();
-      objects = [...baseObjects, ...getSolarSystemObjects(currentSkyDate)];
+      setObjects([...baseObjects, ...getSolarSystemObjects(currentSkyDate)]);
       updateSkyBackground(currentSkyDate);
     }
 
@@ -541,7 +549,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         currentSkyDate.setMinutes(currentSkyDate.getMinutes() + amount);
       }
       updateDateTimeDisplay();
-      objects = [...baseObjects, ...getSolarSystemObjects(currentSkyDate)];
+      setObjects([...baseObjects, ...getSolarSystemObjects(currentSkyDate)]);
       updateSkyBackground(currentSkyDate);
     }
 
@@ -554,7 +562,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     document.getElementById('resetTimeBtn').addEventListener('click', () => {
       useSystemTime = true;
       initDateTimeInput();
-      objects = [...baseObjects, ...getSolarSystemObjects(currentSkyDate)];
+      setObjects([...baseObjects, ...getSolarSystemObjects(currentSkyDate)]);
       updateSkyBackground(currentSkyDate);
     });
 
@@ -653,7 +661,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const selectedName = targetSelectDropdown.value;
       if (!selectedName) return;
 
-      const target = objects.find(o => o.name === selectedName);
+      const target = objectsByName.get(selectedName);
       closeSearchTargetModal();
       activateTargetSearch(target);
     }
@@ -662,7 +670,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const titleText = document.getElementById('modalTitle').textContent;
       const objName = titleText.split(' (')[0].trim();
       
-      const target = objects.find(o => o.name === objName);
+      const target = objectsByName.get(objName);
       closeModal();
       activateTargetSearch(target);
     }
@@ -1028,22 +1036,13 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         throw new Error('Données encodeurs invalides.');
       }
 
-      if (lastRawAZ !== null && lastRawALT !== null) {
-        if (rawAZ !== lastRawAZ || rawALT !== lastRawALT) {
-          touchHeading = 0;
-          touchElevation = 0;
-        }
-      }
-      lastRawAZ = rawAZ;
-      lastRawALT = rawALT;
-
       const azimuth = ((rawAZ * dirAZ / ticksAZ * 360) % 360 + 360) % 360;
       const altitudeCircle = ((rawALT * dirALT / ticksALT * 360) % 360 + 360) % 360;
       
       targetHeading = azimuth;
       targetElevation = altitudeCircle > 180 ? altitudeCircle - 360 : altitudeCircle;
       
-      telescopeReadout.textContent = `Télescope AZ ${azimuth.toFixed(1)}° · ALT ${targetElevation.toFixed(1)}°`;
+      telescopeReadout.textContent = `AZ ${azimuth.toFixed(1)}° · ALT ${targetElevation.toFixed(1)}°`;
       telescopeReadout.classList.remove('error');
     }
 
@@ -1185,6 +1184,36 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       }
     }
 
+    function normalizeSkyAngles(azimuth, altitude) {
+      let normalizedAzimuth = ((azimuth % 360) + 360) % 360;
+      let normalizedAltitude = ((altitude + 180) % 360 + 360) % 360 - 180;
+      if (normalizedAltitude > 90) {
+        normalizedAzimuth = (normalizedAzimuth + 180) % 360;
+        normalizedAltitude = 180 - normalizedAltitude;
+      } else if (normalizedAltitude < -90) {
+        normalizedAzimuth = (normalizedAzimuth + 180) % 360;
+        normalizedAltitude = -180 - normalizedAltitude;
+      }
+      return { azimuth: normalizedAzimuth, altitude: normalizedAltitude };
+    }
+
+    function skyCameraBasis(azimuth, altitude) {
+      const azimuthRadians = (((azimuth % 360) + 360) % 360) * Math.PI / 180;
+      const altitudeRadians = (((altitude % 360) + 360) % 360) * Math.PI / 180;
+      const forward = [
+        Math.sin(azimuthRadians) * Math.cos(altitudeRadians),
+        Math.sin(altitudeRadians),
+        Math.cos(azimuthRadians) * Math.cos(altitudeRadians)
+      ];
+      const right = [Math.cos(azimuthRadians), 0, -Math.sin(azimuthRadians)];
+      const up = [
+        forward[1] * right[2] - forward[2] * right[1],
+        forward[2] * right[0] - forward[0] * right[2],
+        forward[0] * right[1] - forward[1] * right[0]
+      ];
+      return { forward, right, up };
+    }
+
     // --- MOTEUR DE RENDU V5.73.0 (SUPPORTE LES PROJECTIONS) ---
     function render() {
       requestAnimationFrame(render);
@@ -1203,21 +1232,17 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       elevation += (targetElevation - elevation) * 0.4;
 
       // Calcul de l'orientation finale de la caméra
-      const currentHeading = (heading + touchHeading + alignOffsetHeading + 360) % 360;
-      const currentElevation = Math.max(-90, Math.min(90, elevation + touchElevation + alignOffsetElevation));
+      const cameraHeading = (heading + touchHeading + alignOffsetHeading + 360) % 360;
+      const cameraElevation = elevation + touchElevation + alignOffsetElevation;
+      const normalizedCamera = normalizeSkyAngles(cameraHeading, cameraElevation);
+      const currentHeading = normalizedCamera.azimuth;
+      const currentElevation = normalizedCamera.altitude;
       
-      const camAzRad = currentHeading * Math.PI / 180;
-      const camElRad = currentElevation * Math.PI / 180;
+      const camAzRad = (((cameraHeading % 360) + 360) % 360) * Math.PI / 180;
+      const camElRad = (((cameraElevation % 360) + 360) % 360) * Math.PI / 180;
       
       // Matrice de vue (Vecteurs Forward, Right, Up) pour le modèle ACTUEL
-      const forward = [Math.sin(camAzRad) * Math.cos(camElRad), Math.sin(camElRad), Math.cos(camAzRad) * Math.cos(camElRad)];
-      const worldUp = [0, 1, 0];
-      let rx = worldUp[1] * forward[2] - worldUp[2] * forward[1];
-      let ry = worldUp[2] * forward[0] - worldUp[0] * forward[2];
-      let rz = worldUp[0] * forward[1] - worldUp[1] * forward[0];
-      const rLen = Math.hypot(rx, ry, rz) || 1;
-      const right = [rx / rLen, ry / rLen, rz / rLen];
-      const up = [forward[1] * right[2] - forward[2] * right[1], forward[2] * right[0] - forward[0] * right[2], forward[0] * right[1] - forward[1] * right[0]];
+      const { forward, right, up } = skyCameraBasis(cameraHeading, cameraElevation);
       
       // Paramètres de projection
       const fovRad = fieldOfView * Math.PI / 180;
@@ -1441,8 +1466,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         ctx2d.strokeStyle = "rgba(255, 165, 80, 0.45)";
         ctx2d.lineWidth = 1.0;
         for (const [starA, starB] of CONSTELLATION_LINES) {
-          const sA = objects.find(o => o.name === starA);
-          const sB = objects.find(o => o.name === starB);
+          const sA = objectsByName.get(starA);
+          const sB = objectsByName.get(starB);
           if (sA && sB) {
             const hA = horizontalPosition(sA, sidereal, latRadians);
             const hB = horizontalPosition(sB, sidereal, latRadians);
@@ -1542,8 +1567,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           starSize *= Math.min(zoomFactor, 1.8);
 
           ctx2d.fillStyle = colorHex;
-          ctx2d.shadowColor = colorHex;
-          ctx2d.shadowBlur = object.mag < 2.0 ? starSize * 2.5 : starSize * 1.2;
+          if (!window.__dobsonMobileApp) {
+            ctx2d.shadowColor = colorHex;
+            ctx2d.shadowBlur = object.mag < 2.0 ? starSize * 2.5 : starSize * 1.2;
+          }
           ctx2d.beginPath();
           ctx2d.arc(sx, sy, starSize, 0, 2 * Math.PI);
           ctx2d.fill();
@@ -1554,7 +1581,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         lastScreenObjects.push({ object, screenX: proj.x, screenY: proj.y, depth: proj.depth });
       }
 
-      viewReadout.textContent = `Vue AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
+      viewReadout.textContent = `Offset AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
 
       const labels = document.createDocumentFragment();
       const labelGal = document.getElementById('labelGal').checked;
@@ -1631,7 +1658,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const labelConstellations = document.getElementById('labelConstellations').checked;
       if (labelConstellations) {
         for (const c of CONSTELLATION_CENTERS) {
-          const s = objects.find(o => o.name === c.refStar);
+          const s = objectsByName.get(c.refStar);
           if (s) {
             const horiz = horizontalPosition(s, sidereal, latRadians);
             const proj = projectPoint(horiz.position, horiz.raw);
@@ -1658,7 +1685,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const [catalogRes, statusRes] = await Promise.all([fetch('/catalog'), fetch('/status')]);
         baseObjects = await catalogRes.json();
         const solarSystem = getSolarSystemObjects(getSkyDate());
-        objects = [...baseObjects, ...solarSystem];
+        setObjects([...baseObjects, ...solarSystem]);
         restoreSelectedTarget();
 
         const status = await statusRes.json();
@@ -1673,7 +1700,18 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         updateSkyBackground(getSkyDate());
         setStatus(`${objects.length} objets chargés. Prêt.`, "align-ok");
         
-        window.setInterval(pollEncoderStatus, 100);
+        if (window.__dobsonMobileApp) {
+          let lastEncoderPoll = 0;
+          window.setInterval(() => {
+            const now = performance.now();
+            const interval = window.__dobsonEspConnected ? 100 : 33;
+            if (now - lastEncoderPoll < interval) return;
+            lastEncoderPoll = now;
+            pollEncoderStatus();
+          }, 16);
+        } else {
+          window.setInterval(pollEncoderStatus, 100);
+        }
         render();
       } catch (error) {setStatus(error.message, true); }
     }
@@ -1682,7 +1720,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       try {
         const savedTarget = JSON.parse(localStorage.getItem('dobson-selected-target') || 'null');
         if (!savedTarget || !Number.isFinite(Number(savedTarget.ra)) || !Number.isFinite(Number(savedTarget.dec))) return;
-        const catalogObject = objects.find(object => object.name === savedTarget.name);
+        const catalogObject = objectsByName.get(savedTarget.name);
         const restoredTarget = {
           ...(catalogObject || {}),
           name: savedTarget.displayName || savedTarget.name,
@@ -1723,6 +1761,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         const details = getEnrichedDetails(closestObj);
         document.getElementById('modalTitle').textContent = `${closestObj.name} (${closestObj.commonName || closestObj.type})`;
         document.getElementById('modalSub').textContent = `${closestObj.type || 'Objet céleste'}`;
+        const objectPreview = document.getElementById('objectPreview');
+        objectPreview.innerHTML = createObjectPreview(closestObj);
+        objectPreview.querySelector('svg').setAttribute('aria-label', `Illustration astronomique pour ${closestObj.commonName || closestObj.name}`);
         document.getElementById('modalMag').textContent = closestObj.mag.toFixed(1);
         document.getElementById('modalDist').textContent = details.dist;
         document.getElementById('modalSize').textContent = details.size;
@@ -1730,6 +1771,26 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         document.getElementById('objectModal').hidden = false;
       }
     });
+
+    function createObjectPreview(object) {
+      const type = (object.type || '').toLowerCase();
+      const stars = '<g fill="#eaf0ff"><circle cx="18" cy="24" r="1.2"/><circle cx="75" cy="16" r="1"/><circle cx="132" cy="31" r="1.3"/><circle cx="155" cy="66" r="1"/><circle cx="35" cy="76" r="1"/><circle cx="119" cy="84" r="1.1"/><circle cx="52" cy="48" r=".8"/></g>';
+      let objectArtwork;
+
+      if (type.includes('galax')) {
+        objectArtwork = '<g transform="rotate(-24 86 51)"><ellipse cx="86" cy="51" rx="50" ry="17" fill="none" stroke="#99b8ff" stroke-width="7" opacity=".8"/><path d="M37 50c15-21 45-27 69-14 14 8 19 23 10 34-10 12-29 12-43 3-9-6-11-16-5-23 5-6 14-7 21-4" fill="none" stroke="#d3a9ff" stroke-width="5" stroke-linecap="round"/><circle cx="86" cy="51" r="9" fill="#fff0bd"/></g>';
+      } else if (type.includes('néb') || type.includes('neb')) {
+        objectArtwork = '<defs><radialGradient id="nebulaPreview"><stop stop-color="#ffe2a6" stop-opacity=".95"/><stop offset=".36" stop-color="#f394d0" stop-opacity=".75"/><stop offset="1" stop-color="#8f82ff" stop-opacity="0"/></radialGradient></defs><path d="M31 51c4-19 20-29 38-23 7-20 38-17 42 2 22-4 34 15 23 30 14 17-3 34-21 27-16 15-37 5-41-6-19 11-43-6-35-20-10-2-11-7-6-10Z" fill="url(#nebulaPreview)"/>';
+      } else if (type.includes('amas') || type.includes('cluster')) {
+        objectArtwork = '<g fill="#ffe2a6"><circle cx="52" cy="37" r="2"/><circle cx="77" cy="27" r="1.5"/><circle cx="94" cy="38" r="2.4"/><circle cx="111" cy="31" r="1.4"/><circle cx="64" cy="53" r="1.7"/><circle cx="88" cy="55" r="2.1"/><circle cx="118" cy="55" r="1.8"/><circle cx="47" cy="68" r="1.2"/><circle cx="75" cy="72" r="2"/><circle cx="101" cy="70" r="1.5"/><circle cx="132" cy="69" r="1.2"/></g>';
+      } else if (type.includes('plan')) {
+        objectArtwork = '<ellipse cx="86" cy="51" rx="48" ry="14" fill="none" stroke="#a9bdff" stroke-width="4"/><circle cx="86" cy="51" r="22" fill="#ffd27a"/><path d="M65 58a48 14 0 0 0 44-1" fill="none" stroke="#eff4ff" stroke-width="4"/>';
+      } else {
+        objectArtwork = '<circle cx="86" cy="51" r="19" fill="#fff0bd"/><circle cx="86" cy="51" r="30" fill="none" stroke="#f2c877" stroke-opacity=".55" stroke-width="1"/><path d="M86 13v12m0 52v12M48 51h12m52 0h12" stroke="#f2c877" stroke-opacity=".55"/>';
+      }
+
+      return `<svg viewBox="0 0 172 102" role="img" aria-label="Illustration astronomique"><defs><linearGradient id="skyPreview" x2="0" y2="1"><stop stop-color="#0b1733"/><stop offset="1" stop-color="#102e4c"/></linearGradient></defs><rect width="172" height="102" rx="9" fill="url(#skyPreview)"/>${stars}${objectArtwork}</svg>`;
+    }
 
     function closeModal() { document.getElementById('objectModal').hidden = true; }
 
@@ -1742,8 +1803,13 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     };
     
     const scene = document.getElementById('scene');
+    function applyTouchPan(deltaX, deltaY, panPanFactor) {
+      touchHeading = ((touchHeading + deltaX * 0.35 / panPanFactor) % 360 + 360) % 360;
+      touchElevation -= deltaY * 0.25 / panPanFactor;
+    }
+
     scene.addEventListener('pointerdown', event => {
-      if (event.target instanceof Element && event.target.closest('.scene-zoom-controls')) return;
+      if (event.target instanceof Element && event.target.closest('.scene-zoom-controls, #dobson-sensor-mode, .dobson-scene-alignment, .dobson-scene-time-panel, .dobson-solver-panel, .dobson-scene-tools, button, input, select')) return;
       activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       dragPoint = { x: event.clientX, y: event.clientY };
       scene.setPointerCapture(event.pointerId);
@@ -1762,8 +1828,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       // V5.73.0 Sensibilité du pan adaptée selon le mode
       const panPanFactor = (projectionMode !== 'actuel') ? (60 / fieldOfView) : (34 / fieldOfView);
 
-      touchHeading = (touchHeading - (event.clientX - dragPoint.x) * 0.35 / panPanFactor + 360) % 360;
-      touchElevation = Math.max(-90, Math.min(90, touchElevation + (event.clientY - dragPoint.y) * 0.25 / panPanFactor));
+      applyTouchPan(event.clientX - dragPoint.x, event.clientY - dragPoint.y, panPanFactor);
       dragPoint = { x: event.clientX, y: event.clientY };
     });
     const releasePointer = event => {

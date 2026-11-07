@@ -227,6 +227,15 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
       .catch(error => console.warn(error));
 
     projectionModeSelect.addEventListener('change', () => {
+      if (typeof window.__saveMobileSkyPrefs === 'function') {
+        window.__saveMobileSkyPrefs({ projMode: projectionModeSelect.value })
+          .catch(error => {
+            console.error(error);
+            alert(error.message);
+          });
+        return;
+      }
+
       fetch(`/save_sky_prefs?projMode=${encodeURIComponent(projectionModeSelect.value)}`)
         .then(r => {
           if (!r.ok) throw new Error('Impossible d’enregistrer la projection.');

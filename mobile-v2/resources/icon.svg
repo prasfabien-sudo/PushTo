@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Icône d'application GoTo">
+  <title>GoTo</title>
+  <rect width="512" height="512" rx="112" fill="#0B1026"/>
+  <path d="M410 86 Q410 112 436 112 Q410 112 410 138 Q410 112 384 112 Q410 112 410 86Z" fill="#EAF0FF"/>
+  <circle cx="256" cy="256" r="152" fill="none" stroke="#5EEAD4" stroke-width="10"/>
+  <g stroke="#5EEAD4" stroke-width="10" stroke-linecap="round">
+    <line x1="256" y1="58" x2="256" y2="126"/>
+    <line x1="256" y1="386" x2="256" y2="454"/>
+    <line x1="58" y1="256" x2="126" y2="256"/>
+    <line x1="386" y1="256" x2="454" y2="256"/>
+  </g>
+  <g transform="rotate(-20 256 256)">
+    <ellipse cx="256" cy="256" rx="116" ry="32" fill="none" stroke="#9FB4FF" stroke-width="10"/>
+    <circle cx="256" cy="256" r="62" fill="#FFD27A"/>
+    <path d="M140 256 A116 32 0 0 0 372 256" fill="none" stroke="#EAF0FF" stroke-width="10" stroke-linecap="round"/>
+  </g>
+</svg>

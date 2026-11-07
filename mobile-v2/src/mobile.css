@@ -1,0 +1,852 @@
+.dobson-native-panel {
+  position: fixed;
+  z-index: 1000;
+  top: max(8px, env(safe-area-inset-top));
+  right: 8px;
+  width: min(320px, calc(100vw - 16px));
+  color: #e0e0e0;
+  font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  padding-top: 60px !important;
+}
+
+body.dobson-native-app {
+  --dobson-background: #080a10;
+  --dobson-surface: #0b1026;
+  --dobson-surface-raised: #101927;
+  --dobson-border: rgba(119, 191, 215, 0.22);
+  --dobson-text: #d7e5ed;
+  --dobson-muted: #9db2c1;
+  --dobson-accent: #f2c877;
+  padding-bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+  color: var(--dobson-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+html.dobson-native-app {
+  min-height: 100%;
+  background: #080a10 !important;
+}
+
+.dobson-native-app {
+  color-scheme: dark;
+}
+
+body.dobson-native-app {
+  background: #080a10 !important;
+  color: #d7e5ed;
+}
+
+html.dobson-native-app,
+html.dobson-native-app body {
+  background-color: #080a10 !important;
+}
+
+.dobson-native-app h1,
+.dobson-native-app h2,
+.dobson-native-app h3 {
+  color: #e6edf2;
+}
+
+.dobson-native-app .card,
+.dobson-native-app .settings-section,
+.dobson-native-app .step-box,
+.dobson-native-app .release-item,
+.dobson-native-app .modal-content,
+.dobson-native-app .target-box,
+.dobson-native-app .guidance-container,
+.dobson-native-app .target-details,
+.dobson-native-app .metric {
+  border: 1px solid rgba(119, 191, 215, 0.18);
+  border-radius: 12px;
+  background: var(--dobson-surface);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dobson-native-app .bottom-nav {
+  position: fixed;
+  right: auto;
+  left: 50%;
+  bottom: 0;
+  width: min(100%, 520px);
+  min-height: calc(58px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  gap: 4px;
+  padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  border: 1px solid rgba(119, 191, 215, 0.2);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  background: #080a10;
+  box-shadow: 0 -8px 26px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(14px);
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+.dobson-native-app .nav-item {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  min-height: 46px;
+  border-radius: 10px;
+  color: #a9bdca;
+}
+
+.dobson-native-app .nav-item .nav-icon,
+.dobson-native-app .nav-item .ui-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.dobson-native-app .nav-item[aria-current="page"],
+.dobson-native-app .nav-item.active {
+  background: #142033;
+  color: #f2c877;
+}
+
+.dobson-native-app .dobson-night-toggle {
+  position: fixed;
+  z-index: 1001;
+  top: max(8px, env(safe-area-inset-top));
+  left: 10px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(119, 191, 215, 0.32);
+  border-radius: 10px;
+  background: rgba(8, 20, 38, 0.92);
+  color: #a9bdca;
+  backdrop-filter: blur(8px);
+}
+
+.dobson-native-app .dobson-night-toggle .ui-icon {
+  width: 19px;
+  height: 19px;
+}
+
+.dobson-native-app .dobson-night-toggle[aria-pressed="true"] {
+  background: #142033;
+  color: #f2c877;
+}
+
+.dobson-native-app .settings-section > summary,
+.dobson-native-app details:not(.dobson-native-panel) > summary {
+  color: var(--dobson-accent);
+}
+
+.dobson-native-app p,
+.dobson-native-app li {
+  color: var(--dobson-text);
+}
+
+.dobson-native-app a:not(.nav-item) {
+  color: #74d4df;
+}
+
+.dobson-native-app .btn,
+.dobson-native-app .filter-btn,
+.dobson-native-app .time-btn,
+.dobson-native-app .scene-action-btn,
+.dobson-native-app button:not(.nav-item):not(.dobson-night-toggle):not(.jog-btn-inline) {
+  border: 1px solid rgba(119, 191, 215, 0.3);
+  border-radius: 9px;
+  background: #101927;
+  color: #f2c877;
+}
+
+.dobson-native-app input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.dobson-native-app select,
+.dobson-native-app textarea {
+  border-color: rgba(119, 191, 215, 0.36);
+  border-radius: 8px;
+  background-color: #080d17;
+  color: #e6edf2;
+  accent-color: #74d4df;
+}
+
+.dobson-native-app fieldset {
+  border-color: var(--dobson-border);
+  border-radius: 10px;
+  background: #080d17;
+}
+
+.dobson-native-app .dobson-native-panel summary {
+  border-color: rgba(119, 191, 215, 0.26);
+  background: #101927;
+  color: #f2c877;
+  box-shadow: none;
+}
+
+.dobson-native-app .dobson-config-connection-panel {
+  position: static;
+  width: 100%;
+  margin-top: 10px;
+  color: inherit;
+  font: inherit;
+}
+
+.dobson-native-app .dobson-config-connection-panel > summary {
+  width: 100%;
+  min-height: 38px;
+  margin: 0;
+  padding: 8px 10px;
+  border-color: rgba(119, 191, 215, 0.2);
+  border-radius: 8px;
+  background: #080d17;
+  color: #d7e5ed;
+  font-size: 0.84rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.dobson-native-app .dobson-config-connection-panel .dobson-native-content {
+  margin: 6px 0 0;
+  border-color: rgba(119, 191, 215, 0.18);
+  background: #080d17;
+  box-shadow: none;
+}
+
+.dobson-config-sky-options .dobson-sky-preference-group {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 10px;
+  border: 1px solid rgba(119, 191, 215, 0.2);
+  border-radius: 9px;
+}
+
+.dobson-config-sky-options .dobson-sky-preference-group legend {
+  padding: 0 5px;
+  color: #74d4df;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.dobson-config-sky-options .dobson-sky-preference-group label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  color: #d7e5ed;
+}
+
+.dobson-config-sky-options .dobson-sky-preference-group label input[type="checkbox"] {
+  justify-self: center;
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  accent-color: #5eead4;
+}
+
+.dobson-config-sky-options .dobson-sky-preference-headings,
+.dobson-config-sky-options .dobson-sky-object-preference {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px 32px !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.dobson-config-sky-options .dobson-sky-preference-headings {
+  min-height: 24px;
+  color: #8fa4b6;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.dobson-config-sky-options .dobson-sky-preference-headings span:first-child,
+.dobson-config-sky-options .dobson-sky-object-preference span {
+  text-align: left;
+}
+
+.dobson-config-sky-options .dobson-sky-object-preference input[type="checkbox"] {
+  justify-self: center;
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  accent-color: #5eead4;
+}
+
+.dobson-config-sky-options .dobson-sky-object-preference input:disabled {
+  opacity: 0.35;
+}
+
+.dobson-config-sky-options .dobson-sky-magnitude {
+  display: grid;
+  gap: 7px;
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid rgba(119, 191, 215, 0.2);
+  border-radius: 9px;
+  background: #080d17;
+}
+
+.dobson-config-sky-options .dobson-sky-magnitude > label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #d7e5ed;
+}
+
+.dobson-config-sky-options .dobson-sky-magnitude output {
+  color: #f2c877;
+  font-variant-numeric: tabular-nums;
+}
+
+.dobson-config-sky-options .dobson-sky-magnitude input[type="range"] {
+  width: 100%;
+  min-height: 28px;
+  accent-color: #5eead4;
+}
+
+.dobson-sky-magnitude-scale {
+  display: flex;
+  justify-content: space-between;
+  color: #8fa4b6;
+  font-size: 0.72rem;
+}
+
+.dobson-sky-preference-status {
+  display: block;
+  min-height: 1.2em;
+  color: #9db2c1;
+  font-size: 0.78rem;
+}
+
+.dobson-config-sky-options:not(.dobson-sky-preferences-ready) .dobson-config-sky-content {
+  opacity: 0.72;
+}
+
+.dobson-native-panel summary {
+  width: fit-content;
+  min-height: 40px;
+  margin-left: auto;
+  padding: 10px 14px;
+  border: 1px solid #546e7a;
+  border-radius: 10px;
+  background: #1e1e1e;
+  color: #ffb74d;
+  font-weight: 700;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.dobson-native-content {
+  display: grid;
+  gap: 7px;
+  max-height: min(70vh, 560px);
+  margin-top: 6px;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid #455a64;
+  border-radius: 10px;
+  background: #1e1e1e;
+  box-shadow: 0 4px 16px #0009;
+}
+
+.dobson-native-content label {
+  color: #b0bec5;
+  font-size: 0.85rem;
+}
+
+.dobson-native-content input {
+  min-height: 40px;
+  padding: 7px 9px;
+  border: 1px solid #546e7a;
+  border-radius: 6px;
+  background: #121212;
+  color: #fff;
+  font: inherit;
+}
+
+.dobson-native-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.dobson-native-actions button {
+  min-height: 42px;
+  padding: 6px;
+  border: 1px solid #546e7a;
+  border-radius: 6px;
+  background: #263238;
+  color: #ffb74d;
+  font: inherit;
+  font-weight: 700;
+}
+
+.dobson-native-actions button:last-child {
+  grid-column: 1 / -1;
+}
+
+.dobson-native-content output {
+  min-height: 1.2em;
+  color: #b0bec5;
+  overflow-wrap: anywhere;
+}
+
+#dobson-ar-toggle {
+  width: auto;
+  min-width: 62px;
+  height: 36px;
+  padding: 0 7px;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.dobson-catalog-more {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  color: #b0bec5;
+}
+
+.dobson-catalog-more[hidden] {
+  display: none;
+}
+
+.dobson-catalog-more button {
+  min-height: 40px;
+  padding: 6px 16px;
+  border: 1px solid #546e7a;
+  border-radius: 6px;
+  background: #263238;
+  color: #ffb74d;
+  font: inherit;
+  font-weight: 700;
+}
+
+.dobson-solver-panel {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #455a64;
+  border-radius: 9px;
+  background: #151b25;
+}
+
+.dobson-solver-panel > summary {
+  list-style: none;
+}
+
+.dobson-solver-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dobson-solver-panel .ui-icon {
+  width: 21px;
+  height: 21px;
+}
+
+.dobson-solver-panel summary {
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #ffb74d;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dobson-solver-content p {
+  margin: 0;
+  color: #b0bec5;
+}
+
+.dobson-solver-content,
+.dobson-solver-actions {
+  display: grid;
+  gap: 7px;
+}
+
+.dobson-solver-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dobson-solver-content button {
+  min-height: 42px;
+  padding: 6px;
+  border: 1px solid #546e7a;
+  border-radius: 6px;
+  background: #263238;
+  color: #ffb74d;
+  font: inherit;
+  font-weight: 700;
+}
+
+.dobson-solver-content button:disabled {
+  opacity: 0.6;
+}
+
+.dobson-solver-content output {
+  color: #b0bec5;
+  overflow-wrap: anywhere;
+}
+
+body.dobson-sky-mobile {
+  min-height: 100dvh;
+  padding: 0 0 calc(58px + env(safe-area-inset-bottom)) !important;
+  background: #080a10 !important;
+}
+
+.dobson-sky-mobile .sky-card {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dobson-sky-mobile .sky-heading,
+.dobson-sky-mobile .sky-status {
+  display: none;
+}
+
+.dobson-sky-mobile .scene {
+  width: 100%;
+  height: calc(100dvh - 58px - env(safe-area-inset-bottom));
+  min-height: 0;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.dobson-sky-mobile .scene-label.telescope,
+.dobson-sky-mobile .scene-label.view,
+.dobson-sky-mobile .scene-label.horizon {
+  padding: 5px 8px;
+  border: 1px solid rgba(119, 191, 215, 0.2);
+  border-radius: 7px;
+  background: rgba(7, 18, 35, 0.78);
+  color: #d7e5ed;
+  font-size: 0.7rem;
+  backdrop-filter: blur(8px);
+}
+
+.dobson-sky-mobile .scene-label.telescope {
+  max-width: calc(100% - 112px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dobson-sky-mobile .scene-label.cardinal {
+  color: #f2c877;
+  border: 1px solid rgba(242, 200, 119, 0.32);
+  background: rgba(7, 18, 35, 0.84);
+}
+
+.dobson-sky-mobile .scene-zoom-controls {
+  top: 10px;
+  right: 10px;
+}
+
+.dobson-sky-mobile .zoom-btn,
+.dobson-sky-mobile #dobson-ar-toggle {
+  border: 1px solid rgba(119, 191, 215, 0.38);
+  border-radius: 9px;
+  background: rgba(8, 20, 38, 0.9);
+  color: #f2c877;
+  backdrop-filter: blur(10px);
+}
+
+.dobson-sky-mobile .controls {
+  display: block;
+  margin-top: 6px;
+}
+
+.dobson-sky-mobile .scene-action-toolbar {
+  display: none;
+}
+
+.dobson-sky-mobile .dobson-scene-tools {
+  position: absolute;
+  z-index: 20;
+  right: 10px;
+  bottom: 46px;
+  display: flex;
+  gap: 6px;
+}
+
+.dobson-sky-mobile .dobson-scene-tools .scene-action-btn {
+  display: grid;
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  place-items: center;
+  padding: 5px;
+  border: 1px solid rgba(119, 191, 215, 0.28);
+  border-radius: 10px;
+  background: rgba(8, 12, 22, 0.94);
+  color: #f2c877;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(8px);
+}
+
+.dobson-sky-mobile .dobson-scene-tools .ui-icon {
+  width: 21px;
+  height: 21px;
+}
+
+.dobson-sky-mobile .dobson-scene-alignment {
+  position: absolute;
+  z-index: 20;
+  bottom: 10px;
+  left: 10px;
+}
+
+.dobson-sky-mobile .dobson-scene-alignment > summary {
+  display: grid;
+  width: 40px;
+  min-height: 40px;
+  place-items: center;
+  padding: 5px;
+  border: 1px solid rgba(119, 191, 215, 0.28);
+  border-radius: 10px;
+  background: rgba(8, 12, 22, 0.94);
+  color: #f2c877;
+  cursor: pointer;
+  list-style: none;
+  backdrop-filter: blur(8px);
+}
+
+.dobson-sky-mobile .dobson-scene-alignment > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dobson-sky-mobile .dobson-scene-alignment > summary .ui-icon {
+  width: 21px;
+  height: 21px;
+}
+
+.dobson-sky-mobile .dobson-scene-alignment-content {
+  position: absolute;
+  bottom: 46px;
+  left: 0;
+  display: grid;
+  gap: 5px;
+  min-width: 112px;
+  padding: 8px;
+  border: 1px solid rgba(119, 191, 215, 0.24);
+  border-radius: 10px;
+  background: rgba(8, 12, 22, 0.96);
+  color: #d7e5ed;
+  font-size: 0.72rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.dobson-sky-mobile .dobson-scene-alignment-content .offset-inline-group {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.dobson-sky-mobile .dobson-scene-time-panel {
+  position: absolute;
+  z-index: 20;
+  right: 10px;
+  bottom: 10px;
+}
+
+.dobson-sky-mobile .dobson-scene-time-panel > summary {
+  display: grid;
+  width: 40px;
+  min-height: 40px;
+  place-items: center;
+  padding: 5px;
+  border: 1px solid rgba(119, 191, 215, 0.28);
+  border-radius: 10px;
+  background: rgba(8, 12, 22, 0.94);
+  color: #d7e5ed;
+  cursor: pointer;
+  list-style: none;
+  backdrop-filter: blur(8px);
+}
+
+.dobson-sky-mobile .dobson-scene-time-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dobson-sky-mobile .dobson-scene-time-panel > summary .ui-icon {
+  width: 21px;
+  height: 21px;
+}
+
+.dobson-sky-mobile .dobson-scene-time-content {
+  position: absolute;
+  right: 0;
+  bottom: 46px;
+  width: min(330px, calc(100vw - 24px));
+  max-height: min(55vh, 390px);
+  padding: 7px;
+  overflow: auto;
+  border: 1px solid rgba(119, 191, 215, 0.24);
+  border-radius: 10px;
+  background: rgba(8, 12, 22, 0.97);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.dobson-sky-mobile .dobson-scene-time-content .unified-toolbar {
+  display: grid;
+  grid-column: auto;
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.dobson-sky-mobile .dobson-scene-time-content .time-picker-wrapper,
+.dobson-sky-mobile .dobson-scene-time-content .time-step-group {
+  justify-content: center;
+}
+
+.dobson-sky-mobile .dobson-solver-panel {
+  position: absolute;
+  z-index: 20;
+  bottom: 58px;
+  left: 10px;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dobson-sky-mobile .dobson-solver-panel[open] {
+  width: min(320px, calc(100vw - 24px));
+  height: 40px;
+  border: 1px solid rgba(119, 191, 215, 0.24);
+  background: rgba(8, 12, 22, 0.97);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.dobson-sky-mobile .dobson-solver-panel > summary {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  width: 40px;
+  min-height: 40px;
+  place-items: center;
+  padding: 5px;
+  border: 1px solid rgba(119, 191, 215, 0.28);
+  border-radius: 10px;
+  background: rgba(8, 12, 22, 0.94);
+  color: #74d4df;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.dobson-sky-mobile .dobson-solver-panel[open] > summary {
+  border: 0;
+  background: transparent;
+}
+
+.dobson-sky-mobile .dobson-solver-panel .dobson-solver-content {
+  position: absolute;
+  bottom: 46px;
+  left: 0;
+  width: min(318px, calc(100vw - 26px));
+  max-height: min(58vh, 420px);
+  padding: 0 10px 10px;
+  overflow: auto;
+}
+
+.dobson-sky-mobile .dobson-native-panel {
+  position: static;
+  width: auto;
+  color: inherit;
+  font: inherit;
+}
+
+.dobson-sky-mobile .dobson-sky-connection-panel > summary {
+  width: 100%;
+  min-height: 38px;
+  margin: 0;
+  padding: 8px 10px;
+  border-color: rgba(119, 191, 215, 0.2);
+  border-radius: 8px;
+  background: #080d17;
+  color: #d7e5ed;
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.dobson-sky-mobile .dobson-sky-connection-panel .dobson-native-content {
+  max-height: 38vh;
+  margin-top: 5px;
+  padding: 9px;
+  border-color: rgba(119, 191, 215, 0.18);
+  background: #080d17;
+  box-shadow: none;
+}
+
+.dobson-sensor-mode {
+  position: absolute;
+  z-index: 20;
+  top: 46px;
+  left: 10px;
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid rgba(119, 191, 215, 0.42);
+  border-radius: 10px;
+  background: rgba(7, 18, 35, 0.9);
+  color: #d7e5ed;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.dobson-sensor-mode .ui-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.dobson-sensor-mode[aria-pressed="true"] {
+  border-color: #e7bd70;
+  color: #f2c877;
+}
+
+.dobson-sensor-status {
+  position: absolute;
+  z-index: 20;
+  top: 90px;
+  left: 10px;
+  max-width: min(250px, 72vw);
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: rgba(7, 18, 35, 0.82);
+  color: #d7e5ed;
+  font-size: 0.68rem;
+  text-align: right;
+  pointer-events: none;
+}
+
+@media (max-height: 600px) {
+  .dobson-sky-mobile .scene {
+    height: calc(100dvh - 130px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-height: 0;
+  }
+
+  .dobson-sky-mobile .sky-heading,
+  .dobson-sky-mobile .sky-status {
+    display: none;
+  }
+}
