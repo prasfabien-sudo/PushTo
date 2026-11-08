@@ -2,33 +2,23 @@
 
 Système d'assistance au pointage pour télescope Dobson basé sur un microcontrôleur ESP32.
 
-Ce projet transforme un télescope manuel en un système "Push-To" capable de mesurer en temps réel l'azimut et l'altitude grâce à des encodeurs, de conserver les réglages en mémoire flash, de servir une interface web locale et de communiquer avec des logiciels de planétarium comme SkySafari.
+Ce projet transforme un télescope manuel en un système "Push-To" capable de lire les encodeurs et de transmettre leur position sur le réseau Wi-Fi local.
 
 ## Vue d'ensemble
 
 Le système est conçu pour :
 
 - mesurer les déplacements du télescope via des encodeurs rotatifs,
-- calculer les positions en azimut et en altitude,
-- fournir une interface web embarquée pour configurer et calibrer le système,
-- enregistrer les paramètres dans la mémoire non volatile de l'ESP32,
-- proposer une base d'objets astronomiques (catalogue Messier) pour aider au repérage,
-- se connecter à des applications tierces via le protocole SkySafari.
+- transmettre les compteurs et leur résolution par TCP,
+- afficher le pointage et gérer les réglages dans l'application mobile.
 
 ## Fonctionnalités principales
 
 - Point d'accès Wi‑Fi embarqué : `Dobson_PushTo`
-- Serveur web local sur le port 80
-- Serveur SkySafari sur le port 4030
+- Flux TCP de compatibilité SkySafari sur le port 4030 (lecture des encodeurs uniquement)
 - Gestion des encodeurs AZ/ALT avec interruptions matérielles
-- Calibration des ticks par révolution
-- Inversion de sens de rotation configurable
-- Réglage de la position géographique (latitude / longitude)
-- Réinitialisation de zéro en azimut et en altitude
-- Alignement sur Polaris
-- Alignement assisté sur étoile / double étoile
-- Sauvegarde des paramètres dans la flash ESP32
-- Catalogue d'objets astronomiques (Messier)
+- Lecture des résolutions d'encodeurs enregistrées
+- Réglages, localisation et alignements gérés localement par l'application mobile
 
 ## Matériel ciblé
 
@@ -36,7 +26,7 @@ Le système est conçu pour :
 - Framework : Arduino / PlatformIO
 - Encodeurs : 2 axes (Azimut et Altitude)
 - Interface réseau : Wi‑Fi embarqué
-- Démonstration / contrôle : navigateur web local ou logiciel de planétarium compatible SkySafari
+- Contrôle : application mobile ou logiciel de planétarium compatible SkySafari
 
 ## Configuration matérielle
 
@@ -104,7 +94,7 @@ La barre de navigation propose un mode nuit rouge pour préserver la vision noct
 
 ### Vue 3D du ciel (bêta)
 
-La page `/beta_sky`, directement accessible depuis la barre de navigation, affiche le catalogue dans une projection céleste rendue sur Canvas 2D, sans bibliothèque 3D distante. Dans le navigateur du firmware, elle utilise la position configurée et les encodeurs AZ/ALT de l'ESP32. Dans l'application mobile, le catalogue, les préférences et la position du téléphone sont locaux; l'ESP32 n'est interrogé pour les encodeurs qu'après connexion explicite. Le glissement tactile ajoute un décalage manuel.
+La vue 3D de l'application mobile affiche le catalogue dans une projection céleste rendue localement, sans bibliothèque distante. Le catalogue, les préférences et la position du téléphone sont locaux; l'ESP32 n'est interrogé pour les encodeurs qu'après connexion explicite, par TCP sur le port 4030. Le glissement tactile ajoute un décalage manuel.
 
 ### Application mobile native
 
@@ -140,56 +130,22 @@ build_flags = -Iinclude
 - configure les broches des encodeurs,
 - active les interruptions,
 - démarre le point d'accès Wi‑Fi,
-- ouvre les serveurs web et SkySafari.
+- ouvre le flux TCP des encodeurs sur le port 4030.
 
-### 2. Accès web
+### 2. Connexion des encodeurs
 
-Le système met en place un réseau Wi‑Fi local.
+Le système met en place un réseau Wi‑Fi local et accepte une connexion TCP sur le port 4030.
 
 Lorsque l'ESP32 est démarré, il est accessible sur :
 
 - SSID : `Dobson_PushTo`
 - IP locale du point d'accès : fournie via la console série
 
-Depuis un navigateur, il est possible d'accéder aux pages suivantes :
-
-- `/` : page principale
-- `/station` : mise en station avec alignement guidé sur deux étoiles visibles, suivi de la position et calibration des encodeurs
-- `/calib_page` : calibration (accessible depuis Paramètres > Outils avancés)
-- `/config` : paramètres de configuration, dont le choix de projection du ciel
-- `/simu` : simulation (accessible depuis Paramètres > Outils avancés)
-- `/beta_sky` : vue 3D interactive du ciel (bêta)
-- `/help` : aide (accessible depuis la page Push-To)
-- `/releasenotes` : notes de version (accessible depuis Paramètres > Outils avancés)
-
-La navigation de l'interface est accessible depuis une barre fixe en bas de l'écran. La calibration des encodeurs, la simulation et les notes de version sont accessibles uniquement depuis la section « Outils avancés » de Paramètres. L'aide est accessible uniquement depuis la page Push-To.
-
-### 3. API serveur
-
-Le système expose plusieurs endpoints HTTP simples :
-
-- `/status` : retourne l'état des compteurs et paramètres
-- `/cmd` : actions de configuration et d'alignement
-- `/calib` : calibration
-- `/simstep` : simulation de pas d'encodeur
-- `/catalog` : catalogue des objets astronomiques
-- `/get_sites` : liste des lieux enregistrés
-
-Exemples d'actions via `cmd` :
-
-- `set_config`
-- `set_location`
-- `set_zero_alt`
-- `set_zero_az`
-- `set_polaris`
-- `align_star`
-- `align_star1`
-- `align_star2`
-- `save_sites`
+Le protocole renvoie les compteurs d'encodeurs pour `Q`/`R` et leur résolution pour `a`/`q`. L'ESP32 ne sert plus de pages web et n'accepte plus de commandes de configuration ou d'alignement ; ces réglages sont conservés dans l'application mobile.
 
 ## Calibration
 
-La calibration est essentielle pour obtenir une précision correcte.
+La calibration est gérée par l'application mobile et conservée localement.
 
 Les réglages mémorisés incluent :
 
@@ -201,7 +157,7 @@ Les réglages mémorisés incluent :
 - `lon`
 - `siteName`
 
-La calibration est conservée dans la mémoire flash de l'ESP32 via `Preferences`.
+Le firmware conserve uniquement les résolutions d'encodeurs dans les préférences ESP32.
 
 ## Structure du projet
 
@@ -209,7 +165,6 @@ La calibration est conservée dans la mémoire flash de l'ESP32 via `Preferences
 Dobson_PushTo/
 ├── include/                  # Fichiers d'en-tête
 │   ├── CalibPage.h
-│   ├── Calibration.h
 │   ├── Config.h
 │   ├── ConfigPage.h
 │   ├── HelpPage.h
@@ -232,15 +187,12 @@ Le code est structuré en plusieurs blocs :
 
 - gestion des interruptions encodeurs,
 - gestion des préférences système,
-- routes HTTP,
-- logique de calibration,
-- interface web embarquée,
+- lecture des commandes de requête TCP,
 - protocole SkySafari.
 
 Les traitements principaux se trouvent dans :
 
 - `src/Dobson_PushTo.cpp`
-- `include/Calibration.h`
 - `include/ObjectsDB.h`
 
 ## Limitations / points d'attention
@@ -255,7 +207,7 @@ Les traitements principaux se trouvent dans :
 - ajout d'un mode de calibration guidée,
 - gestion de profils utilisateur multiples,
 - ajout d'une base de données étendue d'objets célestes,
-- extension du contrôle depuis une page web plus avancée.
+- extension du contrôle depuis l'application mobile.
 
 ## Notes de version
 

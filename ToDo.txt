@@ -1,3 +1,17 @@
+Pour compiler en version mobile
+------------------------------
+
+Défini dans le fichier mobile-vé/android/local.properties
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
+$env:ANDROID_HOME="C:\Users\prasf\AppData\Local\Android\Sdk"
+
+
+cd .\mobile-v2
+npm.cmd run cap:sync
+cd mobile-v2/android
+.\gradlew assembleDebug
+
+
 Pour tester:
 -----------
 lancer dans le terminal : node simulate_esp32.js
@@ -10,7 +24,6 @@ Général
 
 VUE 3D
 -------
-platesolving (astronometry)==> Ca peut pas fonctionner il faut une application mobile.Car pas d'internet vu que que c'est l'ESP 32 qui est le point d'acces
 
 
 optimisation

@@ -3,10 +3,8 @@
 
 // Configuration Wi-Fi AP
 #define WIFI_SSID "Dobson_PushTo"
-#define WIFI_PASS ""
 
 // Ports
-#define WEB_PORT 80
 #define SKYSAFARI_PORT 4030
 
 // Broches Encodeurs (ESP32)

@@ -75,6 +75,10 @@
 	</dict>
 <key>NSCameraUsageDescription</key>
 	<string>La caméra permet d'afficher le ciel en réalité augmentée.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+	<string>L'accès aux photos permet d'enregistrer vos captures dans l'album AstroPhoto.</string>
+<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>L'application enregistre vos captures dans l'album AstroPhoto.</string>
 <key>NSLocationWhenInUseUsageDescription</key>
 	<string>La position permet de calculer le ciel visible depuis votre emplacement.</string>
 </dict>

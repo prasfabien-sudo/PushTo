@@ -8,8 +8,9 @@ export interface CatalogObject {
 }
 
 export interface DobsonNativePlugin {
-  connect(options: { ssid: string; password?: string }): Promise<{ ssid: string; baseUrl: string }>;
+  connect(options: { ssid: string; password?: string }): Promise<{ ssid: string }>;
   disconnect(options: { ssid: string }): Promise<void>;
+  getEncoderStatus(): Promise<{ rawAZ: number; rawALT: number; ticksAZ: number; ticksALT: number }>;
   startSensors(options: { intervalMs?: number }): Promise<void>;
   stopSensors(): Promise<void>;
   addListener(
@@ -30,4 +31,5 @@ export interface DobsonNativePlugin {
   saveAstrometryApiKey(options: { apiKey: string }): Promise<void>;
   getAstrometryApiKey(): Promise<{ apiKey: string }>;
   clearAstrometryApiKey(): Promise<void>;
+  saveAstroPhoto(options: { base64: string; filename: string }): Promise<void>;
 }

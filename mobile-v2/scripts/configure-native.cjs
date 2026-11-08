@@ -28,6 +28,8 @@ function configureIos() {
   const requiredKeys = [
     ["NSLocalNetworkUsageDescription", "Connexion au réseau local du télescope Dobson Push-To."],
     ["NSCameraUsageDescription", "La caméra permet d'afficher le ciel en réalité augmentée."],
+    ["NSPhotoLibraryUsageDescription", "L'accès aux photos permet d'enregistrer vos captures dans l'album AstroPhoto."],
+    ["NSPhotoLibraryAddUsageDescription", "L'application enregistre vos captures dans l'album AstroPhoto."],
     ["NSLocationWhenInUseUsageDescription", "La position permet de calculer le ciel visible depuis votre emplacement."],
     ["NSAppTransportSecurity", null]
   ];

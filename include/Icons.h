@@ -8,6 +8,7 @@ const char HTTP_ICONS[] PROGMEM = R"rawliteral(
   <symbol id="icon-telescope" viewBox="0 0 24 24"><path d="m10.5 20.5 3-7"/><path d="m8.5 17.5 5 2"/><path d="m14 13 3 1"/><path d="m17 14 3-8-5-2-4 7"/><path d="m12 11-7 3 2 4 7-3"/></symbol>
   <symbol id="icon-crosshair" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></symbol>
   <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+  <symbol id="icon-camera" viewBox="0 0 24 24"><path d="M4 7h3l2-3h6l2 3h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="14" r="3.5"/></symbol>
   <symbol id="icon-expand" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></symbol>
   <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
   <symbol id="icon-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5m-7 7 7-7 7 7"/></symbol>
@@ -30,6 +31,7 @@ const char HTTP_ICONS[] PROGMEM = R"rawliteral(
   <symbol id="icon-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></symbol>
   <symbol id="icon-circle-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></symbol>
   <symbol id="icon-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16.2 7.8-2.8 6.4-6.4 2.8 2.8-6.4 6.4-2.8Z"/></symbol>
+  <symbol id="icon-hand" viewBox="0 0 24 24"><path d="M8 11V5a1.5 1.5 0 0 1 3 0v5-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v6-3a1.5 1.5 0 0 1 3 0v6c0 4-2.5 7-6.5 7H12c-2 0-3.5-1-4.5-2.5L4 14a1.5 1.5 0 0 1 2.5-1.7L8 14v-3Z"/></symbol>
   <symbol id="icon-ruler" viewBox="0 0 24 24"><path d="m21.3 8.7-6-6a2.4 2.4 0 0 0-3.4 0l-9.2 9.2a2.4 2.4 0 0 0 0 3.4l6 6a2.4 2.4 0 0 0 3.4 0l9.2-9.2a2.4 2.4 0 0 0 0-3.4Z"/><path d="m7.5 10.5 2 2m1-5 2 2m1-5 2 2m-1 9 2 2"/></symbol>
   <symbol id="icon-trash-2" viewBox="0 0 24 24"><path d="M3 6h18m-2 0-.9 14H5.9L5 6m4 0V4h6v2m-5 4v6m4-6v6"/></symbol>
   <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14"/></symbol>

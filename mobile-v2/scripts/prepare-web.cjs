@@ -188,6 +188,16 @@ function makeMobileCatalogFilteringResponsive(html) {
 function makeMobileSkyRendererResponsive(html) {
   const replacements = [
     [
+      "    const ctx2d = canvas.getContext('2d');",
+      "    const ctx2d = window.createDobsonSkyContext(canvas);",
+      "initialisation du rendu WebGL mobile avec repli Canvas"
+    ],
+    [
+      "      viewReadout.textContent = `Offset AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;",
+      "      ctx2d.flush?.();\n      viewReadout.textContent = `Offset AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;",
+      "dessin des primitives WebGL"
+    ],
+    [
       '      const ratio = Math.min(window.devicePixelRatio || 1, 2);',
       '      const ratio = Math.min(window.devicePixelRatio || 1, window.__dobsonMobileApp ? 1.5 : 2);',
       "résolution de rendu adaptée aux écrans mobiles"
@@ -411,9 +421,10 @@ function makeMobileHtml(html, output) {
   }
   if (html.includes('id="skyCanvas"')) {
     html = makeMobileSkyRendererResponsive(html);
+    html = html.replace('</head>', '  <script src="/sky-webgl.js"></script>\n</head>');
     html = html.replace(
       '<div class="scene-zoom-controls">',
-      '<div class="scene-zoom-controls"><button id="dobson-ar-toggle" type="button" class="zoom-btn" title="Caméra en réalité augmentée (les capteurs se commandent séparément)" aria-label="Activer la caméra en réalité augmentée" aria-pressed="false">Caméra AR</button>'
+      '<div class="scene-zoom-controls"><button id="dobson-ar-toggle" type="button" class="zoom-btn" title="Caméra en réalité augmentée et pointage automatique" aria-label="Activer la caméra en réalité augmentée" aria-pressed="false">Caméra AR</button>'
     );
     html = html.replace(
       '<canvas id="skyCanvas"',

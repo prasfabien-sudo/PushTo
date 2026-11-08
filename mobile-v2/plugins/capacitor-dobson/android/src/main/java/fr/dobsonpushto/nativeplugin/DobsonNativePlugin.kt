@@ -1,6 +1,8 @@
 package fr.dobsonpushto.nativeplugin
 
 import android.content.Context
+import android.Manifest
+import android.content.ContentValues
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -13,6 +15,8 @@ import android.net.wifi.WifiNetworkSpecifier
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Environment
+import android.provider.MediaStore
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
@@ -23,16 +27,31 @@ import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
+import com.getcapacitor.PermissionState
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
 import org.json.JSONArray
 import org.json.JSONObject
 import java.security.KeyStore
+import java.io.File
+import java.io.ByteArrayOutputStream
+import java.io.EOFException
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.util.concurrent.Executors
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-@CapacitorPlugin(name = "DobsonNative")
+@CapacitorPlugin(
+    name = "DobsonNative",
+    permissions = [Permission(alias = "photoStorage", strings = [Manifest.permission.WRITE_EXTERNAL_STORAGE])]
+)
 class DobsonNativePlugin : Plugin(), SensorEventListener {
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var pendingWifiCall: PluginCall? = null
@@ -40,6 +59,88 @@ class DobsonNativePlugin : Plugin(), SensorEventListener {
     private var sensorThread: HandlerThread? = null
     private var sensorHandler: Handler? = null
     private var database: CatalogDatabase? = null
+    private val encoderExecutor = Executors.newSingleThreadExecutor()
+
+    @PluginMethod
+    fun saveAstroPhoto(call: PluginCall) {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
+            getPermissionState("photoStorage") != PermissionState.GRANTED) {
+            requestPermissionForAlias("photoStorage", call, "photoStoragePermissionResult")
+            return
+        }
+        saveAstroPhotoWithPermission(call)
+    }
+
+    @PermissionCallback
+    private fun photoStoragePermissionResult(call: PluginCall) {
+        if (getPermissionState("photoStorage") != PermissionState.GRANTED) {
+            call.reject("L'accès au stockage est nécessaire pour enregistrer la photo.")
+            return
+        }
+        saveAstroPhotoWithPermission(call)
+    }
+
+    private fun saveAstroPhotoWithPermission(call: PluginCall) {
+        val base64 = call.getString("base64")
+        val filename = call.getString("filename")
+        if (base64.isNullOrBlank() || filename.isNullOrBlank() ||
+            !filename.matches(Regex("ciel-[0-9]+\\.jpg"))) {
+            call.reject("Photo ou nom de fichier invalide.")
+            return
+        }
+        val bytes = try {
+            Base64.decode(base64, Base64.NO_WRAP)
+        } catch (error: IllegalArgumentException) {
+            call.reject("La photo est invalide.", error)
+            return
+        }
+        if (bytes.isEmpty()) {
+            call.reject("La photo est vide.")
+            return
+        }
+
+        val resolver = context.contentResolver
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/AstroPhoto")
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            } else {
+                @Suppress("DEPRECATION")
+                val directory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "AstroPhoto")
+                if (!directory.exists() && !directory.mkdirs()) {
+                    call.reject("Impossible de créer le dossier AstroPhoto.")
+                    return
+                }
+                @Suppress("DEPRECATION")
+                put(MediaStore.Images.Media.DATA, File(directory, filename).absolutePath)
+            }
+        }
+        var uri: android.net.Uri? = null
+        try {
+            uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?: throw IOException("Impossible de créer la photo dans la galerie.")
+            val output = resolver.openOutputStream(uri) ?: throw IOException("Impossible d'ouvrir la photo.")
+            output.use { it.write(bytes) }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val published = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
+                if (resolver.update(uri, published, null, null) != 1) {
+                    throw IOException("Impossible de publier la photo dans la galerie.")
+                }
+            }
+            call.resolve()
+        } catch (error: Exception) {
+            if (uri != null) {
+                try {
+                    resolver.delete(uri, null, null)
+                } catch (cleanupError: Exception) {
+                    android.util.Log.e("DobsonNative", "Nettoyage de la photo incomplète impossible.", cleanupError)
+                }
+            }
+            call.reject("Impossible d'enregistrer la photo dans AstroPhoto.", error)
+        }
+    }
 
     @PluginMethod
     fun connect(call: PluginCall) {
@@ -75,7 +176,6 @@ class DobsonNativePlugin : Plugin(), SensorEventListener {
                 connectivity.bindProcessToNetwork(network)
                 val result = JSObject()
                     .put("ssid", ssid)
-                    .put("baseUrl", "http://192.168.4.1")
                 pendingWifiCall?.resolve(result)
                 pendingWifiCall = null
                 notifyListeners("wifiState", JSObject().put("connected", true).put("ssid", ssid))
@@ -114,6 +214,50 @@ class DobsonNativePlugin : Plugin(), SensorEventListener {
         val connectivity = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         releaseNetworkRequest(connectivity)
         call.resolve()
+    }
+
+    @PluginMethod
+    fun getEncoderStatus(call: PluginCall) {
+        encoderExecutor.execute {
+            try {
+                Socket().use { socket ->
+                    socket.connect(InetSocketAddress("192.168.4.1", 4030), 1500)
+                    socket.soTimeout = 1500
+                    val input = socket.getInputStream()
+                    val output = socket.getOutputStream()
+                    val position = readEncoderValues(input, output, 'Q')
+                    val resolution = readEncoderValues(input, output, 'a')
+                    if (resolution[0] <= 0 || resolution[1] <= 0) {
+                        throw IOException("Résolution des encodeurs invalide.")
+                    }
+                    call.resolve(
+                        JSObject()
+                            .put("rawAZ", position[0])
+                            .put("rawALT", position[1])
+                            .put("ticksAZ", resolution[0])
+                            .put("ticksALT", resolution[1])
+                    )
+                }
+            } catch (error: Exception) {
+                call.reject("Impossible de lire les encodeurs via TCP sur le port 4030.", error)
+            }
+        }
+    }
+
+    private fun readEncoderValues(input: InputStream, output: OutputStream, command: Char): List<Long> {
+        output.write(command.code)
+        output.flush()
+        val response = ByteArrayOutputStream()
+        while (response.size() < 64) {
+            val value = input.read()
+            if (value < 0) throw EOFException("Connexion encodeurs interrompue.")
+            if (value == '\r'.code) break
+            if (value != '\n'.code) response.write(value)
+        }
+        if (response.size() >= 64) throw IOException("Réponse encodeurs trop longue.")
+        val values = response.toString(Charsets.UTF_8.name()).trim().split(Regex("\\s+"))
+        if (values.size != 2) throw IOException("Réponse encodeurs invalide.")
+        return values.map { it.toLongOrNull() ?: throw IOException("Valeur encodeur invalide.") }
     }
 
     @PluginMethod
@@ -306,6 +450,7 @@ class DobsonNativePlugin : Plugin(), SensorEventListener {
         stopSensorUpdates()
         val connectivity = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         releaseNetworkRequest(connectivity)
+        encoderExecutor.shutdownNow()
         database?.close()
         database = null
         super.handleOnDestroy()

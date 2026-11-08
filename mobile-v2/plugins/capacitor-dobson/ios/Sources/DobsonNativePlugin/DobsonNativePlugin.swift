@@ -1,7 +1,9 @@
 import Capacitor
 import CoreMotion
 import Foundation
+import Network
 import NetworkExtension
+import Photos
 import Security
 import SQLite3
 
@@ -12,6 +14,7 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "connect", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "disconnect", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getEncoderStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startSensors", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopSensors", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "initializeCatalog", returnType: CAPPluginReturnPromise),
@@ -19,7 +22,8 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "searchCatalog", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveAstrometryApiKey", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getAstrometryApiKey", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "clearAstrometryApiKey", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "clearAstrometryApiKey", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveAstroPhoto", returnType: CAPPluginReturnPromise)
     ]
 
     private let motionManager = CMMotionManager()
@@ -31,6 +35,52 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
         queue.maxConcurrentOperationCount = 1
         return queue
     }()
+
+    @objc func saveAstroPhoto(_ call: CAPPluginCall) {
+        guard let base64 = call.getString("base64"),
+              let data = Data(base64Encoded: base64), !data.isEmpty,
+              let filename = call.getString("filename"),
+              filename.range(of: #"^ciel-[0-9]+\.jpg$"#, options: .regularExpression) != nil else {
+            call.reject("Photo ou nom de fichier invalide.")
+            return
+        }
+
+        PHPhotoLibrary.requestAuthorization(for: .readWrite) { authorization in
+            guard authorization == .authorized else {
+                call.reject("Autorisez l'accès complet aux photos pour enregistrer dans l'album AstroPhoto.")
+                return
+            }
+            let options = PHFetchOptions()
+            options.predicate = NSPredicate(format: "title = %@", "AstroPhoto")
+            let albums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumRegular, options: options)
+            let album = albums.firstObject
+            var addedToAlbum = false
+            PHPhotoLibrary.shared().performChanges({
+                let albumChange: PHAssetCollectionChangeRequest
+                if let album = album {
+                    guard let change = PHAssetCollectionChangeRequest(for: album) else { return }
+                    albumChange = change
+                } else {
+                    albumChange = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: "AstroPhoto")
+                }
+                let creation = PHAssetCreationRequest.forAsset()
+                let resourceOptions = PHAssetResourceCreationOptions()
+                resourceOptions.originalFilename = filename
+                creation.addResource(with: .photo, data: data, options: resourceOptions)
+                guard let asset = creation.placeholderForCreatedAsset else {
+                    return
+                }
+                albumChange.addAssets([asset] as NSArray)
+                addedToAlbum = true
+            }) { success, error in
+                if success && addedToAlbum {
+                    call.resolve()
+                } else {
+                    call.reject("Impossible d'enregistrer la photo dans AstroPhoto.", nil, error)
+                }
+            }
+        }
+    }
 
     @objc func connect(_ call: CAPPluginCall) {
         guard let ssid = call.getString("ssid")?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -55,7 +105,7 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
         NEHotspotConfigurationManager.shared.apply(configuration) { error in
             if let error = error as? NEHotspotConfigurationError,
                error.code == .alreadyAssociated {
-                call.resolve(["ssid": ssid, "baseUrl": "http://192.168.4.1"])
+                call.resolve(["ssid": ssid])
                 self.notifyListeners("wifiState", data: ["connected": true, "ssid": ssid])
                 return
             }
@@ -63,7 +113,7 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
                 call.reject("iOS n'a pas pu rejoindre le réseau Wi-Fi. Vérifiez le réseau et acceptez la demande système.", nil, error)
                 return
             }
-            call.resolve(["ssid": ssid, "baseUrl": "http://192.168.4.1"])
+            call.resolve(["ssid": ssid])
             self.notifyListeners("wifiState", data: ["connected": true, "ssid": ssid])
         }
     }
@@ -76,6 +126,109 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
         NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: ssid)
         call.resolve()
         notifyListeners("wifiState", data: ["connected": false, "ssid": ssid])
+    }
+
+    @objc func getEncoderStatus(_ call: CAPPluginCall) {
+        let queue = DispatchQueue(label: "DobsonEncoderRead")
+        let connection = NWConnection(
+            host: NWEndpoint.Host("192.168.4.1"),
+            port: NWEndpoint.Port(rawValue: 4030)!,
+            using: .tcp
+        )
+        var completed = false
+
+        func finishWithError(_ message: String, _ error: Error? = nil) {
+            guard !completed else { return }
+            completed = true
+            connection.cancel()
+            call.reject(message, nil, error)
+        }
+
+        func receiveLine(_ accumulated: Data = Data(), completion: @escaping (Result<String, Error>) -> Void) {
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 128) { content, _, isComplete, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                var received = accumulated
+                if let content = content {
+                    received.append(content)
+                }
+                if let separator = received.firstIndex(of: 13) {
+                    guard let line = String(data: Data(received[..<separator]), encoding: .utf8) else {
+                        completion(.failure(NSError(domain: "DobsonEncoder", code: 1, userInfo: [
+                            NSLocalizedDescriptionKey: "Réponse encodeurs illisible."
+                        ])))
+                        return
+                    }
+                    completion(.success(line))
+                } else if isComplete || received.count >= 128 {
+                    completion(.failure(NSError(domain: "DobsonEncoder", code: 2, userInfo: [
+                        NSLocalizedDescriptionKey: "Réponse encodeurs incomplète."
+                    ])))
+                } else {
+                    receiveLine(received, completion: completion)
+                }
+            }
+        }
+
+        func sendRequest(_ command: String, completion: @escaping (Result<String, Error>) -> Void) {
+            connection.send(content: Data(command.utf8), completion: .contentProcessed { error in
+                if let error = error {
+                    completion(.failure(error))
+                } else {
+                    receiveLine(completion: completion)
+                }
+            })
+        }
+
+        let timeout = DispatchWorkItem {
+            finishWithError("Délai dépassé lors de la lecture des encodeurs.")
+        }
+        queue.asyncAfter(deadline: .now() + 2, execute: timeout)
+        connection.stateUpdateHandler = { state in
+            guard !completed else { return }
+            switch state {
+            case .ready:
+                connection.stateUpdateHandler = nil
+                sendRequest("Q") { positionResult in
+                    switch positionResult {
+                    case .failure(let error):
+                        finishWithError("Impossible de lire la position des encodeurs.", error)
+                    case .success(let positionLine):
+                        sendRequest("a") { resolutionResult in
+                            switch resolutionResult {
+                            case .failure(let error):
+                                finishWithError("Impossible de lire la résolution des encodeurs.", error)
+                            case .success(let resolutionLine):
+                                let position = positionLine.split(whereSeparator: \.isWhitespace).compactMap { Int($0) }
+                                let resolution = resolutionLine.split(whereSeparator: \.isWhitespace).compactMap { Int($0) }
+                                guard position.count == 2, resolution.count == 2,
+                                      resolution[0] > 0, resolution[1] > 0 else {
+                                    finishWithError("Réponse encodeurs invalide.")
+                                    return
+                                }
+                                guard !completed else { return }
+                                completed = true
+                                timeout.cancel()
+                                connection.cancel()
+                                call.resolve([
+                                    "rawAZ": position[0],
+                                    "rawALT": position[1],
+                                    "ticksAZ": resolution[0],
+                                    "ticksALT": resolution[1]
+                                ])
+                            }
+                        }
+                    }
+                }
+            case .failed(let error):
+                finishWithError("Impossible de se connecter aux encodeurs TCP.", error)
+            default:
+                break
+            }
+        }
+        connection.start(queue: queue)
     }
 
     @objc func startSensors(_ call: CAPPluginCall) {

@@ -47,7 +47,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-top: 8px; }
     
-    .scene-action-toolbar { grid-column: span 4; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; }
+    .scene-action-toolbar { grid-column: span 4; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
     .scene-action-btn { min-height: 48px; display: flex; align-items: center; justify-content: center; padding: 6px; background: #263238; color: #ffb74d; border: 1px solid #455a64; }
     .scene-action-btn .ui-icon { width: 26px; height: 26px; }
 
@@ -106,10 +106,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     body.landscape-fullscreen .bottom-nav { display: none !important; }
     body.landscape-fullscreen .sky-card { width: 100% !important; max-width: none !important; margin: 0; }
     body.landscape-fullscreen .scene { height: 100vh !important; border: none; border-radius: 0; }
-
-    @media (orientation: landscape) {
-      #manualFullscreenBtn { display: none !important; }
-    }
 
     .object-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px); }
     .object-modal[hidden] { display: none; }
@@ -199,9 +195,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         </button>
         <button id="centerButton" type="button" class="scene-action-btn" aria-label="Réaligner la vue" title="Réaligner la vue">
           <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-crosshair"></use></svg>
-        </button>
-        <button id="manualFullscreenBtn" type="button" class="scene-action-btn" aria-label="Plein écran" title="Plein écran">
-          <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-expand"></use></svg>
         </button>
       </div>
       
@@ -894,14 +887,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     window.addEventListener('resize', checkOrientation);
     window.addEventListener('orientationchange', checkOrientation);
 
-    document.getElementById('manualFullscreenBtn').addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else {
-        document.exitFullscreen().catch(() => {});
-      }
-    });
-
     const CONSTELLATION_LINES = [
       ["Tarazed", "Altair"], ["Altair", "Alshain"], ["Altair", "Deneb el Okab"], ["Altair", "Eta Aql"], ["Eta Aql", "Theta Aql"],
       ["Alpheratz", "Delta And"], ["Delta And", "Mirach"], ["Mirach", "Almach"], ["Alpheratz", "Adhil"], ["Mirach", "51 And"],
@@ -937,7 +922,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       ["Vega", "Epsilon Lyr"], ["Vega", "Zeta Lyr"], ["Zeta Lyr", "Sheliak"], ["Sheliak", "Sulafat"], ["Sulafat", "Zeta Lyr"],
       ["Rasalhague", "Cebalrai"], ["Rasalhague", "Yed Prior"], ["Yed Prior", "Yed Posterior"], ["Yed Posterior", "Sabik"],
       ["Betelgeuse", "Bellatrix"], ["Betelgeuse", "Meissa"], ["Bellatrix", "Meissa"],
-      ["Betelgeuse", "Mintaka"], ["Bellatrix", "Alnitak"],
+      ["Betelgeuse", "Alnitak"], ["Bellatrix", "Mintaka"],
       ["Mintaka", "Alnilam"], ["Alnilam", "Alnitak"],
       ["Alnitak", "Saiph"], ["Mintaka", "Rigel"], ["Rigel", "Saiph"], ["Alnilam", "Hatysa"],
       ["Betelgeuse", "μ Ori"], ["μ Ori", "ξ Ori"], ["ξ Ori", "ν Ori"], ["μ Ori", "χ² Ori"],
@@ -949,7 +934,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       ["Polaris", "Yildun"], ["Yildun", "Zeta UMi"], ["Zeta UMi", "Epsilon UMi"],
       ["Epsilon UMi", "Pherkad"], ["Pherkad", "Kochab"], ["Kochab", "Zeta UMi"], ["Kochab", "Eta UMi"],
       ["Alpherg", "Gamma Piscium"], ["Gamma Piscium", "Iota Psc"], ["Iota Psc", "Omega Psc"], ["Omega Psc", "Alrescha"],
-      ["Unukalhai", "Beta Ser"], ["Unukalhai", "Alya"],
+      ["Unukalhai", "Chow"],
       ["Aldebaran", "Ain"], ["Ain", "Elnath"], ["Aldebaran", "Gamma Tau"], ["Aldebaran", "Tianguis"], ["Aldebaran", "Alcyone"],
       ["Beta Trianguli", "Mothallah"], ["Mothallah", "Gamma Tri"], ["Gamma Tri", "Beta Trianguli"],
       ["Spica", "Heze"], ["Heze", "Vindemiatrix"], ["Vindemiatrix", "Porrima"], ["Porrima", "Zavijava"], ["Porrima", "Spica"],
@@ -963,7 +948,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       { name: "Bélier", refStar: "Hamal" },
       { name: "Bouvier", refStar: "Arcturus" },
       { name: "Cancer", refStar: "Acubens" },
-      { name: "Capricorne", refStar: "Sadalmelik" },
+      { name: "Verseau", refStar: "Sadalmelik" },
       { name: "Cassiopée", refStar: "Navi" },
       { name: "Céphée", refStar: "Alderamin" },
       { name: "Chevelure de Bérénice", refStar: "Diadem" },
@@ -1042,6 +1027,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       
       targetHeading = azimuth;
       targetElevation = altitudeCircle > 180 ? altitudeCircle - 360 : altitudeCircle;
+      const phone = window.__dobsonAutoFollow && window.__dobsonPhoneOrientation;
+      if (phone && Number.isFinite(phone.azimuth) && Number.isFinite(phone.altitude)) {
+        targetHeading = ((phone.azimuth % 360) + 360) % 360;
+        targetElevation = phone.altitude;
+      }
       
       telescopeReadout.textContent = `AZ ${azimuth.toFixed(1)}° · ALT ${targetElevation.toFixed(1)}°`;
       telescopeReadout.classList.remove('error');
@@ -1467,22 +1457,35 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const showConstellations = document.getElementById('showConstellations').checked;
       if (showConstellations) {
         ctx2d.strokeStyle = "rgba(255, 165, 80, 0.45)";
-        ctx2d.lineWidth = 1.0;
+        ctx2d.lineWidth = 1.7;
         for (const [starA, starB] of CONSTELLATION_LINES) {
           const sA = objectsByName.get(starA);
           const sB = objectsByName.get(starB);
           if (sA && sB) {
             const hA = horizontalPosition(sA, sidereal, latRadians);
             const hB = horizontalPosition(sB, sidereal, latRadians);
-            const pA = projectPoint(hA.position, hA.raw);
-            const pB = projectPoint(hB.position, hB.raw);
-            
-            if (pA && pB) {
-              ctx2d.beginPath();
-              ctx2d.moveTo(width / 2 + pA.x * (width / 2), height / 2 - pA.y * (height / 2));
-              ctx2d.lineTo(width / 2 + pB.x * (width / 2), height / 2 - pB.y * (height / 2));
-              ctx2d.stroke();
+            const a = hA.position;
+            const b = hB.position;
+            const angle = Math.acos(Math.max(-1, Math.min(1, a[0]*b[0] + a[1]*b[1] + a[2]*b[2])));
+            const steps = Math.max(1, Math.ceil(angle / (2 * Math.PI / 180)));
+            let drawing = false;
+            ctx2d.beginPath();
+            for (let i = 0; i <= steps; i++) {
+              const t = i / steps;
+              const v = a.map((value, index) => value * (1 - t) + b[index] * t);
+              const length = Math.hypot(...v);
+              if (!length) { drawing = false; continue; }
+              const position = v.map(value => value / length);
+              const raw = { alt: Math.asin(Math.max(-1, Math.min(1, position[1]))), az: Math.atan2(position[0], position[2]) };
+              const point = projectPoint(position, raw);
+              if (!point) { drawing = false; continue; }
+              const x = width / 2 + point.x * width / 2;
+              const y = height / 2 - point.y * height / 2;
+              if (drawing) ctx2d.lineTo(x, y);
+              else ctx2d.moveTo(x, y);
+              drawing = true;
             }
+            ctx2d.stroke();
           }
         }
       }
@@ -1807,10 +1810,17 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     };
     
     const scene = document.getElementById('scene');
+    const reverseTouchAzimuth = window.__dobsonMobileApp && localStorage.getItem('dobson-touch-reverse-azimuth') === 'true';
+    const reverseTouchAltitude = window.__dobsonMobileApp && localStorage.getItem('dobson-touch-reverse-altitude') === 'true';
     function applyTouchPan(deltaX, deltaY, panPanFactor) {
-      touchHeading = ((touchHeading - deltaX * 0.35 / panPanFactor) % 360 + 360) % 360;
-      touchElevation += deltaY * 0.25 / panPanFactor;
+      touchHeading = ((touchHeading - deltaX * (reverseTouchAzimuth ? -1 : 1) * 0.35 / panPanFactor) % 360 + 360) % 360;
+      touchElevation += (window.__dobsonMobileApp ? -deltaY : deltaY) * (reverseTouchAltitude ? -1 : 1) * 0.25 / panPanFactor;
     }
+
+    window.addEventListener('dobson:resetTouchOffset', () => {
+      touchHeading = 0;
+      touchElevation = 0;
+    });
 
     scene.addEventListener('pointerdown', event => {
       if (event.target instanceof Element && event.target.closest('.scene-zoom-controls, #dobson-sensor-mode, .dobson-scene-alignment, .dobson-scene-time-panel, .dobson-solver-panel, .dobson-scene-tools, button, input, select')) return;
