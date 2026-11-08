@@ -2,6 +2,69 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
+const vm = require("node:vm");
+
+test("la navigation mobile ouvre chaque page HTML et marque la page active", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/mobile.js"), "utf8");
+  const navigationFunction = source.match(/function installNativeNavigation\(\) \{[\s\S]*?\r?\n\}/);
+  assert.ok(navigationFunction);
+
+  const expectedPages = [
+    ["/", "/beta_sky.html", "page"],
+    ["/beta_sky.html", "/beta_sky.html", "page"],
+    ["/index.html", "/index.html", "page"],
+    ["/station.html", "/station.html", "page"],
+    ["/config.html", "/config.html", "page"],
+    ["/help.html", "/help.html", "page"]
+  ];
+
+  for (const [pathname, expectedHref, expectedCurrent] of expectedPages) {
+    const body = {
+      appendChild(element) {
+        element.parentNode = this;
+      }
+    };
+    const navigation = {
+      links: [],
+      setAttribute() {},
+      children: [],
+      replaceChildren(...links) {
+        this.children.forEach((element) => { element.parentNode = null; });
+        this.children = links;
+        links.forEach((element) => { element.parentNode = this; });
+        this.links = links;
+      }
+    };
+    const nightModeToggle = {
+      id: "nightModeToggle",
+      parentNode: navigation,
+      setAttribute() {}
+    };
+    navigation.children.push(nightModeToggle);
+    const document = {
+      querySelector: () => navigation,
+      createElement: () => ({
+        attributes: {},
+        setAttribute(name, value) { this.attributes[name] = value; }
+      }),
+      getElementById: (id) => id === "nightModeToggle" && nightModeToggle.parentNode ? nightModeToggle : null,
+      body
+    };
+    const window = { location: { pathname } };
+
+    vm.runInNewContext(`(${navigationFunction[0]})()`, { document, window });
+
+    assert.deepEqual(navigation.links.map((link) => link.href), [
+      "/beta_sky.html",
+      "/index.html",
+      "/station.html",
+      "/config.html",
+      "/help.html"
+    ]);
+    assert.equal(navigation.links.find((link) => link.href === expectedHref).attributes["aria-current"] || null, expectedCurrent);
+    assert.equal(nightModeToggle.parentNode, body);
+  }
+});
 
 test("la caméra AR ne démarre et n'arrête pas la boussole ou les capteurs", () => {
   const source = fs.readFileSync(path.resolve(__dirname, "../src/mobile.js"), "utf8");
@@ -16,8 +79,12 @@ test("la vue du ciel pilote séparément le suivi automatique et la navigation t
   const source = fs.readFileSync(path.resolve(__dirname, "../src/mobile.js"), "utf8");
   const styles = fs.readFileSync(path.resolve(__dirname, "../src/mobile.css"), "utf8");
   const skyPage = fs.readFileSync(path.resolve(__dirname, "../../include/BetaSkyPage.h"), "utf8");
+  const configPage = fs.readFileSync(path.resolve(__dirname, "../../include/ConfigPage.h"), "utf8");
 
   assert.match(source, /function installNativeNavigation\(\)/);
+  assert.match(source, /const sceneMenu = document\.createElement\("details"\)/);
+  assert.match(source, /alignmentContent\.appendChild\(offsetReadout\)/);
+  assert.match(source, /Identifier le centre et l’échelle d’une image du ciel avec Astrometry\.net/);
   assert.match(source, /label: "Aide", icon: "icon-book-open"/);
   assert.match(source, /nightModeToggle\.className = "dobson-night-toggle"/);
   assert.match(source, /icon-gamepad-2/);
@@ -26,13 +93,27 @@ test("la vue du ciel pilote séparément le suivi automatique et la navigation t
   assert.match(source, /dobson-sky-control-mode/);
   assert.match(source, /pointage automatique par capteurs/i);
   assert.match(source, /Navigation tactile/);
-  assert.match(source, /dobson-sky-control-mode-v2/);
+  assert.match(source, /dobson-sky-control-mode-v3/);
+  assert.match(source, /hasSignificantSkyMotion\(autoFollowBaseline, currentOrientation\)/);
+  assert.match(source, /let autoFollow = localStorage\.getItem\("dobson-sky-control-mode-v3"\) !== "touch"/);
+  assert.match(source, /Déplacez le téléphone pour activer le pointage/);
   assert.match(source, /cameraAltitude/);
   assert.match(source, /cameraAzimuth/);
+  assert.match(source, /window\.__loadSkyObjectImage = async/);
+  assert.match(skyPage, /window\.__loadSkyObjectImage\(closestObj\)/);
+  assert.match(source, /hasSignificantSkyMotion\(autoFollowBaseline, currentOrientation\)/);
+  assert.match(source, /magnitude\.disabled = false/);
+  assert.match(configPage, /projectionModeSelect\.addEventListener\('change'/);
+  assert.match(configPage, /window\.__saveMobileSkyPrefs\(\{ projMode: projectionModeSelect\.value \}\)/);
+  assert.match(configPage, /d\.lat !== undefined \? d\.lat : 45\.89/);
+  assert.match(configPage, /d\.lon !== undefined \? d\.lon : 6\.05/);
+  assert.match(source, /dobson-technical-options/);
+  assert.match(source, /dobson-location-options/);
+  assert.match(source, /Configuration enregistrée sur ce téléphone/);
+  assert.match(source, /configurationFields\.has\(event\.target\.id\)/);
   assert.doesNotMatch(source, /dobson-sky-pointing-axis|Direction de pointage/);
   assert.match(source, /azimuth: orientation\.cameraAzimuth,\s+altitude: orientation\.cameraAltitude/);
-  assert.match(source, /altitude >= 2/);
-  assert.match(source, /skyTrackingActive \|\| autoFollow && Math\.abs\(altitude\) < 2/);
+  assert.match(source, /altitude >= 2 \|\| hasSignificantSkyMotion/);
   const sensorHandler = source.match(/sensorListener = await DobsonNative\.addListener\("orientation", \(orientation\) => \{([\s\S]*?)\r?\n    \}\);/);
   assert.ok(sensorHandler);
   assert.doesNotMatch(sensorHandler[1], /skyTrackingActive = false/);
@@ -51,6 +132,8 @@ test("la vue du ciel pilote séparément le suivi automatique et la navigation t
   assert.match(styles, /background: #080a10 !important/);
   assert.match(styles, /width: min\(100%, 520px\)/);
   assert.match(styles, /dobson-night-toggle/);
+  assert.match(styles, /dobson-scene-menu-content/);
+  assert.match(styles, /body\.landscape-fullscreen \.dobson-night-toggle/);
 });
 
 test("l’application ne charge le gros catalogue que sur ses trois vues de catalogue", () => {

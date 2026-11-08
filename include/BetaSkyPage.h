@@ -32,7 +32,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .scene-label.telescope { top: 10px; left: 10px; }
     .scene-label.telescope.error { color: #ff7777; }
     .scene-label.view { left: 10px; bottom: 10px; }
-    .scene-label.horizon { right: 10px; bottom: 10px; }
+    .scene-search-btn { position: absolute; right: 10px; bottom: 10px; z-index: 5; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; padding: 0; background: rgba(21, 27, 37, 0.85); border: 1px solid #344256; border-radius: 8px; color: #ffb74d; cursor: pointer; backdrop-filter: blur(4px); }
+    .scene-search-btn .ui-icon { width: 22px; height: 22px; }
+    .scene-search-btn[aria-pressed="true"] { background: rgba(105, 255, 132, 0.18); border-color: #69ff84; }
     .scene-center { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(255,255,255,.7); border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; z-index: 2; }
     
     .scene-zoom-controls { position: absolute; top: 10px; right: 10px; z-index: 5; display: flex; flex-direction: column; gap: 4px; }
@@ -45,7 +47,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-top: 8px; }
     
-    .scene-action-toolbar { grid-column: span 4; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+    .scene-action-toolbar { grid-column: span 4; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; }
     .scene-action-btn { min-height: 48px; display: flex; align-items: center; justify-content: center; padding: 6px; background: #263238; color: #ffb74d; border: 1px solid #455a64; }
     .scene-action-btn .ui-icon { width: 26px; height: 26px; }
 
@@ -182,7 +184,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       <span class="scene-label cardinal" id="labelW" style="display:none">O</span>
       <span class="scene-label telescope" id="telescopeReadout">Télescope : connexion...</span>
       <span class="scene-label view" id="viewReadout">Offset AZ 0° · ALT 0°</span>
-      <span class="scene-label horizon">Grille AltAz & Heure</span>
+      <button id="openSearchTargetModalBtn" type="button" class="scene-search-btn" aria-label="Rechercher une cible" title="Rechercher une cible" aria-pressed="false">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-search"></use></svg>
+      </button>
       <span class="scene-center" aria-hidden="true"></span>
       <div id="objectLabels" aria-hidden="true"></div>
       <div id="constellationLabels" aria-hidden="true"></div>
@@ -190,9 +194,6 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     
     <div class="controls">
       <div class="scene-action-toolbar" role="group" aria-label="Commandes de la vue du ciel">
-        <button id="openSearchTargetModalBtn" type="button" class="scene-action-btn" aria-label="Rechercher une cible" title="Rechercher une cible" aria-pressed="false">
-          <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-search"></use></svg>
-        </button>
         <button id="openSettingsModalBtn" type="button" class="scene-action-btn" aria-label="Paramètres" title="Paramètres">
           <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-settings"></use></svg>
         </button>
@@ -1389,12 +1390,14 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       const showGrid = document.getElementById('showGrid').checked;
       if (showGrid) {
-        const gridSampleStep = Math.min(5, Math.max(0.25, fieldOfView / 4));
+        const gridSampleStep = Math.min(2, Math.max(0.25, fieldOfView / 8));
+        // Le pas de la grille s'adapte au champ pour qu'elle reste visible en zoomant
+        const gridSpacing = fieldOfView > 50 ? 30 : fieldOfView > 20 ? 15 : 5;
         ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
         ctx2d.lineWidth = 1.2;
         
         // Cercles d'altitude
-        for (let altDeg = -60; altDeg <= 80; altDeg += 20) {
+        for (let altDeg = -90 + gridSpacing; altDeg < 90; altDeg += gridSpacing) {
           if (altDeg === 0) continue;
           const altRad = altDeg * Math.PI / 180;
           let ptsDrawn = 0;
@@ -1412,7 +1415,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
               ptsDrawn++;
             } else { ptsDrawn = 0; }
           }
-          if (ptsDrawn > 1) ctx2d.stroke();
+          ctx2d.stroke();
         }
 
         // Horizon
@@ -1435,11 +1438,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
               ptsDrawn++;
             } else { ptsDrawn = 0; }
           }
-          if (ptsDrawn > 1) ctx2d.stroke();
+          ctx2d.stroke();
         }
 
         // Méridiens d'azimut
-        for (let azDeg = 0; azDeg < 360; azDeg += 45) {
+        for (let azDeg = 0; azDeg < 360; azDeg += gridSpacing) {
           const azRad = azDeg * Math.PI / 180;
           let ptsDrawn = 0;
           ctx2d.beginPath();
@@ -1456,7 +1459,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
               ptsDrawn++;
             } else { ptsDrawn = 0; }
           }
-          if (ptsDrawn > 1) ctx2d.stroke();
+          ctx2d.stroke();
         }
       }
 
@@ -1769,6 +1772,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         document.getElementById('modalSize').textContent = details.size;
         document.getElementById('modalCoords').textContent = `AD ${closestObj.ra.toFixed(2)}h · Dec ${closestObj.dec.toFixed(2)}°`;
         document.getElementById('objectModal').hidden = false;
+        if (typeof window.__loadSkyObjectImage === 'function') window.__loadSkyObjectImage(closestObj);
       }
     });
 
@@ -1804,8 +1808,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     
     const scene = document.getElementById('scene');
     function applyTouchPan(deltaX, deltaY, panPanFactor) {
-      touchHeading = ((touchHeading + deltaX * 0.35 / panPanFactor) % 360 + 360) % 360;
-      touchElevation -= deltaY * 0.25 / panPanFactor;
+      touchHeading = ((touchHeading - deltaX * 0.35 / panPanFactor) % 360 + 360) % 360;
+      touchElevation += deltaY * 0.25 / panPanFactor;
     }
 
     scene.addEventListener('pointerdown', event => {

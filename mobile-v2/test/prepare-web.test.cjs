@@ -32,6 +32,9 @@ test("extrait les huit écrans et enrichit le catalogue mobile sans modifier cel
       assert.match(html, /skyCameraBasis\(cameraHeading, cameraElevation\)/);
       assert.match(html, /const right = \[Math\.cos\(azimuthRadians\), 0, -Math\.sin\(azimuthRadians\)\]/);
       assert.match(html, /applyTouchPan\(event\.clientX - dragPoint\.x, event\.clientY - dragPoint\.y, panPanFactor\)/);
+      assert.match(html, /Math\.min\(window\.__dobsonMobileApp \? 120 : 75, fieldOfView \+ 4\)/);
+      assert.match(html, /Math\.min\(window\.__dobsonMobileApp \? 120 : 75, fieldOfView \* pinchDistance \/ distance\)/);
+      assert.match(html, /Math\.min\(window\.__dobsonMobileApp \? 120 : 75, fieldOfView \+ Math\.sign\(event\.deltaY\) \* 2\)/);
       assert.match(html, /top: '#123b68', mid: '#1b5680', bot: '#287a91'/);
       assert.match(html, /window\.__dobsonMobileApp \? 1\.5 : 2/);
       assert.match(html, /if \(!window\.__dobsonMobileApp\) \{\s*ctx2d\.shadowColor = colorHex/);

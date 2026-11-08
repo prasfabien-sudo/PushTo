@@ -2,6 +2,8 @@ import { Capacitor } from "@capacitor/core";
 import { DobsonNative } from "@dobson/capacitor-dobson";
 import { loadMobileCatalog } from "./mobile-catalog.js";
 import { solveWithAstrometry } from "./astrometry.js";
+import { findAstronomyImage } from "./astronomy-images.js";
+import { hasSignificantSkyMotion } from "./sky-motion.js";
 import "./mobile.css";
 
 window.__dobsonNativeCatalogPromise = Capacitor.isNativePlatform()
@@ -12,6 +14,7 @@ window.__dobsonNativeCatalogPromise.then(window.__resolveDobsonCatalog, window._
 if (Capacitor.isNativePlatform()) {
   document.addEventListener("DOMContentLoaded", () => {
     installNativePanel();
+    installAstronomyImages();
     installAugmentedReality();
     installPlateSolver();
   }, { once: true });
@@ -66,7 +69,7 @@ function installNativePanel() {
       }
       localStorage.setItem("dobsonApiBase", parsed.origin);
       apiBase.value = parsed.origin;
-      status.textContent = "Adresse ESP32 enregistrée.";
+      status.textContent = "";
     } catch (error) {
       status.textContent = error.message || "Adresse ESP32 invalide.";
     }
@@ -114,22 +117,80 @@ function installNativePanel() {
   }
 }
 
+function installAstronomyImages() {
+  const objectPreview = document.querySelector("#objectPreview");
+  if (!objectPreview) return;
+
+  const sourceLink = document.createElement("a");
+  sourceLink.className = "dobson-astronomy-source";
+  sourceLink.target = "_blank";
+  sourceLink.rel = "noopener noreferrer";
+  sourceLink.textContent = "Voir la fiche sur Le Journal de l’Astronomie";
+  sourceLink.hidden = true;
+  const status = document.createElement("output");
+  status.className = "dobson-astronomy-status";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  objectPreview.insertAdjacentElement("afterend", sourceLink);
+  sourceLink.insertAdjacentElement("afterend", status);
+
+  let requestId = 0;
+  window.__loadSkyObjectImage = async (object) => {
+    const currentRequestId = ++requestId;
+    const searchUrl = new URL("/", "https://journaldelastronomie.fr");
+    searchUrl.searchParams.set("s", object.name || object.commonName || "");
+    sourceLink.href = searchUrl.href;
+    sourceLink.hidden = false;
+    status.textContent = "Recherche d’une image astronomique…";
+
+    try {
+      const imageData = await findAstronomyImage(object);
+      if (currentRequestId !== requestId) return;
+      if (!imageData) {
+        status.textContent = "Aucune image de cet objet n’a été trouvée sur le site.";
+        return;
+      }
+
+      const image = document.createElement("img");
+      image.src = imageData.imageUrl;
+      image.alt = imageData.alt;
+      image.loading = "lazy";
+      image.decoding = "async";
+      image.referrerPolicy = "no-referrer";
+      image.addEventListener("error", () => {
+        if (currentRequestId !== requestId) return;
+        image.remove();
+        status.textContent = "Image indisponible ; consultez la fiche du site.";
+      }, { once: true });
+      objectPreview.replaceChildren(image);
+      sourceLink.href = imageData.articleUrl;
+      status.textContent = "Image : Le Journal de l’Astronomie.";
+    } catch (error) {
+      if (currentRequestId !== requestId) return;
+      status.textContent = "Image indisponible ; consultez la fiche du site.";
+      console.error("Chargement de l’image astronomique impossible.", error);
+    }
+  };
+}
+
 function installNativeNavigation() {
   const items = [
-    { href: "/beta_sky", route: "/beta_sky", label: "Vue 3D du ciel", icon: "icon-globe-2" },
-    { href: "/", route: "/", label: "Mode Encodeurs", icon: "icon-telescope" },
-    { href: "/station", route: "/station", label: "Mise en station", icon: "icon-crosshair" },
-    { href: "/config", route: "/config", label: "Configuration", icon: "icon-settings" },
-    { href: "/help", route: "/help", label: "Aide", icon: "icon-book-open" }
+    { href: "/beta_sky.html", route: "/beta_sky", label: "Vue 3D du ciel", icon: "icon-globe-2" },
+    { href: "/index.html", route: "/", label: "Mode Encodeurs", icon: "icon-telescope" },
+    { href: "/station.html", route: "/station", label: "Mise en station", icon: "icon-crosshair" },
+    { href: "/config.html", route: "/config", label: "Configuration", icon: "icon-settings" },
+    { href: "/help.html", route: "/help", label: "Aide", icon: "icon-book-open" }
   ];
   const currentPath = window.location.pathname.replace(/\.html?$/, "").replace(/\/+$/, "") || "/";
   const currentRoute = ({
+    "/": "/beta_sky",
     "/index": "/",
     "/calib_page": "/station",
     "/simu": "/",
     "/releasenotes": "/help"
   })[currentPath] || currentPath;
   const navigation = document.querySelector(".bottom-nav");
+  const nightModeToggle = document.getElementById("nightModeToggle");
 
   if (navigation) {
     navigation.setAttribute("aria-label", "Navigation principale");
@@ -145,7 +206,6 @@ function installNativeNavigation() {
     }));
   }
 
-  const nightModeToggle = document.getElementById("nightModeToggle");
   if (nightModeToggle) {
     nightModeToggle.className = "dobson-night-toggle";
     nightModeToggle.innerHTML = '<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-moon"></use></svg>';
@@ -158,13 +218,19 @@ function installSkySensorControls() {
   if (!scene) return;
 
   document.body.classList.add("dobson-sky-mobile");
+  const sceneMenu = document.createElement("details");
+  sceneMenu.className = "dobson-scene-menu";
+  sceneMenu.innerHTML = '<summary aria-label="Afficher les commandes de la vue du ciel" title="Commandes de la vue du ciel"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-chevron-down"></use></svg></summary><div class="dobson-scene-menu-content"></div>';
+  const sceneMenuContent = sceneMenu.querySelector(".dobson-scene-menu-content");
+  document.body.appendChild(sceneMenu);
+
   const modeButton = document.createElement("button");
   modeButton.id = "dobson-sensor-mode";
   modeButton.type = "button";
   modeButton.className = "dobson-sensor-mode";
   modeButton.setAttribute("aria-pressed", "false");
   modeButton.innerHTML = '<svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-compass"></use></svg><span></span>';
-  scene.appendChild(modeButton);
+  sceneMenuContent.appendChild(modeButton);
 
   const modeLabel = modeButton.querySelector("span");
   const sensorStatus = document.createElement("output");
@@ -178,7 +244,8 @@ function installSkySensorControls() {
   let sensorErrorListener;
   let sensorsStarted = false;
   let skyTrackingActive = false;
-  let autoFollow = localStorage.getItem("dobson-sky-control-mode-v2") !== "touch";
+  let autoFollow = localStorage.getItem("dobson-sky-control-mode-v3") !== "touch";
+  let autoFollowBaseline;
   let lastSensorStatus = 0;
   let lastOrientation;
   const gestureStarts = new Map();
@@ -188,11 +255,12 @@ function installSkySensorControls() {
   sceneTools.className = "dobson-scene-tools";
   sceneTools.setAttribute("role", "group");
   sceneTools.setAttribute("aria-label", "Actions rapides de la vue du ciel");
-  for (const id of ["openSearchTargetModalBtn", "centerButton", "manualFullscreenBtn"]) {
+  for (const id of ["centerButton", "manualFullscreenBtn"]) {
     const button = document.getElementById(id);
     if (button) sceneTools.appendChild(button);
   }
   document.querySelector(".scene-action-toolbar")?.replaceWith(sceneTools);
+  sceneMenuContent.appendChild(sceneTools);
 
   const settingsButton = document.getElementById("openSettingsModalBtn");
   settingsButton?.remove();
@@ -201,22 +269,28 @@ function installSkySensorControls() {
   if (alignment) {
     const alignmentPanel = document.createElement("details");
     alignmentPanel.className = "dobson-scene-alignment";
-    alignmentPanel.innerHTML = '<summary aria-label="Ouvrir les réglages d’offset" title="Réglages d’offset"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-gamepad-2"></use></svg></summary><div class="dobson-scene-alignment-content"><span>Offset AZ / ALT</span></div>';
-    alignmentPanel.querySelector(".dobson-scene-alignment-content").appendChild(alignment);
-    scene.appendChild(alignmentPanel);
+    alignmentPanel.innerHTML = '<summary aria-label="Ouvrir les réglages d’offset" title="Réglages d’offset"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-gamepad-2"></use></svg><span>Réglages d’offset</span></summary><div class="dobson-scene-alignment-content"><span>Offset AZ / ALT</span></div>';
+    const alignmentContent = alignmentPanel.querySelector(".dobson-scene-alignment-content");
+    alignmentContent.appendChild(alignment);
+    const offsetReadout = document.querySelector("#viewReadout");
+    if (offsetReadout) {
+      offsetReadout.classList.remove("scene-label", "view");
+      offsetReadout.classList.add("dobson-scene-offset-readout");
+      alignmentContent.appendChild(offsetReadout);
+    }
+    sceneMenuContent.appendChild(alignmentPanel);
   }
 
   const timeToolbar = controls?.querySelector(".unified-toolbar");
   if (timeToolbar) {
     const timePanel = document.createElement("details");
     timePanel.className = "dobson-scene-time-panel";
-    timePanel.innerHTML = '<summary aria-label="Régler la date et l’heure du ciel" title="Date et heure"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-clock-3"></use></svg></summary><div class="dobson-scene-time-content"></div>';
+    timePanel.innerHTML = '<summary aria-label="Régler la date et l’heure du ciel" title="Date et heure"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-clock-3"></use></svg><span>Date et heure</span></summary><div class="dobson-scene-time-content"></div>';
     timePanel.querySelector(".dobson-scene-time-content").appendChild(timeToolbar);
-    scene.appendChild(timePanel);
+    sceneMenuContent.appendChild(timePanel);
   }
 
   controls?.querySelector(".magnitude-filter")?.remove();
-  scene.appendChild(sceneTools);
 
   const getPointingOrientation = (orientation) => ({
     ...orientation,
@@ -237,7 +311,7 @@ function installSkySensorControls() {
     modeButton.title = autoFollow ? "Capteurs actifs — toucher pour naviguer au doigt" : "Navigation tactile — toucher pour suivre les capteurs";
     modeLabel.textContent = autoFollow ? "Auto" : "Doigt";
     sensorStatus.textContent = autoFollow
-      ? "Capteurs automatiques : attente du pointage vers le ciel"
+      ? "Capteurs automatiques : attente d’un mouvement du téléphone"
       : "Navigation tactile";
   };
 
@@ -264,8 +338,18 @@ function installSkySensorControls() {
       const altitude = Number.isFinite(pointingOrientation.altitude)
         ? pointingOrientation.altitude
         : 90 - Math.abs(pointingOrientation.pitch);
-      if (autoFollow && !skyTrackingActive && altitude >= 2) skyTrackingActive = true;
-      if (skyTrackingActive || autoFollow && Math.abs(altitude) < 2) {
+      const currentOrientation = {
+        azimuth: pointingOrientation.azimuth,
+        altitude: pointingOrientation.altitude
+      };
+      if (autoFollow && !skyTrackingActive) {
+        if (altitude >= 2 || hasSignificantSkyMotion(autoFollowBaseline, currentOrientation)) {
+          skyTrackingActive = true;
+        } else if (!autoFollowBaseline) {
+          autoFollowBaseline = currentOrientation;
+        }
+      }
+      if (skyTrackingActive) {
         lastOrientation = orientation;
         publishOrientation(orientation);
       }
@@ -275,7 +359,7 @@ function installSkySensorControls() {
         sensorStatus.textContent = autoFollow
           ? skyTrackingActive
             ? `Pointage automatique · altitude ${altitude.toFixed(0)}°`
-            : "En attente de pointer vers le ciel"
+            : "Déplacez le téléphone pour activer le pointage"
           : "Navigation tactile";
       }
     });
@@ -288,7 +372,7 @@ function installSkySensorControls() {
     } catch (error) {
       await stopSensors();
       autoFollow = false;
-      localStorage.setItem("dobson-sky-control-mode-v2", "touch");
+      localStorage.setItem("dobson-sky-control-mode-v3", "touch");
       updateMode();
       sensorStatus.textContent = error.message || "Impossible d’activer les capteurs.";
       throw error;
@@ -297,7 +381,9 @@ function installSkySensorControls() {
 
   const enableAutoFollow = async () => {
     autoFollow = true;
-    localStorage.setItem("dobson-sky-control-mode-v2", "auto");
+    autoFollowBaseline = undefined;
+    skyTrackingActive = false;
+    localStorage.setItem("dobson-sky-control-mode-v3", "auto");
     updateMode();
     try {
       await startSensors();
@@ -310,7 +396,7 @@ function installSkySensorControls() {
     if (!autoFollow) return;
     autoFollow = false;
     skyTrackingActive = false;
-    localStorage.setItem("dobson-sky-control-mode-v2", "touch");
+    localStorage.setItem("dobson-sky-control-mode-v3", "touch");
     updateMode();
     stopSensors().catch((error) => {
       sensorStatus.textContent = error.message || "Impossible d’arrêter les capteurs.";
@@ -381,12 +467,113 @@ function installSkySettingsSection(connectionPanel) {
     </div>`;
   const currentProjection = configForm.querySelector("#projectionModeSelect");
   const projectionSection = currentProjection?.closest(".settings-section");
-  if (projectionSection) projectionSection.insertAdjacentElement("afterend", section);
-  else configForm.prepend(section);
+  configForm.prepend(section);
 
-  const connectionContent = section.querySelector(".dobson-config-sky-content");
-  connectionPanel.classList.add("dobson-config-connection-panel");
-  connectionContent.appendChild(connectionPanel);
+  const skyContent = section.querySelector(".dobson-config-sky-content");
+  if (projectionSection) {
+    projectionSection.classList.add("dobson-projection-options");
+    skyContent.prepend(projectionSection);
+  }
+
+  const findSection = (prefix, parent = configForm) => [...parent.children].find((element) =>
+    element.matches("details.settings-section")
+      && element.querySelector(":scope > summary")?.textContent.trim().startsWith(prefix));
+  const technicalSection = document.createElement("details");
+  technicalSection.className = "settings-section dobson-technical-options";
+  technicalSection.innerHTML = `
+    <summary>Paramètres techniques<svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-chevron-down"></use></svg></summary>
+    <div class="settings-content dobson-technical-content"></div>`;
+  const technicalContent = technicalSection.querySelector(".dobson-technical-content");
+  for (const prefix of ["Encodeurs", "Broches GPIO", "Sens de rotation"]) {
+    const subsection = findSection(prefix);
+    if (subsection) technicalContent.appendChild(subsection);
+  }
+
+  const locationSection = document.createElement("details");
+  locationSection.className = "settings-section dobson-location-options";
+  locationSection.innerHTML = `
+    <summary>Lieu d’observation<svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-chevron-down"></use></svg></summary>
+    <div class="settings-content dobson-location-content"></div>`;
+  const locationContent = locationSection.querySelector(".dobson-location-content");
+  for (const prefix of ["Lieu d'observation actif", "Ajouter un nouveau lieu"]) {
+    const subsection = findSection(prefix);
+    if (subsection) locationContent.appendChild(subsection);
+  }
+
+  const card = configForm.closest(".card");
+  const advancedSection = [...card.children].find((element) =>
+    element !== configForm
+      && element.matches("details.settings-section")
+      && element.querySelector(":scope > summary")?.textContent.trim().startsWith("Outils avancés"));
+  if (advancedSection) technicalContent.appendChild(advancedSection);
+  connectionPanel.classList.add("settings-section", "dobson-config-connection-panel");
+  connectionPanel.querySelector("summary").insertAdjacentHTML("beforeend", '<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-chevron-down"></use></svg>');
+  technicalContent.appendChild(connectionPanel);
+  const configurationStatus = document.createElement("output");
+  configurationStatus.className = "dobson-config-save-status";
+  configurationStatus.setAttribute("role", "status");
+  configurationStatus.setAttribute("aria-live", "polite");
+  technicalContent.appendChild(configurationStatus);
+
+  configForm.querySelector('button[type="submit"]')?.remove();
+  configForm.removeAttribute("onsubmit");
+  configForm.append(locationSection, technicalSection);
+
+  let configSaveTimer;
+  let configSaveQueue = Promise.resolve();
+  const persistConfiguration = () => {
+    configSaveQueue = configSaveQueue.then(async () => {
+      const latitudeText = document.querySelector("#lat").value.trim();
+      const longitudeText = document.querySelector("#lon").value.trim();
+      const latitude = Number(latitudeText);
+      const longitude = Number(longitudeText);
+      if (!latitudeText || !longitudeText || !Number.isFinite(latitude) || !Number.isFinite(longitude)
+        || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+        configurationStatus.textContent = "Saisissez une latitude et une longitude valides.";
+        return;
+      }
+
+      const siteSelect = document.querySelector("#siteSelect");
+      const parameters = new URLSearchParams({
+        action: "set_config",
+        ticksAZ: document.querySelector("#ticksAZ").value,
+        ticksALT: document.querySelector("#ticksALT").value,
+        revAZ: document.querySelector("#revAZ").checked ? "1" : "0",
+        revALT: document.querySelector("#revALT").checked ? "1" : "0",
+        lat: latitudeText,
+        lon: longitudeText,
+        siteName: siteSelect.selectedOptions[0]?.textContent.trim() || "Lieu personnalisé"
+      });
+
+      localStorage.setItem("dobson-mobile-location", JSON.stringify({ latitude, longitude }));
+      try {
+        const response = await fetch(`/cmd?${parameters}`);
+        if (!response.ok) throw new Error("Impossible d’enregistrer la configuration.");
+        const result = await response.json();
+        if (result.status !== "OK") throw new Error("L’ESP32 n’a pas confirmé la configuration.");
+        configurationStatus.textContent = "";
+      } catch (error) {
+        configurationStatus.textContent = error.message || "Impossible d’enregistrer la configuration.";
+        console.error("Enregistrement automatique de la configuration impossible.", error);
+      }
+    });
+  };
+  const scheduleConfigurationSave = () => {
+    clearTimeout(configSaveTimer);
+    configSaveTimer = setTimeout(persistConfiguration, 300);
+  };
+  const configurationFields = new Set(["ticksAZ", "ticksALT", "revAZ", "revALT", "siteSelect", "lat", "lon"]);
+  configForm.addEventListener("change", (event) => {
+    if (configurationFields.has(event.target.id)) scheduleConfigurationSave();
+  });
+  const siteSelect = configForm.querySelector("#siteSelect");
+  if (siteSelect) {
+    new MutationObserver(scheduleConfigurationSave).observe(siteSelect, { childList: true });
+  }
+  configForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    scheduleConfigurationSave();
+  });
 
   const inputs = [...section.querySelectorAll("[data-sky-pref]")];
   const status = section.querySelector(".dobson-sky-preference-status");
@@ -440,7 +627,7 @@ function installSkySettingsSection(connectionPanel) {
     );
     const response = await fetch(`/save_sky_prefs?${query}`);
     if (!response.ok) throw new Error("Impossible d’enregistrer les options du ciel.");
-    status.textContent = "Options du ciel enregistrées.";
+    status.textContent = "";
   };
   window.__saveMobileSkyPrefs = saveSkyPreferences;
 
@@ -457,12 +644,17 @@ function installSkySettingsSection(connectionPanel) {
         input.checked = value === undefined ? true : value === true || value === 1 || value === "1";
         input.disabled = false;
       }
+      magnitude.disabled = false;
       magnitude.value = positionFromMagnitude(Number(skyPreferences.mag ?? 99));
       updateMagnitudeLabel();
       syncNameControls();
       section.classList.add("dobson-sky-preferences-ready");
       status.textContent = "";
     } catch (error) {
+      for (const input of inputs) input.disabled = false;
+      magnitude.disabled = false;
+      syncNameControls();
+      section.classList.add("dobson-sky-preferences-ready");
       status.textContent = error.message || "Impossible de charger les options du ciel.";
       console.error("Chargement des options du ciel impossible.", error);
     }
@@ -496,6 +688,7 @@ function installAugmentedReality() {
   const scene = document.querySelector("#scene");
   const status = document.querySelector("#skyStatus");
   if (!toggle || !video || !scene) return;
+  document.querySelector(".dobson-scene-menu-content")?.appendChild(toggle);
 
   let stream;
   const stop = () => {
@@ -552,9 +745,10 @@ function installPlateSolver() {
   section.innerHTML = `
     <summary aria-label="Ouvrir la résolution astrométrique" title="Résolution astrométrique">
       <svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-sparkles"></use></svg>
+      <span>Résolution d’image</span>
     </summary>
     <div class="dobson-solver-content">
-      <p>Résoudre une image du ciel avec Astrometry.net.</p>
+      <p>Identifier le centre et l’échelle d’une image du ciel avec Astrometry.net. Une clé API et une image sont nécessaires.</p>
       <label for="dobson-astrometry-key">Clé API Astrometry.net</label>
       <input id="dobson-astrometry-key" type="password" autocomplete="off" placeholder="Saisir votre clé API">
       <div class="dobson-solver-actions">
@@ -568,7 +762,7 @@ function installPlateSolver() {
         L’image ne sera envoyée à Astrometry.net qu’à votre demande et restera privée.
       </output>
     </div>`;
-  scene.appendChild(section);
+  document.querySelector(".dobson-scene-menu-content")?.appendChild(section);
 
   const apiKeyInput = section.querySelector("#dobson-astrometry-key");
   const imageInput = section.querySelector("#dobson-solver-image");

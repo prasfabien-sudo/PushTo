@@ -362,8 +362,8 @@ const char HTTP_CONFIG_PAGE[] PROGMEM = R"rawliteral(
           document.getElementById('revAZ').checked = d.revAZ || false;
           document.getElementById('revALT').checked = d.revALT || false;
           
-          const lat = d.lat || 45.89;
-          const lon = d.lon || 6.05;
+          const lat = d.lat !== undefined ? d.lat : 45.89;
+          const lon = d.lon !== undefined ? d.lon : 6.05;
           document.getElementById('lat').value = lat;
           document.getElementById('lon').value = lon;
 

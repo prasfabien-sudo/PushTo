@@ -193,6 +193,21 @@ function makeMobileSkyRendererResponsive(html) {
       "résolution de rendu adaptée aux écrans mobiles"
     ],
     [
+      "fieldOfView = Math.min(75, fieldOfView + 4);",
+      "fieldOfView = Math.min(window.__dobsonMobileApp ? 120 : 75, fieldOfView + 4);",
+      "dézoom mobile élargi sans modifier la limite du firmware"
+    ],
+    [
+      "fieldOfView = Math.max(2, Math.min(75, fieldOfView * pinchDistance / distance));",
+      "fieldOfView = Math.max(2, Math.min(window.__dobsonMobileApp ? 120 : 75, fieldOfView * pinchDistance / distance));",
+      "limite de dézoom mobile au pincement"
+    ],
+    [
+      "fieldOfView = Math.max(2, Math.min(75, fieldOfView + Math.sign(event.deltaY) * 2));",
+      "fieldOfView = Math.max(2, Math.min(window.__dobsonMobileApp ? 120 : 75, fieldOfView + Math.sign(event.deltaY) * 2));",
+      "limite de dézoom mobile à la molette"
+    ],
+    [
       `      const keyframes = [
         { alt: -18, top: '#020305', mid: '#05080f', bot: '#080c14' },
         { alt: -12, top: '#05080f', mid: '#0f1423', bot: '#1b1b3a' },
