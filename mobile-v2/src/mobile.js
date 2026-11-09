@@ -535,6 +535,7 @@ function installSkySettingsSection(connectionPanel) {
       <output role="status" aria-live="polite"></output>
     </div>`;
   technicalContent.appendChild(astrometrySection);
+  installZwoCameraSettings(technicalContent);
   const apiKeyInput = astrometrySection.querySelector("#dobson-astrometry-key");
   const apiKeyStatus = astrometrySection.querySelector("output");
   DobsonNative.getAstrometryApiKey().then(({ apiKey }) => {
@@ -752,6 +753,14 @@ function installAugmentedReality() {
   if (!toggle || !video || !scene) return;
   document.querySelector(".dobson-scene-menu-content")?.appendChild(toggle);
   toggle.title = "Caméra en réalité augmentée et pointage automatique";
+  const sourceLabel = document.createElement("label");
+  sourceLabel.className = "dobson-ar-source";
+  sourceLabel.hidden = true;
+  sourceLabel.innerHTML = 'Source caméra <select id="dobson-ar-source-select"><option value="phone">Téléphone</option><option value="zwo">ZWO ASI224</option></select>';
+  toggle.insertAdjacentElement("afterend", sourceLabel);
+  const sourceSelect = sourceLabel.querySelector("select");
+  let arSource = localStorage.getItem("dobson-mobile-ar-source") === "zwo" ? "zwo" : "phone";
+  sourceSelect.value = arSource;
 
   const capture = document.createElement("button");
   capture.type = "button";
@@ -826,8 +835,16 @@ function installAugmentedReality() {
   });
 
   let stream;
+  let zwoRunning = false;
   let starting = false;
   let generation = 0;
+  const zwoView = document.createElement("img");
+  zwoView.className = "dobson-ar-zwo-view";
+  zwoView.alt = "";
+  zwoView.setAttribute("aria-hidden", "true");
+  zwoView.hidden = true;
+  zwoView.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none";
+  video.insertAdjacentElement("afterend", zwoView);
   const stop = () => {
     generation++;
     if (stream) {
@@ -835,6 +852,9 @@ function installAugmentedReality() {
       stream = undefined;
     }
     video.srcObject = null;
+    zwoRunning = false;
+    zwoView.hidden = true;
+    zwoView.removeAttribute("src");
     scene.classList.remove("dobson-ar-active");
     toggle.setAttribute("aria-pressed", "false");
     toggle.setAttribute("aria-label", "Activer la caméra en réalité augmentée");
@@ -844,11 +864,25 @@ function installAugmentedReality() {
   };
 
   toggle.addEventListener("click", async () => {
-    if (stream) {
+    if (stream || zwoRunning) {
       stop();
       return;
     }
     if (starting) return;
+    if (arSource === "zwo") {
+      starting = true;
+      const requestGeneration = generation;
+      try {
+        await startZwoSource(requestGeneration);
+      } catch (error) {
+        stop();
+        status.textContent = error.message || "Impossible de démarrer la caméra ZWO.";
+        console.error("Activation de la caméra ZWO impossible.", error);
+      } finally {
+        starting = false;
+      }
+      return;
+    }
     if (!navigator.mediaDevices?.getUserMedia) {
       status.textContent = "La caméra n’est pas disponible sur cet appareil.";
       console.error(status.textContent);
@@ -885,22 +919,63 @@ function installAugmentedReality() {
     }
   });
 
+  const startZwoSource = async (requestGeneration) => {
+    const zwoStatus = await DobsonNative.zwoStatus();
+    if (!zwoStatus.connected) {
+      throw new Error("La caméra ZWO n’est pas connectée. Connectez-la dans les paramètres techniques.");
+    }
+    if (requestGeneration !== generation) return;
+    zwoRunning = true;
+    zwoView.hidden = false;
+    scene.classList.add("dobson-ar-active");
+    toggle.setAttribute("aria-pressed", "true");
+    toggle.setAttribute("aria-label", "Désactiver la caméra en réalité augmentée");
+    toggle.textContent = "Arrêter AR";
+    capture.hidden = false;
+    openPhoto.hidden = !capturedImage;
+    await window.__dobsonEnableAutoFollow({ immediate: true });
+    pumpZwoFrames(requestGeneration);
+  };
+  const pumpZwoFrames = async (requestGeneration) => {
+    while (zwoRunning && requestGeneration === generation) {
+      try {
+        const frame = await DobsonNative.zwoGetFrame();
+        if (!zwoRunning || requestGeneration !== generation) break;
+        zwoView.src = frame.dataUrl;
+      } catch (error) {
+        stop();
+        status.textContent = error.message || "Le flux de la caméra ZWO s’est interrompu.";
+        console.error("Lecture d’une trame ZWO impossible.", error);
+        break;
+      }
+    }
+  };
+  const captureVideoFrame = async () => {
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) {
+      throw new Error("La caméra n’a pas encore fourni d’image. Réessayez dans un instant.");
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Impossible de préparer la photo.");
+    context.drawImage(video, 0, 0);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.95));
+    if (!blob) throw new Error("Impossible de créer la photo.");
+    return blob;
+  };
+  const captureZwoFrame = async () => {
+    const frame = await DobsonNative.zwoGetFrame();
+    const response = await fetch(frame.dataUrl);
+    return response.blob();
+  };
+
   capture.addEventListener("click", async () => {
     if (capturing) return;
     capturing = true;
     capture.disabled = true;
     try {
-      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) {
-        throw new Error("La caméra n’a pas encore fourni d’image. Réessayez dans un instant.");
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("Impossible de préparer la photo.");
-      context.drawImage(video, 0, 0);
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.95));
-      if (!blob) throw new Error("Impossible de créer la photo.");
+      const blob = zwoRunning ? await captureZwoFrame() : await captureVideoFrame();
       capturedImage = new File([blob], `ciel-${Date.now()}.jpg`, { type: "image/jpeg" });
       if (photoUrl) URL.revokeObjectURL(photoUrl);
       photoUrl = URL.createObjectURL(capturedImage);
@@ -941,8 +1016,29 @@ function installAugmentedReality() {
     }
   });
 
+  sourceSelect.addEventListener("change", () => {
+    arSource = sourceSelect.value === "zwo" ? "zwo" : "phone";
+    localStorage.setItem("dobson-mobile-ar-source", arSource);
+    if (stream || zwoRunning) stop();
+  });
+  const refreshSourceSelector = async () => {
+    try {
+      const zwoStatus = await DobsonNative.zwoStatus();
+      sourceLabel.hidden = !zwoStatus.connected;
+      if (!zwoStatus.connected && arSource === "zwo") {
+        arSource = "phone";
+        sourceSelect.value = arSource;
+        localStorage.setItem("dobson-mobile-ar-source", arSource);
+      }
+    } catch {
+      sourceLabel.hidden = true;
+    }
+  };
+  refreshSourceSelector();
+  window.addEventListener("dobson-zwo-changed", refreshSourceSelector);
+
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden && (stream || starting)) stop();
+    if (document.hidden && (stream || zwoRunning || starting)) stop();
   });
   window.addEventListener("pagehide", () => {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
@@ -953,6 +1049,197 @@ async function solveImage(image, reportStatus) {
   const { apiKey } = await DobsonNative.getAstrometryApiKey();
   if (!apiKey) throw new Error("Enregistrez d’abord votre clé API dans les paramètres techniques.");
   return solveWithAstrometry(image, apiKey, reportStatus);
+}
+
+const zwoConfigStorageKey = "dobson-mobile-zwo-config";
+const zwoChangedEvent = "dobson-zwo-changed";
+const defaultZwoConfig = { exposureMs: 100, gain: 100 };
+
+function readZwoConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(zwoConfigStorageKey) || "null");
+    return {
+      exposureMs: Number.isFinite(saved?.exposureMs) ? saved.exposureMs : defaultZwoConfig.exposureMs,
+      gain: Number.isFinite(saved?.gain) ? saved.gain : defaultZwoConfig.gain
+    };
+  } catch {
+    return { ...defaultZwoConfig };
+  }
+}
+
+function installZwoCameraSettings(container) {
+  if (!container) return;
+  const section = document.createElement("details");
+  section.className = "settings-section dobson-zwo-options";
+  section.innerHTML = `
+    <summary>Caméra ZWO ASI224<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-chevron-down"></use></svg></summary>
+    <div class="settings-content dobson-zwo-settings">
+      <output class="dobson-zwo-status" role="status" aria-live="polite">Vérification de la caméra…</output>
+      <label for="dobson-zwo-exposure">Exposition (ms)</label>
+      <input id="dobson-zwo-exposure" type="number" inputmode="decimal" min="0.1" max="10000" step="0.1">
+      <label for="dobson-zwo-gain">Gain</label>
+      <input id="dobson-zwo-gain" type="number" inputmode="numeric" min="0" max="600" step="1">
+      <div class="dobson-solver-actions">
+        <button id="dobson-zwo-connect" type="button">Connecter la caméra</button>
+        <button id="dobson-zwo-apply" type="button">Appliquer les réglages</button>
+        <button id="dobson-zwo-disconnect" type="button">Déconnecter</button>
+      </div>
+      <details class="dobson-zwo-journal">
+        <summary>Journal de la caméra<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-clipboard-list"></use></svg></summary>
+        <div class="settings-content">
+          <label for="dobson-zwo-journal-content">Événements de connexion et erreurs</label>
+          <textarea id="dobson-zwo-journal-content" class="dobson-zwo-journal-content" readonly rows="10" spellcheck="false"></textarea>
+          <div class="dobson-solver-actions">
+            <button id="dobson-zwo-journal-refresh" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-refresh"></use></svg>Actualiser</button>
+            <button id="dobson-zwo-journal-copy" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-copy"></use></svg>Copier</button>
+            <button id="dobson-zwo-journal-clear" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-trash-2"></use></svg>Effacer</button>
+          </div>
+        </div>
+      </details>
+    </div>`;
+  container.appendChild(section);
+
+  const statusOutput = section.querySelector(".dobson-zwo-status");
+  const exposureInput = section.querySelector("#dobson-zwo-exposure");
+  const gainInput = section.querySelector("#dobson-zwo-gain");
+  const connectButton = section.querySelector("#dobson-zwo-connect");
+  const applyButton = section.querySelector("#dobson-zwo-apply");
+  const disconnectButton = section.querySelector("#dobson-zwo-disconnect");
+  const savedConfig = readZwoConfig();
+  exposureInput.value = String(savedConfig.exposureMs);
+  gainInput.value = String(savedConfig.gain);
+
+  const readControls = () => {
+    const exposureMs = Number(exposureInput.value);
+    const gain = Number(gainInput.value);
+    if (!Number.isFinite(exposureMs) || exposureMs <= 0 || !Number.isFinite(gain) || gain < 0) {
+      throw new Error("Saisissez une exposition positive et un gain valide.");
+    }
+    return { exposureMs, gain };
+  };
+  const refresh = async () => {
+    try {
+      const status = await DobsonNative.zwoStatus();
+      if (status.connected) {
+        statusOutput.textContent = `Caméra connectée : ${status.name} (${status.width} x ${status.height}).`;
+      } else if (status.usbDetected) {
+        statusOutput.textContent = `Caméra ${status.name || "ZWO"} détectée, non connectée.`;
+      } else {
+        statusOutput.textContent = "Aucune caméra ZWO détectée. Branchez-la en USB OTG.";
+      }
+      applyButton.disabled = !status.connected;
+      disconnectButton.disabled = !status.connected;
+      return status;
+    } catch (error) {
+      statusOutput.textContent = "Caméra ZWO indisponible sur cet appareil.";
+      applyButton.disabled = true;
+      disconnectButton.disabled = true;
+      console.error("Lecture de l’état de la caméra ZWO impossible.", error);
+      return null;
+    }
+  };
+  const connectCamera = async (controls) => {
+    const current = await DobsonNative.zwoStatus();
+    if (current.connected) {
+      await DobsonNative.zwoSetControls(controls);
+    } else {
+      const { cameras } = await DobsonNative.zwoListCameras();
+      if (!cameras.length) throw new Error("Aucune caméra ZWO détectée. Branchez-la en USB OTG puis réessayez.");
+      await DobsonNative.zwoOpen({ index: cameras[0].index, ...controls });
+    }
+    saveZwoConfig(controls);
+  };
+
+  refresh().then((status) => {
+    if (!status || status.connected || !status.usbDetected || !localStorage.getItem(zwoConfigStorageKey)) return;
+    connectCamera(readZwoConfig())
+      .then(() => refresh())
+      .then(() => window.dispatchEvent(new CustomEvent(zwoChangedEvent)))
+      .catch((error) => {
+        statusOutput.textContent = error.message || "Reconnexion automatique de la caméra ZWO impossible.";
+        console.error("Reconnexion automatique de la caméra ZWO impossible.", error);
+      });
+  });
+
+  connectButton.addEventListener("click", async () => {
+    connectButton.disabled = true;
+    try {
+      const controls = readControls();
+      await connectCamera(controls);
+      await refresh();
+      window.dispatchEvent(new CustomEvent(zwoChangedEvent));
+    } catch (error) {
+      statusOutput.textContent = error.message || "Connexion à la caméra ZWO impossible.";
+      console.error("Connexion à la caméra ZWO impossible.", error);
+    } finally {
+      connectButton.disabled = false;
+    }
+  });
+  applyButton.addEventListener("click", async () => {
+    try {
+      const controls = readControls();
+      await DobsonNative.zwoSetControls(controls);
+      saveZwoConfig(controls);
+      await refresh();
+      statusOutput.textContent = "Réglages appliqués.";
+    } catch (error) {
+      statusOutput.textContent = error.message || "Impossible d’appliquer les réglages.";
+      console.error("Application des réglages ZWO impossible.", error);
+    }
+  });
+  disconnectButton.addEventListener("click", async () => {
+    try {
+      await DobsonNative.zwoClose();
+      await refresh();
+      statusOutput.textContent = "Caméra déconnectée.";
+      window.dispatchEvent(new CustomEvent(zwoChangedEvent));
+    } catch (error) {
+      statusOutput.textContent = error.message || "Impossible de déconnecter la caméra.";
+      console.error("Déconnexion de la caméra ZWO impossible.", error);
+    }
+  });
+
+  const journalDetails = section.querySelector(".dobson-zwo-journal");
+  const journalOutput = section.querySelector("#dobson-zwo-journal-content");
+  const journalRefresh = section.querySelector("#dobson-zwo-journal-refresh");
+  const journalCopy = section.querySelector("#dobson-zwo-journal-copy");
+  const journalClear = section.querySelector("#dobson-zwo-journal-clear");
+  const refreshJournal = async () => {
+    try {
+      const { content } = await DobsonNative.zwoGetLog();
+      journalOutput.value = content || "Journal vide.";
+    } catch (error) {
+      journalOutput.value = "Lecture du journal impossible.";
+      console.error("Lecture du journal ZWO impossible.", error);
+    }
+  };
+  journalDetails.addEventListener("toggle", () => {
+    if (journalDetails.open) refreshJournal();
+  });
+  journalRefresh.addEventListener("click", refreshJournal);
+  journalClear.addEventListener("click", async () => {
+    try {
+      await DobsonNative.zwoClearLog();
+      await refreshJournal();
+    } catch (error) {
+      journalOutput.value = "Effacement du journal impossible.";
+      console.error("Effacement du journal ZWO impossible.", error);
+    }
+  });
+  journalCopy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(journalOutput.value);
+      statusOutput.textContent = "Journal copié dans le presse-papiers.";
+    } catch (error) {
+      journalOutput.select();
+      document.execCommand("copy");
+      statusOutput.textContent = "Journal copié dans le presse-papiers.";
+    }
+  });
+}
+
+function saveZwoConfig(config) {
+  localStorage.setItem(zwoConfigStorageKey, JSON.stringify(config));
 }
 
 function installAdvancedPlateSolver(container) {

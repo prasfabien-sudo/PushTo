@@ -1381,10 +1381,11 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const showGrid = document.getElementById('showGrid').checked;
       if (showGrid) {
         const gridSampleStep = Math.min(2, Math.max(0.25, fieldOfView / 8));
-        // Le pas de la grille s'adapte au champ pour qu'elle reste visible en zoomant
-        const gridSpacing = fieldOfView > 50 ? 30 : fieldOfView > 20 ? 15 : 5;
-        ctx2d.strokeStyle = "rgba(0, 160, 220, 0.35)";
-        ctx2d.lineWidth = 1.2;
+        // Pas fixe : la grille reste présente et stable quel que soit le zoom
+        const gridSpacing = 10;
+        const nightGrid = document.documentElement.dataset.nightMode === 'true';
+        ctx2d.strokeStyle = nightGrid ? "rgba(200, 70, 70, 0.22)" : "rgba(150, 180, 210, 0.2)";
+        ctx2d.lineWidth = 0.6;
         
         // Cercles d'altitude
         for (let altDeg = -90 + gridSpacing; altDeg < 90; altDeg += gridSpacing) {
@@ -1411,8 +1412,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         // Horizon
         {
           const altRad = 0;
-          ctx2d.strokeStyle = "rgba(0, 220, 255, 0.95)";
-          ctx2d.lineWidth = 2.5;
+          ctx2d.strokeStyle = nightGrid ? "rgba(255, 110, 110, 0.7)" : "rgba(120, 200, 255, 0.7)";
+          ctx2d.lineWidth = 1.2;
           let ptsDrawn = 0;
           ctx2d.beginPath();
           for (let aDeg = 0; aDeg <= 360; aDeg += gridSampleStep) {
@@ -1436,7 +1437,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           const azRad = azDeg * Math.PI / 180;
           let ptsDrawn = 0;
           ctx2d.beginPath();
-          for (let altDeg = -80; altDeg <= 90; altDeg += gridSampleStep) {
+          for (let altDeg = -90; altDeg <= 90; altDeg += gridSampleStep) {
             const altRad = altDeg * Math.PI / 180;
             const pos3D = [Math.sin(azRad) * Math.cos(altRad), Math.sin(altRad), Math.cos(azRad) * Math.cos(altRad)];
             const proj = projectPoint(pos3D, { alt: altRad, az: azRad });
@@ -1589,7 +1590,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       viewReadout.textContent = `Offset AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
 
-      const labels = document.createDocumentFragment();
+      // Éléments réutilisés entre les frames pour éviter le clignotement
+      const labelPool = labelsElement.labelPool || (labelsElement.labelPool = []);
+      let labelUsed = 0;
       const labelGal = document.getElementById('labelGal').checked;
       const labelNeb = document.getElementById('labelNeb').checked;
       const labelAmas = document.getElementById('labelAmas').checked;
@@ -1635,8 +1638,16 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
         placedLabels.push({ left: leftPct, top: topPct });
 
-        const label = document.createElement('span');
+        let label = labelPool[labelUsed];
+        if (!label) {
+          label = document.createElement('span');
+          labelPool.push(label);
+          labelsElement.appendChild(label);
+        }
+        labelUsed++;
+        label.style.display = '';
         label.className = isPolaris ? 'object-label polaris' : 'object-label';
+
         
         if (isPolaris) label.style.color = '#ffedcc';
         else if (isPlanetOrBody) label.style.color = '#80d8ff';
@@ -1653,11 +1664,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         else if (isPlanetOrBody) label.textContent = `🪐 ${item.object.name}`;
         else if (item.object.name.startsWith("M") || item.object.name.startsWith("NGC")) {
           label.textContent = `${item.object.name}${item.object.commonName ? ' (' + item.object.commonName + ')' : ''}`;
-        } else label.textContent = item.object.name ? item.object.name : item.object.commonName;
+        }         else label.textContent = item.object.name ? item.object.name : item.object.commonName;
         
-        labels.appendChild(label);
       }
-      labelsElement.replaceChildren(labels);
+      for (let i = labelUsed; i < labelPool.length; i++) labelPool[i].style.display = 'none';
 
       // Étiquettes constellations
       const constLabels = document.createDocumentFragment();

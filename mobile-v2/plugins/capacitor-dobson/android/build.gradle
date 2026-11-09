@@ -40,4 +40,5 @@ repositories {
 
 dependencies {
     implementation project(':capacitor-android')
+    implementation files('libs/zwocamera.jar')
 }

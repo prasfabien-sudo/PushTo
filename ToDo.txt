@@ -3,13 +3,15 @@ Pour compiler en version mobile
 
 Défini dans le fichier mobile-vé/android/local.properties
 $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
+ou C:\Program Files\Eclipse Adoptium\jdk-21.0.13.9-hotspot
+
 $env:ANDROID_HOME="C:\Users\prasf\AppData\Local\Android\Sdk"
 
 
 cd .\mobile-v2
 npm.cmd run cap:sync
 cd mobile-v2/android
-.\gradlew assembleDebug
+.\gradlew assembleDebug --no-daemon
 
 
 Pour tester:

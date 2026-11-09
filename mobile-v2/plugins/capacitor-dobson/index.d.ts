@@ -32,4 +32,32 @@ export interface DobsonNativePlugin {
   getAstrometryApiKey(): Promise<{ apiKey: string }>;
   clearAstrometryApiKey(): Promise<void>;
   saveAstroPhoto(options: { base64: string; filename: string }): Promise<void>;
+  zwoListCameras(): Promise<{ cameras: ZwoCameraInfo[] }>;
+  zwoStatus(): Promise<ZwoStatus>;
+  zwoOpen(options: { index: number; exposureMs?: number; gain?: number }): Promise<ZwoStatus>;
+  zwoSetControls(options: { exposureMs?: number; gain?: number }): Promise<ZwoStatus>;
+  zwoGetFrame(): Promise<{ dataUrl: string; width: number; height: number; timestamp: number }>;
+  zwoClose(): Promise<ZwoStatus>;
+  zwoGetLog(): Promise<{ content: string }>;
+  zwoClearLog(): Promise<void>;
+}
+
+export interface ZwoCameraInfo {
+  index: number;
+  cameraId: number;
+  name: string;
+  maxWidth: number;
+  maxHeight: number;
+  isColor: boolean;
+}
+
+export interface ZwoStatus {
+  connected: boolean;
+  usbDetected: boolean;
+  name: string;
+  width: number;
+  height: number;
+  isColor: boolean;
+  exposureMs: number;
+  gain: number;
 }

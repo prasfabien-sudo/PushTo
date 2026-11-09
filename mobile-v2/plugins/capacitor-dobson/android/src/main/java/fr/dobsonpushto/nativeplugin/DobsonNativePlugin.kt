@@ -20,6 +20,19 @@ import android.provider.MediaStore
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
+import com.zwo.ASICameraProperty
+import com.zwo.ASIConstants
+import com.zwo.ASIImageBuffer
+import com.zwo.ASIUSBManager
+import com.zwo.ZwoCamera
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.getcapacitor.JSArray
@@ -60,6 +73,29 @@ class DobsonNativePlugin : Plugin(), SensorEventListener {
     private var sensorHandler: Handler? = null
     private var database: CatalogDatabase? = null
     private val encoderExecutor = Executors.newSingleThreadExecutor()
+    private val zwoExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "zwo-camera").apply {
+            setUncaughtExceptionHandler { _, error -> zwoLog("Erreur non capturée dans le thread caméra.", error) }
+        }
+    }
+    private val zwoLogMaxBytes = 100_000L
+    private val zwoVendorId = 0x03C3
+    private val zwoSuccess = ASIConstants.ASI_ERROR_CODE.ASI_SUCCESS
+    private val zwoPermissionAction = "fr.dobsonpushto.nativeplugin.ZWO_USB_PERMISSION"
+    private var zwoCamera: ZwoCamera? = null
+    private var zwoBuffer: ASIImageBuffer? = null
+    private var zwoBufferSize = 0
+    private var zwoCameraName = ""
+    private var zwoWidth = 0
+    private var zwoHeight = 0
+    private var zwoIsColor = false
+    private var zwoBayerPattern = 0
+    private var zwoExposureMs = 100.0
+    private var zwoGain = 100
+    private var zwoPendingOpen: ZwoOpenRequest? = null
+    private var zwoPermissionReceiver: BroadcastReceiver? = null
+
+    private class ZwoOpenRequest(val call: PluginCall, val index: Int, val exposureMs: Double, val gain: Int)
 
     @PluginMethod
     fun saveAstroPhoto(call: PluginCall) {
@@ -446,8 +482,416 @@ class DobsonNativePlugin : Plugin(), SensorEventListener {
         }
     }
 
+    @PluginMethod
+    fun zwoListCameras(call: PluginCall) {
+        zwoExecutor.execute {
+            try {
+                ASIUSBManager.initContext(context)
+                val cameras = JSArray()
+                val count = ZwoCamera.getNumOfConnectedCameras()
+                for (index in 0 until count) {
+                    val property = ZwoCamera.getCameraProperty(index).obj as? ASICameraProperty ?: continue
+                    cameras.put(
+                        JSObject()
+                            .put("index", index)
+                            .put("cameraId", property.cameraID)
+                            .put("name", property.name)
+                            .put("maxWidth", property.maxWidth)
+                            .put("maxHeight", property.maxHeight)
+                            .put("isColor", property.isColorCam == 1)
+                    )
+                }
+                call.resolve(JSObject().put("cameras", cameras))
+            } catch (error: Throwable) {
+                zwoLog("Échec de la liste des caméras.", error)
+                rejectZwo(call, "Impossible de lister les caméras ZWO.", error)
+            }
+        }
+    }
+
+    @PluginMethod
+    fun zwoGetLog(call: PluginCall) {
+        zwoExecutor.execute {
+            val content = try {
+                zwoLogFile().takeIf { it.exists() }?.readText() ?: ""
+            } catch (error: Throwable) {
+                "Lecture du journal impossible : ${error.message}"
+            }
+            call.resolve(JSObject().put("content", content))
+        }
+    }
+
+    @PluginMethod
+    fun zwoClearLog(call: PluginCall) {
+        zwoExecutor.execute {
+            zwoLogFile().delete()
+            call.resolve()
+        }
+    }
+
+    @PluginMethod
+    fun zwoStatus(call: PluginCall) {
+        zwoExecutor.execute {
+            call.resolve(zwoStatusObject())
+        }
+    }
+
+    @PluginMethod
+    fun zwoOpen(call: PluginCall) {
+        val request = ZwoOpenRequest(
+            call,
+            call.getInt("index") ?: 0,
+            call.getDouble("exposureMs") ?: zwoExposureMs,
+            call.getInt("gain") ?: zwoGain
+        )
+        zwoExecutor.execute {
+            try {
+                ASIUSBManager.initContext(context)
+                val device = findZwoUsbDevice()
+                if (device == null) {
+                    zwoLog("Aucune caméra ZWO détectée sur le port USB.")
+                    call.reject("Aucune caméra ZWO détectée sur le port USB.")
+                    return@execute
+                }
+                val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
+                if (usbManager.hasPermission(device)) {
+                    openZwoLocked(request)
+                } else {
+                    requestZwoPermission(request, device)
+                }
+            } catch (error: Throwable) {
+                zwoLog("Échec de l'ouverture (préparation).", error)
+                rejectZwo(call, "Impossible d'ouvrir la caméra ZWO.", error)
+            }
+        }
+    }
+
+    @PluginMethod
+    fun zwoSetControls(call: PluginCall) {
+        val requestedExposure = call.getDouble("exposureMs")
+        val requestedGain = call.getInt("gain")
+        zwoExecutor.execute {
+            val camera = zwoCamera
+            if (camera == null) {
+                call.reject("Caméra ZWO non connectée.")
+                return@execute
+            }
+            try {
+                val exposure = (requestedExposure ?: zwoExposureMs).coerceIn(0.1, 30000.0)
+                val gain = (requestedGain ?: zwoGain).coerceIn(0, 600)
+                applyZwoControls(camera, exposure, gain)
+                zwoExposureMs = exposure
+                zwoGain = gain
+                call.resolve(zwoStatusObject())
+            } catch (error: Throwable) {
+                zwoLog("Échec de la modification des réglages.", error)
+                rejectZwo(call, "Impossible de modifier les réglages de la caméra ZWO.", error)
+            }
+        }
+    }
+
+    @PluginMethod
+    fun zwoGetFrame(call: PluginCall) {
+        zwoExecutor.execute {
+            val camera = zwoCamera
+            val buffer = zwoBuffer
+            if (camera == null || buffer == null) {
+                call.reject("Caméra ZWO non connectée.")
+                return@execute
+            }
+            try {
+                val timeoutMs = (zwoExposureMs * 2 + 2000).toInt()
+                val code = camera.getVideoData(buffer, zwoBufferSize, timeoutMs).intVal
+                if (code != zwoSuccess) {
+                    call.reject(zwoErrorMessage(code))
+                    return@execute
+                }
+                val raw = ByteArray(zwoBufferSize)
+                val byteBuffer = buffer.getmByteBuffer()
+                byteBuffer.rewind()
+                byteBuffer.get(raw)
+                val bitmap = rawToBitmap(raw)
+                val output = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 85, output)
+                val width = bitmap.width
+                val height = bitmap.height
+                bitmap.recycle()
+                val encoded = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+                call.resolve(
+                    JSObject()
+                        .put("dataUrl", "data:image/jpeg;base64,$encoded")
+                        .put("width", width)
+                        .put("height", height)
+                        .put("timestamp", System.currentTimeMillis())
+                )
+            } catch (error: Throwable) {
+                zwoLog("Échec de la lecture d'une image.", error)
+                rejectZwo(call, "Impossible de lire une image depuis la caméra ZWO.", error)
+            }
+        }
+    }
+
+    @PluginMethod
+    fun zwoClose(call: PluginCall) {
+        zwoExecutor.execute {
+            try {
+                closeZwoLocked()
+                call.resolve(zwoStatusObject())
+            } catch (error: Throwable) {
+                zwoLog("Échec de la fermeture.", error)
+                rejectZwo(call, "Impossible de fermer la caméra ZWO.", error)
+            }
+        }
+    }
+
+    private fun zwoStatusObject(): JSObject {
+        val connected = zwoCamera != null
+        return JSObject()
+            .put("connected", connected)
+            .put("usbDetected", findZwoUsbDevice() != null)
+            .put("name", if (connected) zwoCameraName else "")
+            .put("width", if (connected) zwoWidth else 0)
+            .put("height", if (connected) zwoHeight else 0)
+            .put("isColor", connected && zwoIsColor)
+            .put("exposureMs", zwoExposureMs)
+            .put("gain", zwoGain)
+    }
+
+    private fun rejectZwo(call: PluginCall, message: String, error: Throwable) {
+        call.reject("$message ${error.javaClass.simpleName} : ${error.message.orEmpty()}")
+    }
+
+    private fun zwoLogFile(): File = File(context.filesDir, "zwo-journal.log")
+
+    private fun zwoLog(message: String, error: Throwable? = null) {
+        try {
+            val file = zwoLogFile()
+            if (file.exists() && file.length() > zwoLogMaxBytes) {
+                file.delete()
+            }
+            val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.FRANCE)
+                .format(java.util.Date())
+            val details = error?.let { "\n" + it.stackTraceToString() }.orEmpty()
+            file.appendText("[$timestamp] $message$details\n")
+        } catch (ignored: Throwable) {
+            // Le journal ne doit jamais bloquer la caméra.
+        }
+    }
+
+    private fun zwoErrorMessage(code: Int): String {
+        return "Erreur caméra ZWO : " + ASIConstants.ASI_ERROR_CODE.getErrorString(code)
+    }
+
+    private fun findZwoUsbDevice(): UsbDevice? {
+        val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
+        return usbManager.deviceList.values.firstOrNull { it.vendorId == zwoVendorId }
+    }
+
+    private fun requestZwoPermission(request: ZwoOpenRequest, device: UsbDevice) {
+        zwoPendingOpen = request
+        if (zwoPermissionReceiver == null) {
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(receiverContext: Context?, intent: Intent?) {
+                    val granted = intent?.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false) == true
+                    zwoExecutor.execute { onZwoPermissionResult(granted) }
+                }
+            }
+            zwoPermissionReceiver = receiver
+            val filter = IntentFilter(zwoPermissionAction)
+            if (Build.VERSION.SDK_INT >= 33) {
+                context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                context.registerReceiver(receiver, filter)
+            }
+        }
+        val permissionIntent = Intent(zwoPermissionAction).setPackage(context.packageName)
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+            (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
+        val pendingIntent = PendingIntent.getBroadcast(context, 0, permissionIntent, flags)
+        val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
+        usbManager.requestPermission(device, pendingIntent)
+    }
+
+    private fun onZwoPermissionResult(granted: Boolean) {
+        val request = zwoPendingOpen ?: return
+        zwoPendingOpen = null
+        unregisterZwoPermissionReceiver()
+        if (!granted) {
+            zwoLog("Permission USB refusée par l'utilisateur.")
+            request.call.reject("Permission USB refusée pour la caméra ZWO.")
+            return
+        }
+        openZwoLocked(request)
+    }
+
+    private fun unregisterZwoPermissionReceiver() {
+        val receiver = zwoPermissionReceiver ?: return
+        zwoPermissionReceiver = null
+        try {
+            context.unregisterReceiver(receiver)
+        } catch (ignored: IllegalArgumentException) {
+            // Le récepteur était déjà retiré.
+        }
+    }
+
+    private fun openZwoLocked(request: ZwoOpenRequest) {
+        val call = request.call
+        var camera: ZwoCamera? = null
+        try {
+            closeZwoLocked()
+            val count = ZwoCamera.getNumOfConnectedCameras()
+            if (request.index !in 0 until count) {
+                call.reject("Caméra ZWO introuvable.")
+                return
+            }
+            val property = ZwoCamera.getCameraProperty(request.index).obj as? ASICameraProperty
+            if (property == null) {
+                call.reject("Propriétés de la caméra ZWO illisibles.")
+                return
+            }
+            val opened = ZwoCamera(property.cameraID)
+            camera = opened
+            val openCode = opened.openCamera().intVal
+            if (openCode != zwoSuccess) {
+                call.reject(zwoErrorMessage(openCode))
+                return
+            }
+            opened.initCamera()
+            zwoLog("Caméra ouverte : ${property.name}, initialisation effectuée.")
+            val width = property.maxWidth.toInt()
+            val height = property.maxHeight.toInt()
+            val roiCode = opened.setRoiFormat(width, height, 1, ASIConstants.ASI_IMG_TYPE.ASI_IMG_RAW8).intVal
+            if (roiCode != zwoSuccess) {
+                zwoLog("Format d'image refusé : ${zwoErrorMessage(roiCode)}")
+                call.reject(zwoErrorMessage(roiCode))
+                return
+            }
+            val exposure = request.exposureMs.coerceIn(0.1, 30000.0)
+            val gain = request.gain.coerceIn(0, 600)
+            applyZwoControls(opened, exposure, gain)
+            val startCode = opened.startVideoCapture().intVal
+            if (startCode != zwoSuccess) {
+                zwoLog("Démarrage du flux refusé : ${zwoErrorMessage(startCode)}")
+                call.reject(zwoErrorMessage(startCode))
+                return
+            }
+            val size = width * height
+            zwoCameraName = property.name
+            zwoWidth = width
+            zwoHeight = height
+            zwoIsColor = property.isColorCam == 1
+            zwoBayerPattern = property.bayerPattern
+            zwoBufferSize = size
+            zwoBuffer = ASIImageBuffer.allocate(size)
+            zwoExposureMs = exposure
+            zwoGain = gain
+            zwoCamera = opened
+            call.resolve(zwoStatusObject())
+        } catch (error: Throwable) {
+            camera?.let { closeQuietly(it) }
+            zwoLog("Échec de l'ouverture de la caméra.", error)
+            rejectZwo(call, "Impossible d'ouvrir la caméra ZWO.", error)
+        }
+    }
+
+    private fun applyZwoControls(camera: ZwoCamera, exposureMs: Double, gain: Int) {
+        val gainCode = camera.setControlValue(ASIConstants.ASI_CONTROL_TYPE.ASI_GAIN, gain.toLong(), 0)
+        if (gainCode != zwoSuccess) {
+            throw IllegalStateException(zwoErrorMessage(gainCode))
+        }
+        val exposureUs = Math.round(exposureMs * 1000.0)
+        val exposureCode = camera.setControlValue(ASIConstants.ASI_CONTROL_TYPE.ASI_EXPOSURE, exposureUs, 0)
+        if (exposureCode != zwoSuccess) {
+            throw IllegalStateException(zwoErrorMessage(exposureCode))
+        }
+    }
+
+    private fun closeZwoLocked() {
+        val camera = zwoCamera ?: return
+        zwoCamera = null
+        zwoBuffer = null
+        zwoBufferSize = 0
+        closeQuietly(camera)
+    }
+
+    private fun closeQuietly(camera: ZwoCamera) {
+        try {
+            camera.stopVideoCapture()
+        } catch (ignored: Exception) {
+            // La caméra peut déjà être arrêtée.
+        }
+        try {
+            camera.closeCamera()
+        } catch (ignored: Exception) {
+            // La caméra peut déjà être fermée.
+        }
+    }
+
+    private fun rawToBitmap(raw: ByteArray): Bitmap {
+        val histogram = IntArray(256)
+        for (value in raw) {
+            histogram[value.toInt() and 0xFF]++
+        }
+        val low = histogramPercentile(histogram, raw.size, 0.005)
+        val high = histogramPercentile(histogram, raw.size, 0.998).coerceAtLeast(low + 1)
+        val lut = IntArray(256) { value -> ((value - low) * 255 / (high - low)).coerceIn(0, 255) }
+        return if (zwoIsColor) rawColorToBitmap(raw, lut) else rawMonoToBitmap(raw, lut)
+    }
+
+    private fun histogramPercentile(histogram: IntArray, total: Int, fraction: Double): Int {
+        val target = (total * fraction).toLong()
+        var cumulative = 0L
+        for (value in histogram.indices) {
+            cumulative += histogram[value]
+            if (cumulative > target) return value
+        }
+        return 255
+    }
+
+    private fun rawMonoToBitmap(raw: ByteArray, lut: IntArray): Bitmap {
+        val pixels = IntArray(zwoWidth * zwoHeight)
+        for (index in pixels.indices) {
+            val gray = lut[raw[index].toInt() and 0xFF]
+            pixels[index] = Color.rgb(gray, gray, gray)
+        }
+        return Bitmap.createBitmap(pixels, zwoWidth, zwoHeight, Bitmap.Config.ARGB_8888)
+    }
+
+    private fun rawColorToBitmap(raw: ByteArray, lut: IntArray): Bitmap {
+        val layout = when (zwoBayerPattern) {
+            ASIConstants.ASI_BAYER_PATTERN.ASI_BAYER_BG -> "BGGR"
+            ASIConstants.ASI_BAYER_PATTERN.ASI_BAYER_GR -> "GRBG"
+            ASIConstants.ASI_BAYER_PATTERN.ASI_BAYER_GB -> "GBRG"
+            else -> "RGGB"
+        }
+        val redOffset = layout.indexOf('R')
+        val blueOffset = layout.indexOf('B')
+        val greenOffsets = layout.indices.filter { layout[it] == 'G' }
+        val offsets = intArrayOf(0, 1, zwoWidth, zwoWidth + 1)
+        val outWidth = zwoWidth / 2
+        val outHeight = zwoHeight / 2
+        val pixels = IntArray(outWidth * outHeight)
+        for (y in 0 until outHeight) {
+            for (x in 0 until outWidth) {
+                val base = 2 * y * zwoWidth + 2 * x
+                val red = lut[raw[base + offsets[redOffset]].toInt() and 0xFF]
+                val green = (
+                    lut[raw[base + offsets[greenOffsets[0]]].toInt() and 0xFF] +
+                        lut[raw[base + offsets[greenOffsets[1]]].toInt() and 0xFF]
+                    ) / 2
+                val blue = lut[raw[base + offsets[blueOffset]].toInt() and 0xFF]
+                pixels[y * outWidth + x] = Color.rgb(red, green, blue)
+            }
+        }
+        return Bitmap.createBitmap(pixels, outWidth, outHeight, Bitmap.Config.ARGB_8888)
+    }
+
     override fun handleOnDestroy() {
         stopSensorUpdates()
+        unregisterZwoPermissionReceiver()
+        zwoPendingOpen = null
+        zwoExecutor.execute { closeZwoLocked() }
+        zwoExecutor.shutdown()
         val connectivity = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         releaseNetworkRequest(connectivity)
         encoderExecutor.shutdownNow()

@@ -188,6 +188,59 @@ function makeMobileCatalogFilteringResponsive(html) {
 function makeMobileSkyRendererResponsive(html) {
   const replacements = [
     [
+      '    let fieldOfView = 34;',
+      `    let fieldOfView = window.__dobsonMobileApp ? 100 : 34;
+    const mobileSkyViewStorageKey = 'dobson-mobile-sky-view-v1';
+    let mobileSkyViewSaveTimer;
+      let mobileSkyViewRestored = false;
+      function saveMobileSkyView() {
+        if (!window.__dobsonMobileApp || !mobileSkyViewRestored) return;
+      try {
+        localStorage.setItem(mobileSkyViewStorageKey, JSON.stringify({
+          fieldOfView,
+          touchHeading,
+          touchElevation,
+          alignOffsetHeading,
+          alignOffsetElevation
+        }));
+      } catch (error) {
+        console.error('Enregistrement de la vue du ciel impossible.', error);
+      }
+    }
+    function scheduleMobileSkyViewSave() {
+      if (!window.__dobsonMobileApp || !mobileSkyViewRestored) return;
+      clearTimeout(mobileSkyViewSaveTimer);
+      mobileSkyViewSaveTimer = setTimeout(saveMobileSkyView, 250);
+    }
+    function restoreMobileSkyView() {
+      if (!window.__dobsonMobileApp) return;
+      mobileSkyViewRestored = true;
+      try {
+        const saved = JSON.parse(localStorage.getItem(mobileSkyViewStorageKey) || 'null');
+        if (!saved || typeof saved !== 'object') {
+          fieldOfView = 100;
+          return;
+        }
+        const values = ['fieldOfView', 'touchHeading', 'touchElevation', 'alignOffsetHeading', 'alignOffsetElevation'];
+        if (!values.every(key => Number.isFinite(Number(saved[key])))) return;
+        fieldOfView = Math.max(2, Math.min(120, Number(saved.fieldOfView)));
+        touchHeading = ((Number(saved.touchHeading) % 360) + 360) % 360;
+        touchElevation = Math.max(-360, Math.min(360, Number(saved.touchElevation)));
+        alignOffsetHeading = ((Number(saved.alignOffsetHeading) % 360) + 360) % 360;
+        alignOffsetElevation = Math.max(-90, Math.min(90, Number(saved.alignOffsetElevation)));
+      } catch (error) {
+        console.error('Restauration de la vue du ciel impossible.', error);
+      }
+    }
+    window.addEventListener('pagehide', saveMobileSkyView);`,
+      "restauration et sauvegarde persistante de la vue mobile"
+    ],
+    [
+      '        await loadSavedSkyPrefs();\n        resizeCanvas();',
+      '        await loadSavedSkyPrefs();\n        restoreMobileSkyView();\n        resizeCanvas();',
+      "restauration du cadrage après les préférences"
+    ],
+    [
       "    const ctx2d = canvas.getContext('2d');",
       "    const ctx2d = window.createDobsonSkyContext(canvas);",
       "initialisation du rendu WebGL mobile avec repli Canvas"
@@ -203,19 +256,63 @@ function makeMobileSkyRendererResponsive(html) {
       "résolution de rendu adaptée aux écrans mobiles"
     ],
     [
-      "fieldOfView = Math.min(75, fieldOfView + 4);",
-      "fieldOfView = Math.min(window.__dobsonMobileApp ? 120 : 75, fieldOfView + 4);",
-      "dézoom mobile élargi sans modifier la limite du firmware"
+      '        if (distance && pinchDistance) fieldOfView = Math.max(2, Math.min(75, fieldOfView * pinchDistance / distance));',
+      '        if (distance && pinchDistance) {\n          fieldOfView = Math.max(2, Math.min(window.__dobsonMobileApp ? 120 : 75, fieldOfView * pinchDistance / distance));\n          scheduleMobileSkyViewSave();\n        }',
+      "enregistrement du zoom au pincement"
     ],
     [
-      "fieldOfView = Math.max(2, Math.min(75, fieldOfView * pinchDistance / distance));",
-      "fieldOfView = Math.max(2, Math.min(window.__dobsonMobileApp ? 120 : 75, fieldOfView * pinchDistance / distance));",
-      "limite de dézoom mobile au pincement"
+      '      fieldOfView = Math.max(2, Math.min(75, fieldOfView + Math.sign(event.deltaY) * 2));',
+      '      fieldOfView = Math.max(2, Math.min(window.__dobsonMobileApp ? 120 : 75, fieldOfView + Math.sign(event.deltaY) * 2));\n      scheduleMobileSkyViewSave();',
+      "enregistrement du zoom à la molette"
     ],
     [
-      "fieldOfView = Math.max(2, Math.min(75, fieldOfView + Math.sign(event.deltaY) * 2));",
-      "fieldOfView = Math.max(2, Math.min(window.__dobsonMobileApp ? 120 : 75, fieldOfView + Math.sign(event.deltaY) * 2));",
-      "limite de dézoom mobile à la molette"
+      "      fieldOfView = Math.max(2, fieldOfView - 4);\n    });\n    document.getElementById('zoomOutBtn').addEventListener('click', () => {\n      fieldOfView = Math.min(75, fieldOfView + 4);\n    });",
+      "      fieldOfView = Math.max(2, fieldOfView - 4);\n      scheduleMobileSkyViewSave();\n    });\n    document.getElementById('zoomOutBtn').addEventListener('click', () => {\n      fieldOfView = Math.min(window.__dobsonMobileApp ? 120 : 75, fieldOfView + 4);\n      scheduleMobileSkyViewSave();\n    });",
+      "enregistrement du zoom par boutons"
+    ],
+    [
+      "      const panPanFactor = (projectionMode !== 'actuel') ? (60 / fieldOfView) : (34 / fieldOfView);\n\n      applyTouchPan(event.clientX - dragPoint.x, event.clientY - dragPoint.y, panPanFactor);",
+      `      const projectionReferenceFov = projectionMode !== 'actuel' ? 60 : 34;
+      const panPanFactor = (projectionReferenceFov / fieldOfView) * (scene.clientWidth / 390);
+
+      applyTouchPan(event.clientX - dragPoint.x, event.clientY - dragPoint.y, panPanFactor);
+      scheduleMobileSkyViewSave();`,
+      "enregistrement du déplacement au doigt"
+    ],
+    [
+      "      alignOffsetElevation = 0;\n      if (projectionMode === 'actuel') fieldOfView = 34;\n      else if (projectionMode === 'stéréo') fieldOfView = 60;\n      else fieldOfView = 45;\n    });",
+      "      alignOffsetElevation = 0;\n      if (projectionMode === 'actuel') fieldOfView = 34;\n      else if (projectionMode === 'stéréo') fieldOfView = 60;\n      else fieldOfView = 45;\n      scheduleMobileSkyViewSave();\n    });",
+      "enregistrement du recentrage"
+    ],
+    [
+      "      touchHeading = 0;\n      touchElevation = 0;\n    });",
+      "      touchHeading = 0;\n      touchElevation = 0;\n      scheduleMobileSkyViewSave();\n    });",
+      "enregistrement de la remise à zéro du déplacement"
+    ],
+    [
+      "alignOffsetHeading = (alignOffsetHeading - step + 360) % 360;",
+      "alignOffsetHeading = (alignOffsetHeading - step + 360) % 360;\n      scheduleMobileSkyViewSave();",
+      "enregistrement de l'alignement horizontal"
+    ],
+    [
+      "alignOffsetHeading = (alignOffsetHeading + step + 360) % 360;",
+      "alignOffsetHeading = (alignOffsetHeading + step + 360) % 360;\n      scheduleMobileSkyViewSave();",
+      "enregistrement de l'alignement horizontal"
+    ],
+    [
+      "alignOffsetElevation = Math.max(-90, Math.min(90, alignOffsetElevation + step));",
+      "alignOffsetElevation = Math.max(-90, Math.min(90, alignOffsetElevation + step));\n      scheduleMobileSkyViewSave();",
+      "enregistrement de l'alignement vertical"
+    ],
+    [
+      "      else fieldOfView = 34; // Actuel / Perspective\n    }",
+      "      else fieldOfView = 34; // Actuel / Perspective\n      scheduleMobileSkyViewSave();\n    }",
+      "enregistrement du mode de projection"
+    ],
+    [
+      "alignOffsetElevation = Math.max(-90, Math.min(90, alignOffsetElevation - step));",
+      "alignOffsetElevation = Math.max(-90, Math.min(90, alignOffsetElevation - step));\n      scheduleMobileSkyViewSave();",
+      "enregistrement de l'alignement vertical"
     ],
     [
       `      const keyframes = [
@@ -238,13 +335,15 @@ function makeMobileSkyRendererResponsive(html) {
     ],
     [
       '    function render() {\n      requestAnimationFrame(render);',
-      '    const mobileEquatorialCache = new WeakMap();\n    let mobileHorizontalFrame = null;\n    let mobileLastLabelUpdate = 0;\n    function render() {\n      requestAnimationFrame(render);',
+      '    const mobileEquatorialCache = new WeakMap();\n    const mobileHorizontalCache = new WeakMap();\n    let mobileHorizontalFrame = null;\n    let mobileLastLabelUpdate = 0;\n    function render() {\n      requestAnimationFrame(render);',
       "préparation du rendu mobile continu"
     ],
     [
       '    function horizontalPosition(object, siderealDegrees, latRadians) {\n      const dec = object.dec * Math.PI / 180;',
       `    function horizontalPosition(object, siderealDegrees, latRadians) {
       if (window.__dobsonMobileApp && mobileHorizontalFrame && Number.isFinite(object.ra) && Number.isFinite(object.dec)) {
+        const cachedPosition = mobileHorizontalCache.get(object);
+        if (cachedPosition && cachedPosition.frameKey === mobileHorizontalFrame.key) return cachedPosition.value;
         let equatorial = mobileEquatorialCache.get(object);
         if (!equatorial) {
           const ra = object.ra * Math.PI / 12;
@@ -263,12 +362,14 @@ function makeMobileSkyRendererResponsive(html) {
           + equatorial.cosDec * mobileHorizontalFrame.cosLatitude * cosHourAngle;
         const altitudeRad = Math.asin(Math.max(-1, Math.min(1, sinAltitude)));
         const azimuthRad = Math.atan2(east, north);
-        return {
+        const result = {
           altitude: altitudeRad * 180 / Math.PI,
           azimuth: (azimuthRad * 180 / Math.PI + 360) % 360,
           position: [east, sinAltitude, north],
           raw: { alt: altitudeRad, az: azimuthRad }
         };
+        mobileHorizontalCache.set(object, { frameKey: mobileHorizontalFrame.key, value: result });
+        return result;
       }
 
       const dec = object.dec * Math.PI / 180;`,
@@ -280,6 +381,7 @@ function makeMobileSkyRendererResponsive(html) {
       if (window.__dobsonMobileApp) {
         const siderealRadians = sidereal * Math.PI / 180;
         mobileHorizontalFrame = {
+          key: Math.round(sidereal * 1000),
           cosSidereal: Math.cos(siderealRadians),
           sinSidereal: Math.sin(siderealRadians),
           cosLatitude: Math.cos(latRadians),
@@ -317,15 +419,17 @@ function makeMobileSkyRendererResponsive(html) {
       "suppression des recherches DOM par étoile"
     ],
     [
-      '      viewReadout.textContent = \`Offset AZ \${Math.round(currentHeading)}° · ALT \${Math.round(currentElevation)}°\`;\n\n      const labels = document.createDocumentFragment();',
+      '      viewReadout.textContent = \`Offset AZ \${Math.round(currentHeading)}° · ALT \${Math.round(currentElevation)}°\`;\n\n      // Éléments réutilisés entre les frames pour éviter le clignotement\n      const labelPool = labelsElement.labelPool || (labelsElement.labelPool = []);\n      let labelUsed = 0;',
       `      viewReadout.textContent = \`Offset AZ \${Math.round(currentHeading)}° · ALT \${Math.round(currentElevation)}°\`;
       if (window.__dobsonMobileApp) {
         const now = performance.now();
-        if (now - mobileLastLabelUpdate < 16) return;
+        if (now - mobileLastLabelUpdate < 80) return;
         mobileLastLabelUpdate = now;
       }
 
-      const labels = document.createDocumentFragment();`,
+      // Éléments réutilisés entre les frames pour éviter le clignotement
+      const labelPool = labelsElement.labelPool || (labelsElement.labelPool = []);
+      let labelUsed = 0;`,
       "découplage des étiquettes du rendu fluide"
     ],
     [
@@ -339,8 +443,8 @@ function makeMobileSkyRendererResponsive(html) {
       "optimisation des collisions d'étiquettes"
     ],
     [
-      '        labels.appendChild(label);\n      }\n      labelsElement.replaceChildren(labels);',
-      '        labels.appendChild(label);\n        mobileLabelCount++;\n      }\n      labelsElement.replaceChildren(labels);',
+      '        else label.textContent = item.object.name ? item.object.name : item.object.commonName;\n        \n      }\n      for (let i = labelUsed; i < labelPool.length; i++) labelPool[i].style.display = \'none\';',
+      '        else label.textContent = item.object.name ? item.object.name : item.object.commonName;\n        mobileLabelCount++;\n        \n      }\n      for (let i = labelUsed; i < labelPool.length; i++) labelPool[i].style.display = \'none\';',
       "limitation des étiquettes mobiles"
     ]
   ];
