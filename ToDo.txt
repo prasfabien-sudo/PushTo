@@ -26,6 +26,10 @@ Pour tester:
 lancer dans le terminal : node simulate_esp32.js
 se connecter à : http://127.0.0.1:8000/
 
+$env:JAVA_HOME = "C:\Program Files\Android\openjdk\jdk-21.0.8"
+$env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+cd .\mobile-v2
+npm.cmd run cap:android
 
 
 Général
