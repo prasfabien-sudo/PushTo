@@ -56,10 +56,14 @@ export async function solveWithAstrometry(image, apiKey, reportStatus, dependenc
   const ra = Number(solution.ra);
   const dec = Number(solution.dec);
   const pixelScale = Number(solution.pixscale);
-  if (![ra, dec, pixelScale].every(Number.isFinite)) {
+  if ([solution.ra, solution.dec, solution.pixscale].some((value) => value == null || value === "")
+    || ![ra, dec, pixelScale].every(Number.isFinite) || dec < -90 || dec > 90 || pixelScale <= 0) {
     throw new Error("Astrometry.net a renvoyé une calibration incomplète.");
   }
   const raHours = ((ra / 15) % 24 + 24) % 24;
+  if (dependencies.onCalibration) {
+    await dependencies.onCalibration({ ra: raHours, dec, pixelScale });
+  }
   return `Résolution réussie : AD ${raHours.toFixed(4)} h · Dec ${dec.toFixed(4)}° · échelle ${pixelScale.toFixed(2)}″/pixel.`;
 }
 

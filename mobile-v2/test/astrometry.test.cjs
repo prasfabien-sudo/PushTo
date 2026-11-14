@@ -23,14 +23,16 @@ test("envoie une image privée et retourne la calibration Astrometry.net", async
     return jsonResponse(responses.shift());
   };
   const messages = [];
+  let calibration;
   const result = await solveWithAstrometry(
     new Blob(["image-data"], { type: "image/jpeg" }),
     "secret-api-key",
     (message) => messages.push(message),
-    { fetch: request, delay: async () => {} }
+    { fetch: request, delay: async () => {}, onCalibration: (value) => { calibration = value; } }
   );
 
   assert.match(result, /AD 12\.0000 h · Dec -20\.0000°/);
+  assert.deepEqual(calibration, { ra: 12, dec: -20, pixelScale: 1.25 });
   assert.equal(calls.length, 5);
   assert.equal(calls[0].url, "https://nova.astrometry.net/api/login");
   assert.deepEqual(JSON.parse(calls[0].options.body.get("request-json")), { apikey: "secret-api-key" });

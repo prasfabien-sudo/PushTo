@@ -88,6 +88,8 @@ html.dobson-native-app body {
 
 .dobson-native-app .nav-item {
   flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
   max-width: none;
   min-height: 46px;
@@ -101,10 +103,46 @@ html.dobson-native-app body {
   height: 22px;
 }
 
+.dobson-native-app .nav-label {
+  display: block;
+  font-size: 0.65rem;
+  line-height: 1.15;
+  text-align: center;
+}
+
 .dobson-native-app .nav-item[aria-current="page"],
 .dobson-native-app .nav-item.active {
   background: #142033;
   color: #f2c877;
+}
+
+.dobson-simulation-banner {
+  position: fixed;
+  z-index: 1002;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 120px);
+  padding: 5px 8px;
+  border: 1px solid #d9953d;
+  border-radius: 0 0 8px 8px;
+  background: #281803;
+  color: #ffe0ad;
+  font-size: 0.75rem;
+}
+
+.dobson-simulation-banner button {
+  min-height: 34px;
+  padding: 4px 8px;
+  font: inherit;
+}
+
+.dobson-simulation-toggle {
+  min-height: 42px;
+  padding: 8px 12px;
 }
 
 .dobson-native-app .dobson-night-toggle {
@@ -507,6 +545,12 @@ body.dobson-native-app details.dobson-technical-options > summary {
   overflow-wrap: anywhere;
 }
 
+#dobson-test-connection {
+  min-height: 42px;
+  padding: 6px;
+  font: inherit;
+}
+
 .dobson-connection-notice:not(:empty) {
   position: fixed;
   z-index: 1100;
@@ -738,6 +782,26 @@ body.dobson-sky-mobile {
   display: none;
 }
 
+#dobson-telescope-marker {
+  position: absolute;
+  z-index: 8;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 2px solid #ffb74d;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 3px #000;
+  transform: translate(-50%, -50%);
+  touch-action: none;
+}
+
+#dobson-telescope-marker[hidden] {
+  display: none;
+}
+
 .dobson-sky-mobile .sky-card {
   width: 100%;
   max-width: none;
@@ -759,6 +823,19 @@ body.dobson-sky-mobile {
   border: 0;
   border-radius: 0;
   box-shadow: none;
+}
+
+.dobson-sky-mobile #objectModal {
+  bottom: calc(58px + env(safe-area-inset-bottom));
+  z-index: 45;
+}
+
+.dobson-sky-mobile #objectModal .modal-content {
+  max-height: min(45dvh, 360px);
+}
+
+.dobson-sky-mobile .sky-quick-controls {
+  top: max(8px, env(safe-area-inset-top));
 }
 
 .dobson-sky-mobile .dobson-night-toggle,

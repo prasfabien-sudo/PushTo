@@ -69,7 +69,7 @@ const char HTTP_HELP_PAGE[] PROGMEM = R"rawliteral(
       </li>
       <li>Dans la section <strong>Encoder Steps Per Revolution</strong> (Résolution des encodeurs) :
         <ul>
-          <li>Indique le nombre de pas réglé sur ton ESP32 pour l'Azimut et l'Altitude (ex: <span class="highlight">10000</span> pas par tour).</li>
+          <li>Indique le nombre de pas correspondant aux encodeurs pour l'Azimut et l'Altitude (ex: <span class="highlight">10000</span> pas par tour).</li>
         </ul>
       </li>
     </ol>
@@ -82,8 +82,12 @@ const char HTTP_HELP_PAGE[] PROGMEM = R"rawliteral(
     </ol>
 
     <div class="note">
-      <svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-lightbulb'></use></svg> <strong>Conseil :</strong> Pense à effectuer la mise en station (recalage au Nord et à l'horizontale) depuis la page <strong>Mise en Station / Alignement</strong> de l'interface Web avant de pointer tes premiers objets dans SkySafari.
+      <svg class='ui-icon' aria-hidden='true' focusable='false'><use href='/icons.svg#icon-lightbulb'></use></svg> <strong>Conseil :</strong> Le firmware accepte un seul client TCP à la fois. Déconnecte l'application Dobson avant de connecter SkySafari et effectue l'alignement dans SkySafari.
     </div>
+
+    <h3>Sources des données célestes</h3>
+    <p>Les figures des constellations sont adaptées de <a href="https://www.constellationmap.org/fr/" target="_blank" rel="noopener noreferrer">ConstellationLines par Marc van der Sluys</a>, sous licence CC BY 4.0. Les coordonnées, magnitudes et types spectraux des étoiles proviennent du Bright Star Catalogue, 5e édition révisée (Hoffleit &amp; Warren, 1991), VizieR V/50.</p>
+    <p>Le catalogue stellaire HYG 4.4 est fourni par Astronexus sous licence CC BY-SA 4.0 : <a href="https://codeberg.org/astronexus/hyg" target="_blank" rel="noopener noreferrer">Astronexus HYG</a>.</p>
   </div>
 
   <nav class="bottom-nav" aria-label="Navigation principale">

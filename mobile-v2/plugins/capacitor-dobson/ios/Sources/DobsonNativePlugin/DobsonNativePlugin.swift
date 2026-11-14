@@ -14,6 +14,7 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "connect", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "disconnect", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getWifiState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getEncoderStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startSensors", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopSensors", returnType: CAPPluginReturnPromise),
@@ -27,6 +28,8 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     private let motionManager = CMMotionManager()
+    private var connectedWifiSsid: String?
+    private let wifiStateQueue = DispatchQueue(label: "DobsonWifiState")
     private var database: DobsonCatalogDatabase?
     private let motionQueue: OperationQueue = {
         let queue = OperationQueue()
@@ -105,6 +108,7 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
         NEHotspotConfigurationManager.shared.apply(configuration) { error in
             if let error = error as? NEHotspotConfigurationError,
                error.code == .alreadyAssociated {
+                self.wifiStateQueue.sync { self.connectedWifiSsid = ssid }
                 call.resolve(["ssid": ssid])
                 self.notifyListeners("wifiState", data: ["connected": true, "ssid": ssid])
                 return
@@ -113,6 +117,7 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
                 call.reject("iOS n'a pas pu rejoindre le réseau Wi-Fi. Vérifiez le réseau et acceptez la demande système.", nil, error)
                 return
             }
+            self.wifiStateQueue.sync { self.connectedWifiSsid = ssid }
             call.resolve(["ssid": ssid])
             self.notifyListeners("wifiState", data: ["connected": true, "ssid": ssid])
         }
@@ -124,8 +129,14 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: ssid)
+        wifiStateQueue.sync { connectedWifiSsid = nil }
         call.resolve()
         notifyListeners("wifiState", data: ["connected": false, "ssid": ssid])
+    }
+
+    @objc func getWifiState(_ call: CAPPluginCall) {
+        let ssid = wifiStateQueue.sync { connectedWifiSsid }
+        call.resolve(["connected": ssid != nil, "ssid": ssid ?? ""])
     }
 
     @objc func getEncoderStatus(_ call: CAPPluginCall) {
@@ -136,6 +147,7 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
             using: .tcp
         )
         var completed = false
+        var stage = "Connexion TCP"
 
         func finishWithError(_ message: String, _ error: Error? = nil) {
             guard !completed else { return }
@@ -183,7 +195,7 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         let timeout = DispatchWorkItem {
-            finishWithError("Délai dépassé lors de la lecture des encodeurs.")
+            finishWithError("\(stage) : délai dépassé.")
         }
         queue.asyncAfter(deadline: .now() + 2, execute: timeout)
         connection.stateUpdateHandler = { state in
@@ -191,11 +203,13 @@ public class DobsonNativePlugin: CAPPlugin, CAPBridgedPlugin {
             switch state {
             case .ready:
                 connection.stateUpdateHandler = nil
+                stage = "Lecture de la position (Q)"
                 sendRequest("Q") { positionResult in
                     switch positionResult {
                     case .failure(let error):
                         finishWithError("Impossible de lire la position des encodeurs.", error)
                     case .success(let positionLine):
+                        stage = "Lecture de la résolution (a)"
                         sendRequest("a") { resolutionResult in
                             switch resolutionResult {
                             case .failure(let error):

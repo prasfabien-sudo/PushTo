@@ -158,8 +158,11 @@ const char HTTP_SIMU_PAGE[] PROGMEM = R"rawliteral(
       let ticks = (axis === 'az') ? ticksAZ : ticksALT;
       let deltaTicks = Math.sign(deg) * Math.max(1, Math.round((Math.abs(deg) / 360.0) * ticks));
       fetch(`/simstep?axis=${axis}&delta=${deltaTicks}`)
-        .then(r => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        .then(async r => {
+          if (!r.ok) {
+            const result = await r.json();
+            throw new Error(result.message || `HTTP ${r.status}`);
+          }
           updateVal();
         })
         .catch(error => {
@@ -169,8 +172,11 @@ const char HTTP_SIMU_PAGE[] PROGMEM = R"rawliteral(
 
     function resetSimulation() {
       fetch('/simstep?axis=reset&delta=0')
-        .then(r => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        .then(async r => {
+          if (!r.ok) {
+            const result = await r.json();
+            throw new Error(result.message || `HTTP ${r.status}`);
+          }
           updateVal();
         })
         .catch(error => {

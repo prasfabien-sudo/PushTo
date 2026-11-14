@@ -33,8 +33,42 @@
       throw error;
     }
   };
-  const getDeviceConfiguration = () => readLocalJson("dobson-mobile-device-config", {}, "configuration");
+  const simulationKey = "dobson-mobile-simulation-v1";
+  const readSimulation = () => {
+    const saved = sessionStorage.getItem(simulationKey);
+    if (!saved) return null;
+    const simulation = JSON.parse(saved);
+    if (!simulation || typeof simulation !== "object" || !simulation.configuration
+      || typeof simulation.configuration !== "object"
+      || !Number.isSafeInteger(simulation.rawAZ) || !Number.isSafeInteger(simulation.rawALT)) {
+      throw new Error("Données de simulation invalides.");
+    }
+    return simulation;
+  };
+  window.__dobsonSimulationActive = () => readSimulation() !== null;
+  window.__dobsonStartSimulation = () => {
+    if (readSimulation()) return;
+    const configuration = readLocalJson("dobson-mobile-device-config", {}, "configuration");
+    delete configuration.offsetAZ;
+    delete configuration.offsetALT;
+    delete configuration.star1;
+    sessionStorage.setItem(simulationKey, JSON.stringify({ configuration, rawAZ: 0, rawALT: 0 }));
+  };
+  window.__dobsonStopSimulation = () => sessionStorage.removeItem(simulationKey);
+  const getDeviceConfiguration = () => {
+    const simulation = readSimulation();
+    return simulation ? simulation.configuration : readLocalJson("dobson-mobile-device-config", {}, "configuration");
+  };
   const getRawEncoderStatus = async (configuration) => {
+    const simulation = readSimulation();
+    if (simulation) {
+      return {
+        rawAZ: simulation.rawAZ,
+        rawALT: simulation.rawALT,
+        ticksAZ: Number(configuration.ticksAZ) > 0 ? Number(configuration.ticksAZ) : 10000,
+        ticksALT: Number(configuration.ticksALT) > 0 ? Number(configuration.ticksALT) : 10000
+      };
+    }
     if (window.__dobsonEspConnected) {
       const nativePlugin = await window.__dobsonNativePluginPromise;
       return nativePlugin.getEncoderStatus();
@@ -90,7 +124,13 @@
     };
   };
   const saveConfiguration = (configuration) => {
-    localStorage.setItem("dobson-mobile-device-config", JSON.stringify(configuration));
+    const simulation = readSimulation();
+    if (simulation) {
+      simulation.configuration = configuration;
+      sessionStorage.setItem(simulationKey, JSON.stringify(simulation));
+    } else {
+      localStorage.setItem("dobson-mobile-device-config", JSON.stringify(configuration));
+    }
   };
   const getCurrentRawPosition = async (configuration) => {
     const encoders = await getRawEncoderStatus(configuration);
@@ -162,7 +202,7 @@
         };
         saveConfiguration(configuration);
       }
-      localStorage.setItem("dobson-mobile-location", JSON.stringify({ latitude, longitude }));
+      if (!readSimulation()) localStorage.setItem("dobson-mobile-location", JSON.stringify({ latitude, longitude }));
       return jsonResponse({ status: "OK", local: true });
     }
 
@@ -291,7 +331,31 @@
         return getMobileStatus().then((status) => jsonResponse(status));
       }
 
-      if (url.pathname === "/calib" || url.pathname === "/simstep") {
+      if (url.pathname === "/simstep") {
+        const simulation = readSimulation();
+        if (!simulation) return Promise.resolve(jsonResponse({ status: "ERROR", message: "Activez d’abord la simulation locale." }, 409));
+        const axis = url.searchParams.get("axis");
+        const deltaText = url.searchParams.get("delta");
+        const delta = Number(deltaText);
+        if (!["az", "alt", "reset"].includes(axis) || deltaText === null || deltaText.trim() === ""
+          || !Number.isSafeInteger(delta) || Math.abs(delta) > 10000000) {
+          return Promise.resolve(jsonResponse({ status: "ERROR", message: "Déplacement simulé invalide." }, 400));
+        }
+        if (axis === "reset") {
+          simulation.rawAZ = 0;
+          simulation.rawALT = 0;
+        } else {
+          const key = axis === "az" ? "rawAZ" : "rawALT";
+          if (!Number.isSafeInteger(simulation[key] + delta)) {
+            return Promise.resolve(jsonResponse({ status: "ERROR", message: "Limite du compteur simulé atteinte." }, 400));
+          }
+          simulation[key] += delta;
+        }
+        sessionStorage.setItem(simulationKey, JSON.stringify(simulation));
+        return Promise.resolve(jsonResponse({ status: "OK", local: true }));
+      }
+
+      if (url.pathname === "/calib") {
         return Promise.resolve(jsonResponse({
           status: "ERROR",
           message: "Cette fonction n’est plus disponible sur l’ESP32."

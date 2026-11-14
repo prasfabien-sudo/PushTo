@@ -15,9 +15,85 @@ window.__dobsonNativeCatalogPromise.then(window.__resolveDobsonCatalog, window._
 if (Capacitor.isNativePlatform()) {
   document.addEventListener("DOMContentLoaded", () => {
     installNativePanel();
+    installNightSystemBars();
+    installSimulationControls();
     installAstronomyImages();
     installAugmentedReality();
   }, { once: true });
+}
+
+function installSimulationControls() {
+  const isSimulationPage = window.location.pathname.endsWith("/simu.html");
+  if (isSimulationPage) {
+    const card = document.querySelector(".card");
+    const modeButton = document.createElement("button");
+    modeButton.type = "button";
+    modeButton.className = "dobson-simulation-toggle";
+    const description = document.createElement("p");
+    description.textContent = "La simulation utilise des compteurs locaux, indépendants du télescope. Les réglages et alignements modifiés pendant la simulation sont temporaires.";
+    card.insertBefore(description, card.querySelector(".step-picker"));
+    card.insertBefore(modeButton, card.querySelector(".step-picker"));
+    const refresh = () => {
+      const active = window.__dobsonSimulationActive();
+      modeButton.textContent = active ? "Désactiver la simulation" : "Activer la simulation";
+      modeButton.setAttribute("aria-pressed", String(active));
+      for (const control of card.querySelectorAll('[onclick^="stepSelected"], [onclick="resetSimulation()"]')) {
+        control.disabled = !active;
+      }
+    };
+    modeButton.addEventListener("click", () => {
+      try {
+        if (window.__dobsonSimulationActive()) window.__dobsonStopSimulation();
+        else window.__dobsonStartSimulation();
+        window.location.reload();
+      } catch (error) {
+        document.querySelector("#simStatus").textContent = `Impossible de changer le mode simulation : ${error.message}`;
+        console.error("Changement du mode simulation impossible.", error);
+        refresh();
+      }
+    });
+    refresh();
+  }
+  if (!window.__dobsonSimulationActive()) return;
+  const banner = document.createElement("div");
+  banner.className = "dobson-simulation-banner";
+  banner.setAttribute("role", "status");
+  const text = document.createElement("span");
+  text.textContent = "Simulation active — encodeurs réels non affichés";
+  const exit = document.createElement("button");
+  exit.type = "button";
+  exit.textContent = "Quitter";
+  exit.setAttribute("aria-label", "Quitter la simulation et revenir aux données réelles");
+  exit.addEventListener("click", () => {
+    window.__dobsonStopSimulation();
+    window.location.reload();
+  });
+  banner.append(text, exit);
+  document.body.appendChild(banner);
+}
+
+function installNightSystemBars() {
+  if (Capacitor.getPlatform() !== "android") return;
+  const status = document.createElement("output");
+  status.className = "dobson-connection-notice";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  document.body.appendChild(status);
+  let queue = Promise.resolve();
+  const update = () => {
+    const enabled = document.documentElement.dataset.nightMode === "true";
+    queue = queue.then(() => DobsonNative.setNightSystemBars({ enabled })).then(() => {
+      status.textContent = "";
+    }).catch((error) => {
+      status.textContent = "Impossible de modifier la barre d’état pour le mode nuit.";
+      console.error("Modification de la barre d’état impossible.", error);
+    });
+  };
+  new MutationObserver(update).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-night-mode"]
+  });
+  update();
 }
 
 function installNativePanel() {
@@ -36,15 +112,19 @@ function installNativePanel() {
         <button id="dobson-connect" type="button">Connecter</button>
         <button id="dobson-disconnect" type="button">Déconnecter</button>
       </div>
+      <button id="dobson-test-connection" type="button">Tester la lecture des encodeurs</button>
       <output id="dobson-native-status" role="status" aria-live="polite"></output>
+      <output id="dobson-encoder-test-status" role="status" aria-live="polite"></output>
     </div>`;
   const isSkyPage = window.location.pathname.endsWith("/beta_sky.html");
   const isConfigPage = window.location.pathname.endsWith("/config.html");
-  if (!isSkyPage && !isConfigPage) document.body.prepend(panel);
 
   const ssid = panel.querySelector("#dobson-ssid");
   const password = panel.querySelector("#dobson-wifi-password");
   const status = panel.querySelector("#dobson-native-status");
+  const testButton = panel.querySelector("#dobson-test-connection");
+  const testStatus = panel.querySelector("#dobson-encoder-test-status");
+  let previousEncoderTest;
   const connectionNotice = document.createElement("output");
   connectionNotice.className = "dobson-connection-notice";
   connectionNotice.setAttribute("role", "status");
@@ -55,7 +135,12 @@ function installNativePanel() {
   const publishWifiState = (state) => {
     const wasConnected = window.__dobsonEspConnected;
     window.__dobsonEspConnected = state.connected;
+    if (!state.connected) {
+      previousEncoderTest = undefined;
+      testStatus.textContent = "";
+    }
     window.dispatchEvent(new CustomEvent("dobson:wifiState", { detail: state }));
+    if (isConfigPage && state.connected && state.ssid) ssid.value = state.ssid;
     if (state.connected && !wasConnected) {
       status.textContent = "";
       connectionNotice.textContent = `Connecté à ${state.ssid}.`;
@@ -63,8 +148,17 @@ function installNativePanel() {
       noticeTimer = setTimeout(() => { connectionNotice.textContent = ""; }, 3500);
     }
   };
-  DobsonNative.addListener("wifiState", publishWifiState).catch((error) => {
-    status.textContent = error.message || "Impossible de suivre la connexion Wi-Fi.";
+  let wifiRevision = 0;
+  DobsonNative.addListener("wifiState", (state) => {
+    wifiRevision++;
+    publishWifiState(state);
+  }).then(async () => {
+    const revision = wifiRevision;
+    const state = await DobsonNative.getWifiState();
+    if (wifiRevision === revision) publishWifiState(state);
+  }).catch((error) => {
+    connectionNotice.textContent = error.message || "Impossible de suivre la connexion Wi-Fi.";
+    console.error("Suivi de la connexion Wi-Fi impossible.", error);
   });
 
   panel.querySelector("#dobson-connect").addEventListener("click", async () => {
@@ -91,10 +185,32 @@ function installNativePanel() {
     }
   });
 
+  testButton.addEventListener("click", async () => {
+    if (!window.__dobsonEspConnected) {
+      testStatus.textContent = "Connectez d’abord l’application au Wi-Fi de l’ESP32 avec le bouton Connecter.";
+      return;
+    }
+    testButton.disabled = true;
+    testStatus.textContent = "Lecture TCP de la position et de la résolution en cours…";
+    try {
+      const { rawAZ, rawALT, ticksAZ, ticksALT } = await DobsonNative.getEncoderStatus();
+      const differences = previousEncoderTest
+        ? ` Variation depuis le dernier test : AZ ${rawAZ - previousEncoderTest.rawAZ}, ALT ${rawALT - previousEncoderTest.rawALT}.`
+        : "";
+      previousEncoderTest = { rawAZ, rawALT };
+      testStatus.textContent = `Lecture TCP réussie (192.168.4.1:4030). Compteurs : AZ ${rawAZ}, ALT ${rawALT}. Résolutions annoncées : AZ ${ticksAZ}, ALT ${ticksALT}.${differences} Déplacez chaque axe puis relancez le test pour vérifier les variations.`;
+    } catch (error) {
+      testStatus.textContent = `Échec de lecture TCP (192.168.4.1:4030) : ${error.message || "erreur inconnue"}. Fermez SkySafari et tout autre client, puis réessayez.`;
+      console.error("Diagnostic des encodeurs impossible.", error);
+    } finally {
+      testButton.disabled = false;
+    }
+  });
+
   if (isSkyPage) installSkySensorControls();
   if (isConfigPage) installSkySettingsSection(panel);
 
-  if (isSkyPage && navigator.geolocation) {
+  if (isSkyPage && navigator.geolocation && !window.__dobsonSimulationActive()) {
     navigator.geolocation.getCurrentPosition(({ coords }) => {
       localStorage.setItem("dobson-mobile-location", JSON.stringify({
         latitude: coords.latitude,
@@ -164,17 +280,17 @@ function installNativeNavigation() {
   const items = [
     { href: "/beta_sky.html", route: "/beta_sky", label: "Vue 3D du ciel", icon: "icon-globe-2" },
     { href: "/index.html", route: "/", label: "Mode Encodeurs", icon: "icon-telescope" },
-    { href: "/station.html", route: "/station", label: "Mise en station", icon: "icon-crosshair" },
-    { href: "/config.html", route: "/config", label: "Configuration", icon: "icon-settings" },
-    { href: "/help.html", route: "/help", label: "Aide", icon: "icon-book-open" }
+    { href: "/config.html", route: "/config", label: "Configuration", icon: "icon-settings" }
   ];
   const currentPath = window.location.pathname.replace(/\.html?$/, "").replace(/\/+$/, "") || "/";
   const currentRoute = ({
     "/": "/beta_sky",
     "/index": "/",
-    "/calib_page": "/station",
+    "/station": "/",
+    "/calib_page": "/",
     "/simu": "/",
-    "/releasenotes": "/help"
+    "/help": "/config",
+    "/releasenotes": "/config"
   })[currentPath] || currentPath;
   const navigation = document.querySelector(".bottom-nav");
   const nightModeToggle = document.getElementById("nightModeToggle");
@@ -189,6 +305,10 @@ function installNativeNavigation() {
       link.setAttribute("aria-label", item.label);
       if (item.route === currentRoute) link.setAttribute("aria-current", "page");
       link.innerHTML = `<span class="nav-icon"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#${item.icon}"></use></svg></span>`;
+      const label = document.createElement("span");
+      label.className = "nav-label";
+      label.textContent = item.label;
+      link.appendChild(label);
       return link;
     }));
   }
@@ -229,7 +349,9 @@ function installSkySensorControls() {
   let sensorErrorListener;
   let sensorsStarted = false;
   let skyTrackingActive = false;
-  let autoFollow = localStorage.getItem("dobson-sky-control-mode-v3") !== "touch";
+  const simulationActive = window.__dobsonSimulationActive();
+  let autoFollow = !simulationActive && localStorage.getItem("dobson-sky-control-mode-v3") !== "touch";
+  modeButton.disabled = simulationActive;
   let autoFollowBaseline;
   const gestureStarts = new Map();
 
@@ -282,6 +404,7 @@ function installSkySensorControls() {
   });
   const publishOrientation = (orientation) => {
     const pointing = getPointingOrientation(orientation);
+    pointing.receivedAt = Date.now();
     window.__dobsonPhoneOrientation = pointing;
     window.dispatchEvent(new CustomEvent("dobson:orientation", { detail: pointing }));
   };
@@ -289,10 +412,13 @@ function installSkySensorControls() {
   const updateMode = () => {
     window.__dobsonAutoFollow = autoFollow;
     modeButton.setAttribute("aria-pressed", String(autoFollow));
-    modeButton.setAttribute("aria-label", autoFollow
+    modeButton.setAttribute("aria-label", simulationActive
+      ? "Suivi par capteurs indisponible pendant la simulation"
+      : autoFollow
       ? "Revenir à la navigation tactile"
       : "Activer le pointage automatique par capteurs");
-    modeButton.title = autoFollow ? "Capteurs actifs — toucher pour naviguer au doigt" : "Navigation tactile — toucher pour suivre les capteurs";
+    modeButton.title = simulationActive ? "Suivi par capteurs indisponible pendant la simulation"
+      : autoFollow ? "Capteurs actifs — toucher pour naviguer au doigt" : "Navigation tactile — toucher pour suivre les capteurs";
     modeButton.querySelector("use").setAttribute("href", autoFollow
       ? "/icons.svg#icon-compass"
       : "/icons.svg#icon-hand");
@@ -368,6 +494,10 @@ function installSkySensorControls() {
   const stopSensors = () => queueSensorOperation(stopSensorsNow);
 
   const enableAutoFollow = async ({ immediate = false } = {}) => {
+    if (simulationActive) {
+      sensorStatus.textContent = "Quittez la simulation pour utiliser les capteurs et la caméra AR.";
+      return false;
+    }
     autoFollow = true;
     autoFollowBaseline = undefined;
     skyTrackingActive = immediate;
@@ -458,6 +588,7 @@ function installSkySettingsSection(connectionPanel) {
       </fieldset>
       <fieldset class="dobson-sky-preference-group">
         <legend>Catalogue céleste</legend>
+        <label><span>Messier sans limite de magnitude</span><input type="checkbox" data-sky-pref="showMessierAll"></label>
         <div class="dobson-sky-preference-headings"><span>Catégorie</span><span>Objets</span><span>Noms</span></div>
         <label class="dobson-sky-object-preference"><span>Galaxies</span><input type="checkbox" data-sky-pref="showGal"><input type="checkbox" data-sky-pref="labelGal" aria-label="Afficher les noms des galaxies"></label>
         <label class="dobson-sky-object-preference"><span>Nébuleuses</span><input type="checkbox" data-sky-pref="showNeb"><input type="checkbox" data-sky-pref="labelNeb" aria-label="Afficher les noms des nébuleuses"></label>
@@ -475,6 +606,10 @@ function installSkySettingsSection(connectionPanel) {
   const currentProjection = configForm.querySelector("#projectionModeSelect");
   const projectionSection = currentProjection?.closest(".settings-section");
   configForm.prepend(section);
+  const additionalPages = document.createElement("details");
+  additionalPages.className = "settings-section";
+  additionalPages.innerHTML = '<summary>Autres fonctions<svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#icon-chevron-down"></use></svg></summary><div class="settings-content"><p><a href="/station.html">Mise en station</a></p><p><a href="/help.html">Aide</a></p></div>';
+  configForm.appendChild(additionalPages);
 
   const skyContent = section.querySelector(".dobson-config-sky-content");
   for (const id of ["dobson-touch-reverse-azimuth", "dobson-touch-reverse-altitude"]) {
@@ -511,6 +646,35 @@ function installSkySettingsSection(connectionPanel) {
     const subsection = findSection(prefix);
     if (subsection) locationContent.appendChild(subsection);
   }
+  const siteLatitude = locationContent.querySelector("#newSiteLat");
+  const siteLongitude = locationContent.querySelector("#newSiteLon");
+  if (siteLatitude && siteLongitude) {
+    const gpsButton = document.createElement("button");
+    gpsButton.type = "button";
+    gpsButton.textContent = "Utiliser ma position GPS";
+    const gpsStatus = document.createElement("output");
+    gpsStatus.setAttribute("role", "status");
+    gpsStatus.setAttribute("aria-live", "polite");
+    siteLongitude.parentElement.insertAdjacentElement("afterend", gpsButton);
+    gpsButton.insertAdjacentElement("afterend", gpsStatus);
+    gpsButton.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        gpsStatus.textContent = "La géolocalisation n’est pas disponible sur cet appareil.";
+        return;
+      }
+      gpsButton.disabled = true;
+      gpsStatus.textContent = "Recherche de la position GPS…";
+      navigator.geolocation.getCurrentPosition(({ coords }) => {
+        siteLatitude.value = coords.latitude.toFixed(5);
+        siteLongitude.value = coords.longitude.toFixed(5);
+        gpsStatus.textContent = `Position obtenue (précision : ${Math.round(coords.accuracy)} m). Donnez un nom au lieu puis ajoutez-le.`;
+        gpsButton.disabled = false;
+      }, (error) => {
+        gpsStatus.textContent = `Impossible d’obtenir la position GPS : ${error.message}`;
+        gpsButton.disabled = false;
+      }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    });
+  }
 
   const card = configForm.closest(".card");
   const advancedSection = [...card.children].find((element) =>
@@ -535,7 +699,6 @@ function installSkySettingsSection(connectionPanel) {
       <output role="status" aria-live="polite"></output>
     </div>`;
   technicalContent.appendChild(astrometrySection);
-  installZwoCameraSettings(technicalContent);
   const apiKeyInput = astrometrySection.querySelector("#dobson-astrometry-key");
   const apiKeyStatus = astrometrySection.querySelector("output");
   DobsonNative.getAstrometryApiKey().then(({ apiKey }) => {
@@ -608,7 +771,9 @@ function installSkySettingsSection(connectionPanel) {
         siteName: siteSelect.selectedOptions[0]?.textContent.trim() || "Lieu personnalisé"
       });
 
-      localStorage.setItem("dobson-mobile-location", JSON.stringify({ latitude, longitude }));
+      if (!window.__dobsonSimulationActive()) {
+        localStorage.setItem("dobson-mobile-location", JSON.stringify({ latitude, longitude }));
+      }
       try {
         const response = await fetch(`/cmd?${parameters}`);
         if (!response.ok) throw new Error("Impossible d’enregistrer la configuration.");
@@ -704,7 +869,7 @@ function installSkySettingsSection(connectionPanel) {
       }
       for (const input of inputs) {
         const value = skyPreferences[input.dataset.skyPref];
-        input.checked = value === undefined ? true : value === true || value === 1 || value === "1";
+        input.checked = value === undefined ? input.dataset.skyPref !== "showMessierAll" : value === true || value === 1 || value === "1";
         input.disabled = false;
       }
       magnitude.disabled = false;
@@ -751,16 +916,59 @@ function installAugmentedReality() {
   const scene = document.querySelector("#scene");
   const status = document.querySelector("#dobson-sensor-status");
   if (!toggle || !video || !scene) return;
+  const marker = document.createElement("button");
+  marker.id = "dobson-telescope-marker";
+  marker.type = "button";
+  marker.hidden = true;
+  marker.setAttribute("aria-label", "Position du télescope : déplacer le cercle ou utiliser les flèches");
+  marker.title = "Déplacer vers la position du télescope";
+  scene.appendChild(marker);
+  const moveMarker = (clientX, clientY) => {
+    const bounds = scene.getBoundingClientRect();
+    const x = Math.max(0, Math.min(bounds.width, clientX - bounds.left));
+    const y = Math.max(0, Math.min(bounds.height, clientY - bounds.top));
+    if (!window.__dobsonSetTelescopeMarker(2 * x / bounds.width - 1, 1 - 2 * y / bounds.height)) {
+      status.textContent = "Cette position est hors de la zone de projection.";
+      document.querySelector(".dobson-scene-menu").open = true;
+    } else {
+      status.textContent = "";
+    }
+  };
+  let markerPointer;
+  let markerGrab;
+  marker.addEventListener("pointerdown", (event) => {
+    if (markerPointer !== undefined) return;
+    event.preventDefault();
+    event.stopPropagation();
+    markerPointer = event.pointerId;
+    const bounds = marker.getBoundingClientRect();
+    markerGrab = { x: event.clientX - (bounds.left + bounds.width / 2), y: event.clientY - (bounds.top + bounds.height / 2) };
+    marker.setPointerCapture(event.pointerId);
+  });
+  marker.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== markerPointer) return;
+    event.preventDefault();
+    event.stopPropagation();
+    moveMarker(event.clientX - markerGrab.x, event.clientY - markerGrab.y);
+  });
+  const releaseMarker = (event) => {
+    if (event.pointerId !== markerPointer) return;
+    event.stopPropagation();
+    markerPointer = undefined;
+    markerGrab = undefined;
+  };
+  marker.addEventListener("pointerup", releaseMarker);
+  marker.addEventListener("pointercancel", releaseMarker);
+  marker.addEventListener("keydown", (event) => {
+    const directions = { ArrowLeft: [-5, 0], ArrowRight: [5, 0], ArrowUp: [0, -5], ArrowDown: [0, 5] };
+    const delta = directions[event.key];
+    if (!delta) return;
+    event.preventDefault();
+    const bounds = marker.getBoundingClientRect();
+    moveMarker(bounds.left + bounds.width / 2 + delta[0], bounds.top + bounds.height / 2 + delta[1]);
+  });
   document.querySelector(".dobson-scene-menu-content")?.appendChild(toggle);
   toggle.title = "Caméra en réalité augmentée et pointage automatique";
-  const sourceLabel = document.createElement("label");
-  sourceLabel.className = "dobson-ar-source";
-  sourceLabel.hidden = true;
-  sourceLabel.innerHTML = 'Source caméra <select id="dobson-ar-source-select"><option value="phone">Téléphone</option><option value="zwo">ZWO ASI224</option></select>';
-  toggle.insertAdjacentElement("afterend", sourceLabel);
-  const sourceSelect = sourceLabel.querySelector("select");
-  let arSource = localStorage.getItem("dobson-mobile-ar-source") === "zwo" ? "zwo" : "phone";
-  sourceSelect.value = arSource;
 
   const capture = document.createElement("button");
   capture.type = "button";
@@ -788,7 +996,7 @@ function installAugmentedReality() {
     <div class="dobson-photo-content">
       <h2 id="dobson-photo-title">Photo du ciel</h2>
       <img alt="Photo prise avec la caméra arrière">
-      <p>Le bouton IA envoie la photo à Astrometry.net pour la résoudre.</p>
+      <p>Le bouton IA envoie la photo à Astrometry.net et tente de réaligner le centre de la vue. La rotation et le champ de la caméra ne sont pas calibrés.</p>
       <div class="dobson-photo-actions">
         <button type="button" class="dobson-photo-solve">IA</button>
         <a class="dobson-photo-download">Télécharger</a>
@@ -803,6 +1011,7 @@ function installAugmentedReality() {
   const photoStatus = photoDialog.querySelector("output");
   const photoClose = photoDialog.querySelector(".dobson-photo-close");
   let capturedImage;
+  let capturedCalibration;
   let photoUrl;
   let solvingPhoto = false;
   let capturing = false;
@@ -823,7 +1032,10 @@ function installAugmentedReality() {
     capture.disabled = true;
     photoStatus.textContent = "Connexion à Astrometry.net…";
     try {
-      photoStatus.textContent = await solveImage(capturedImage, (message) => { photoStatus.textContent = message; });
+      photoStatus.textContent = await solveImage(capturedImage, (message) => { photoStatus.textContent = message; }, (solution) => {
+        window.__dobsonApplyPhotoCalibration(solution, capturedCalibration);
+      });
+      photoStatus.textContent += " Centre de la vue réaligné ; rotation et champ non calibrés.";
     } catch (error) {
       photoStatus.textContent = error.message || "La résolution astrométrique a échoué.";
       console.error("Résolution de la photo AR impossible.", error);
@@ -835,16 +1047,8 @@ function installAugmentedReality() {
   });
 
   let stream;
-  let zwoRunning = false;
   let starting = false;
   let generation = 0;
-  const zwoView = document.createElement("img");
-  zwoView.className = "dobson-ar-zwo-view";
-  zwoView.alt = "";
-  zwoView.setAttribute("aria-hidden", "true");
-  zwoView.hidden = true;
-  zwoView.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none";
-  video.insertAdjacentElement("afterend", zwoView);
   const stop = () => {
     generation++;
     if (stream) {
@@ -852,35 +1056,24 @@ function installAugmentedReality() {
       stream = undefined;
     }
     video.srcObject = null;
-    zwoRunning = false;
-    zwoView.hidden = true;
-    zwoView.removeAttribute("src");
     scene.classList.remove("dobson-ar-active");
     toggle.setAttribute("aria-pressed", "false");
     toggle.setAttribute("aria-label", "Activer la caméra en réalité augmentée");
     toggle.textContent = "Caméra AR";
     capture.hidden = true;
     openPhoto.hidden = true;
+    marker.hidden = true;
   };
 
   toggle.addEventListener("click", async () => {
-    if (stream || zwoRunning) {
+    if (stream) {
       stop();
       return;
     }
     if (starting) return;
-    if (arSource === "zwo") {
-      starting = true;
-      const requestGeneration = generation;
-      try {
-        await startZwoSource(requestGeneration);
-      } catch (error) {
-        stop();
-        status.textContent = error.message || "Impossible de démarrer la caméra ZWO.";
-        console.error("Activation de la caméra ZWO impossible.", error);
-      } finally {
-        starting = false;
-      }
+    if (window.__dobsonSimulationActive()) {
+      status.textContent = "Quittez la simulation pour utiliser la caméra AR.";
+      document.querySelector(".dobson-scene-menu").open = true;
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -919,37 +1112,6 @@ function installAugmentedReality() {
     }
   });
 
-  const startZwoSource = async (requestGeneration) => {
-    const zwoStatus = await DobsonNative.zwoStatus();
-    if (!zwoStatus.connected) {
-      throw new Error("La caméra ZWO n’est pas connectée. Connectez-la dans les paramètres techniques.");
-    }
-    if (requestGeneration !== generation) return;
-    zwoRunning = true;
-    zwoView.hidden = false;
-    scene.classList.add("dobson-ar-active");
-    toggle.setAttribute("aria-pressed", "true");
-    toggle.setAttribute("aria-label", "Désactiver la caméra en réalité augmentée");
-    toggle.textContent = "Arrêter AR";
-    capture.hidden = false;
-    openPhoto.hidden = !capturedImage;
-    await window.__dobsonEnableAutoFollow({ immediate: true });
-    pumpZwoFrames(requestGeneration);
-  };
-  const pumpZwoFrames = async (requestGeneration) => {
-    while (zwoRunning && requestGeneration === generation) {
-      try {
-        const frame = await DobsonNative.zwoGetFrame();
-        if (!zwoRunning || requestGeneration !== generation) break;
-        zwoView.src = frame.dataUrl;
-      } catch (error) {
-        stop();
-        status.textContent = error.message || "Le flux de la caméra ZWO s’est interrompu.";
-        console.error("Lecture d’une trame ZWO impossible.", error);
-        break;
-      }
-    }
-  };
   const captureVideoFrame = async () => {
     if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) {
       throw new Error("La caméra n’a pas encore fourni d’image. Réessayez dans un instant.");
@@ -964,19 +1126,16 @@ function installAugmentedReality() {
     if (!blob) throw new Error("Impossible de créer la photo.");
     return blob;
   };
-  const captureZwoFrame = async () => {
-    const frame = await DobsonNative.zwoGetFrame();
-    const response = await fetch(frame.dataUrl);
-    return response.blob();
-  };
 
   capture.addEventListener("click", async () => {
     if (capturing) return;
     capturing = true;
     capture.disabled = true;
     try {
-      const blob = zwoRunning ? await captureZwoFrame() : await captureVideoFrame();
+      const calibration = window.__dobsonCaptureCalibration();
+      const blob = await captureVideoFrame();
       capturedImage = new File([blob], `ciel-${Date.now()}.jpg`, { type: "image/jpeg" });
+      capturedCalibration = calibration;
       if (photoUrl) URL.revokeObjectURL(photoUrl);
       photoUrl = URL.createObjectURL(capturedImage);
       photoPreview.src = photoUrl;
@@ -1016,230 +1175,18 @@ function installAugmentedReality() {
     }
   });
 
-  sourceSelect.addEventListener("change", () => {
-    arSource = sourceSelect.value === "zwo" ? "zwo" : "phone";
-    localStorage.setItem("dobson-mobile-ar-source", arSource);
-    if (stream || zwoRunning) stop();
-  });
-  const refreshSourceSelector = async () => {
-    try {
-      const zwoStatus = await DobsonNative.zwoStatus();
-      sourceLabel.hidden = !zwoStatus.connected;
-      if (!zwoStatus.connected && arSource === "zwo") {
-        arSource = "phone";
-        sourceSelect.value = arSource;
-        localStorage.setItem("dobson-mobile-ar-source", arSource);
-      }
-    } catch {
-      sourceLabel.hidden = true;
-    }
-  };
-  refreshSourceSelector();
-  window.addEventListener("dobson-zwo-changed", refreshSourceSelector);
-
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden && (stream || zwoRunning || starting)) stop();
+    if (document.hidden && (stream || starting)) stop();
   });
   window.addEventListener("pagehide", () => {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
   });
 }
 
-async function solveImage(image, reportStatus) {
+async function solveImage(image, reportStatus, onCalibration) {
   const { apiKey } = await DobsonNative.getAstrometryApiKey();
   if (!apiKey) throw new Error("Enregistrez d’abord votre clé API dans les paramètres techniques.");
-  return solveWithAstrometry(image, apiKey, reportStatus);
-}
-
-const zwoConfigStorageKey = "dobson-mobile-zwo-config";
-const zwoChangedEvent = "dobson-zwo-changed";
-const defaultZwoConfig = { exposureMs: 100, gain: 100 };
-
-function readZwoConfig() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(zwoConfigStorageKey) || "null");
-    return {
-      exposureMs: Number.isFinite(saved?.exposureMs) ? saved.exposureMs : defaultZwoConfig.exposureMs,
-      gain: Number.isFinite(saved?.gain) ? saved.gain : defaultZwoConfig.gain
-    };
-  } catch {
-    return { ...defaultZwoConfig };
-  }
-}
-
-function installZwoCameraSettings(container) {
-  if (!container) return;
-  const section = document.createElement("details");
-  section.className = "settings-section dobson-zwo-options";
-  section.innerHTML = `
-    <summary>Caméra ZWO ASI224<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-chevron-down"></use></svg></summary>
-    <div class="settings-content dobson-zwo-settings">
-      <output class="dobson-zwo-status" role="status" aria-live="polite">Vérification de la caméra…</output>
-      <label for="dobson-zwo-exposure">Exposition (ms)</label>
-      <input id="dobson-zwo-exposure" type="number" inputmode="decimal" min="0.1" max="10000" step="0.1">
-      <label for="dobson-zwo-gain">Gain</label>
-      <input id="dobson-zwo-gain" type="number" inputmode="numeric" min="0" max="600" step="1">
-      <div class="dobson-solver-actions">
-        <button id="dobson-zwo-connect" type="button">Connecter la caméra</button>
-        <button id="dobson-zwo-apply" type="button">Appliquer les réglages</button>
-        <button id="dobson-zwo-disconnect" type="button">Déconnecter</button>
-      </div>
-      <details class="dobson-zwo-journal">
-        <summary>Journal de la caméra<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-clipboard-list"></use></svg></summary>
-        <div class="settings-content">
-          <label for="dobson-zwo-journal-content">Événements de connexion et erreurs</label>
-          <textarea id="dobson-zwo-journal-content" class="dobson-zwo-journal-content" readonly rows="10" spellcheck="false"></textarea>
-          <div class="dobson-solver-actions">
-            <button id="dobson-zwo-journal-refresh" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-refresh"></use></svg>Actualiser</button>
-            <button id="dobson-zwo-journal-copy" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-copy"></use></svg>Copier</button>
-            <button id="dobson-zwo-journal-clear" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#icon-trash-2"></use></svg>Effacer</button>
-          </div>
-        </div>
-      </details>
-    </div>`;
-  container.appendChild(section);
-
-  const statusOutput = section.querySelector(".dobson-zwo-status");
-  const exposureInput = section.querySelector("#dobson-zwo-exposure");
-  const gainInput = section.querySelector("#dobson-zwo-gain");
-  const connectButton = section.querySelector("#dobson-zwo-connect");
-  const applyButton = section.querySelector("#dobson-zwo-apply");
-  const disconnectButton = section.querySelector("#dobson-zwo-disconnect");
-  const savedConfig = readZwoConfig();
-  exposureInput.value = String(savedConfig.exposureMs);
-  gainInput.value = String(savedConfig.gain);
-
-  const readControls = () => {
-    const exposureMs = Number(exposureInput.value);
-    const gain = Number(gainInput.value);
-    if (!Number.isFinite(exposureMs) || exposureMs <= 0 || !Number.isFinite(gain) || gain < 0) {
-      throw new Error("Saisissez une exposition positive et un gain valide.");
-    }
-    return { exposureMs, gain };
-  };
-  const refresh = async () => {
-    try {
-      const status = await DobsonNative.zwoStatus();
-      if (status.connected) {
-        statusOutput.textContent = `Caméra connectée : ${status.name} (${status.width} x ${status.height}).`;
-      } else if (status.usbDetected) {
-        statusOutput.textContent = `Caméra ${status.name || "ZWO"} détectée, non connectée.`;
-      } else {
-        statusOutput.textContent = "Aucune caméra ZWO détectée. Branchez-la en USB OTG.";
-      }
-      applyButton.disabled = !status.connected;
-      disconnectButton.disabled = !status.connected;
-      return status;
-    } catch (error) {
-      statusOutput.textContent = "Caméra ZWO indisponible sur cet appareil.";
-      applyButton.disabled = true;
-      disconnectButton.disabled = true;
-      console.error("Lecture de l’état de la caméra ZWO impossible.", error);
-      return null;
-    }
-  };
-  const connectCamera = async (controls) => {
-    const current = await DobsonNative.zwoStatus();
-    if (current.connected) {
-      await DobsonNative.zwoSetControls(controls);
-    } else {
-      const { cameras } = await DobsonNative.zwoListCameras();
-      if (!cameras.length) throw new Error("Aucune caméra ZWO détectée. Branchez-la en USB OTG puis réessayez.");
-      await DobsonNative.zwoOpen({ index: cameras[0].index, ...controls });
-    }
-    saveZwoConfig(controls);
-  };
-
-  refresh().then((status) => {
-    if (!status || status.connected || !status.usbDetected || !localStorage.getItem(zwoConfigStorageKey)) return;
-    connectCamera(readZwoConfig())
-      .then(() => refresh())
-      .then(() => window.dispatchEvent(new CustomEvent(zwoChangedEvent)))
-      .catch((error) => {
-        statusOutput.textContent = error.message || "Reconnexion automatique de la caméra ZWO impossible.";
-        console.error("Reconnexion automatique de la caméra ZWO impossible.", error);
-      });
-  });
-
-  connectButton.addEventListener("click", async () => {
-    connectButton.disabled = true;
-    try {
-      const controls = readControls();
-      await connectCamera(controls);
-      await refresh();
-      window.dispatchEvent(new CustomEvent(zwoChangedEvent));
-    } catch (error) {
-      statusOutput.textContent = error.message || "Connexion à la caméra ZWO impossible.";
-      console.error("Connexion à la caméra ZWO impossible.", error);
-    } finally {
-      connectButton.disabled = false;
-    }
-  });
-  applyButton.addEventListener("click", async () => {
-    try {
-      const controls = readControls();
-      await DobsonNative.zwoSetControls(controls);
-      saveZwoConfig(controls);
-      await refresh();
-      statusOutput.textContent = "Réglages appliqués.";
-    } catch (error) {
-      statusOutput.textContent = error.message || "Impossible d’appliquer les réglages.";
-      console.error("Application des réglages ZWO impossible.", error);
-    }
-  });
-  disconnectButton.addEventListener("click", async () => {
-    try {
-      await DobsonNative.zwoClose();
-      await refresh();
-      statusOutput.textContent = "Caméra déconnectée.";
-      window.dispatchEvent(new CustomEvent(zwoChangedEvent));
-    } catch (error) {
-      statusOutput.textContent = error.message || "Impossible de déconnecter la caméra.";
-      console.error("Déconnexion de la caméra ZWO impossible.", error);
-    }
-  });
-
-  const journalDetails = section.querySelector(".dobson-zwo-journal");
-  const journalOutput = section.querySelector("#dobson-zwo-journal-content");
-  const journalRefresh = section.querySelector("#dobson-zwo-journal-refresh");
-  const journalCopy = section.querySelector("#dobson-zwo-journal-copy");
-  const journalClear = section.querySelector("#dobson-zwo-journal-clear");
-  const refreshJournal = async () => {
-    try {
-      const { content } = await DobsonNative.zwoGetLog();
-      journalOutput.value = content || "Journal vide.";
-    } catch (error) {
-      journalOutput.value = "Lecture du journal impossible.";
-      console.error("Lecture du journal ZWO impossible.", error);
-    }
-  };
-  journalDetails.addEventListener("toggle", () => {
-    if (journalDetails.open) refreshJournal();
-  });
-  journalRefresh.addEventListener("click", refreshJournal);
-  journalClear.addEventListener("click", async () => {
-    try {
-      await DobsonNative.zwoClearLog();
-      await refreshJournal();
-    } catch (error) {
-      journalOutput.value = "Effacement du journal impossible.";
-      console.error("Effacement du journal ZWO impossible.", error);
-    }
-  });
-  journalCopy.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(journalOutput.value);
-      statusOutput.textContent = "Journal copié dans le presse-papiers.";
-    } catch (error) {
-      journalOutput.select();
-      document.execCommand("copy");
-      statusOutput.textContent = "Journal copié dans le presse-papiers.";
-    }
-  });
-}
-
-function saveZwoConfig(config) {
-  localStorage.setItem(zwoConfigStorageKey, JSON.stringify(config));
+  return solveWithAstrometry(image, apiKey, reportStatus, { onCalibration });
 }
 
 function installAdvancedPlateSolver(container) {

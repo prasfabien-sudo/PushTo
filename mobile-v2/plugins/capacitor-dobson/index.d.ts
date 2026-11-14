@@ -8,14 +8,16 @@ export interface CatalogObject {
 }
 
 export interface DobsonNativePlugin {
+  setNightSystemBars(options: { enabled: boolean }): Promise<void>;
   connect(options: { ssid: string; password?: string }): Promise<{ ssid: string }>;
   disconnect(options: { ssid: string }): Promise<void>;
+  getWifiState(): Promise<{ connected: boolean; ssid: string }>;
   getEncoderStatus(): Promise<{ rawAZ: number; rawALT: number; ticksAZ: number; ticksALT: number }>;
   startSensors(options: { intervalMs?: number }): Promise<void>;
   stopSensors(): Promise<void>;
   addListener(
     eventName: "orientation",
-    listener: (event: { azimuth: number; altitude: number; pitch: number; roll: number; timestamp: number; headingAvailable: boolean }) => void
+    listener: (event: { azimuth: number; altitude: number; cameraAzimuth: number; cameraAltitude: number; pitch: number; roll: number; timestamp: number; headingAvailable: boolean }) => void
   ): Promise<{ remove(): Promise<void> }>;
   addListener(
     eventName: "sensorError",
@@ -32,32 +34,4 @@ export interface DobsonNativePlugin {
   getAstrometryApiKey(): Promise<{ apiKey: string }>;
   clearAstrometryApiKey(): Promise<void>;
   saveAstroPhoto(options: { base64: string; filename: string }): Promise<void>;
-  zwoListCameras(): Promise<{ cameras: ZwoCameraInfo[] }>;
-  zwoStatus(): Promise<ZwoStatus>;
-  zwoOpen(options: { index: number; exposureMs?: number; gain?: number }): Promise<ZwoStatus>;
-  zwoSetControls(options: { exposureMs?: number; gain?: number }): Promise<ZwoStatus>;
-  zwoGetFrame(): Promise<{ dataUrl: string; width: number; height: number; timestamp: number }>;
-  zwoClose(): Promise<ZwoStatus>;
-  zwoGetLog(): Promise<{ content: string }>;
-  zwoClearLog(): Promise<void>;
-}
-
-export interface ZwoCameraInfo {
-  index: number;
-  cameraId: number;
-  name: string;
-  maxWidth: number;
-  maxHeight: number;
-  isColor: boolean;
-}
-
-export interface ZwoStatus {
-  connected: boolean;
-  usbDetected: boolean;
-  name: string;
-  width: number;
-  height: number;
-  isColor: boolean;
-  exposureMs: number;
-  gain: number;
 }

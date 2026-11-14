@@ -112,7 +112,7 @@ function makeMobileCatalogFilteringResponsive(html) {
 
       if (selectedTypeFilter !== 'all') {
         filtered = filtered.filter(o => {
-          const type = (o.type || "").toLowerCase();
+          const type = (o.type || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
           if (selectedTypeFilter === 'neb_planetaire') return type.includes('planétaire') || type.includes('planetaire') || type.includes('pn');
           if (selectedTypeFilter === 'planete') return (type === 'planète' || type === 'planete') && !type.includes('neb');
           if (selectedTypeFilter === 'galaxie') return type.includes('gal') || type.includes('gx');
@@ -280,8 +280,8 @@ function makeMobileSkyRendererResponsive(html) {
       "enregistrement du déplacement au doigt"
     ],
     [
-      "      alignOffsetElevation = 0;\n      if (projectionMode === 'actuel') fieldOfView = 34;\n      else if (projectionMode === 'stéréo') fieldOfView = 60;\n      else fieldOfView = 45;\n    });",
-      "      alignOffsetElevation = 0;\n      if (projectionMode === 'actuel') fieldOfView = 34;\n      else if (projectionMode === 'stéréo') fieldOfView = 60;\n      else fieldOfView = 45;\n      scheduleMobileSkyViewSave();\n    });",
+      "      telescopeCameraDirection = [0, 0, 1];\n      if (projectionMode === 'actuel') fieldOfView = 34;\n      else if (projectionMode === 'stéréo') fieldOfView = 60;\n      else fieldOfView = 45;\n    });",
+      "      telescopeCameraDirection = [0, 0, 1];\n      if (projectionMode === 'actuel') fieldOfView = 34;\n      else if (projectionMode === 'stéréo') fieldOfView = 60;\n      else fieldOfView = 45;\n      scheduleMobileSkyViewSave();\n    });",
       "enregistrement du recentrage"
     ],
     [
@@ -335,13 +335,13 @@ function makeMobileSkyRendererResponsive(html) {
     ],
     [
       '    function render() {\n      requestAnimationFrame(render);',
-      '    const mobileEquatorialCache = new WeakMap();\n    const mobileHorizontalCache = new WeakMap();\n    let mobileHorizontalFrame = null;\n    let mobileLastLabelUpdate = 0;\n    function render() {\n      requestAnimationFrame(render);',
+      '    const mobileEquatorialCache = new WeakMap();\n    const mobileHorizontalCache = new WeakMap();\n    let mobileHorizontalFrame = null;\n    function render() {\n      requestAnimationFrame(render);',
       "préparation du rendu mobile continu"
     ],
     [
-      '    function horizontalPosition(object, siderealDegrees, latRadians) {\n      const dec = object.dec * Math.PI / 180;',
-      `    function horizontalPosition(object, siderealDegrees, latRadians) {
-      if (window.__dobsonMobileApp && mobileHorizontalFrame && Number.isFinite(object.ra) && Number.isFinite(object.dec)) {
+      '    function horizontalPosition(object, siderealDegrees, latRadians, useMobileCache = true) {\n      const dec = object.dec * Math.PI / 180;',
+      `    function horizontalPosition(object, siderealDegrees, latRadians, useMobileCache = true) {
+      if (useMobileCache && window.__dobsonMobileApp && mobileHorizontalFrame && Number.isFinite(object.ra) && Number.isFinite(object.dec)) {
         const cachedPosition = mobileHorizontalCache.get(object);
         if (cachedPosition && cachedPosition.frameKey === mobileHorizontalFrame.key) return cachedPosition.value;
         let equatorial = mobileEquatorialCache.get(object);
@@ -381,7 +381,7 @@ function makeMobileSkyRendererResponsive(html) {
       if (window.__dobsonMobileApp) {
         const siderealRadians = sidereal * Math.PI / 180;
         mobileHorizontalFrame = {
-          key: Math.round(sidereal * 1000),
+          key: Math.round(sidereal * 1000) + "|" + latitude,
           cosSidereal: Math.cos(siderealRadians),
           sinSidereal: Math.sin(siderealRadians),
           cosLatitude: Math.cos(latRadians),
@@ -399,7 +399,8 @@ function makeMobileSkyRendererResponsive(html) {
         showGalaxies: document.getElementById('showGal').checked,
         showNebulae: document.getElementById('showNeb').checked,
         showClusters: document.getElementById('showAmas').checked,
-        showStars: document.getElementById('showStars').checked
+        showStars: document.getElementById('showStars').checked,
+        showMessierAll: document.getElementById('showMessierAll').checked
       } : null;
       lastScreenObjects = [];
 
@@ -411,41 +412,13 @@ function makeMobileSkyRendererResponsive(html) {
       `        if (window.__dobsonMobileApp) {
           const { isGal, isNeb, isAmas, isStar } = getObjectType(object);
           if (object.mag > mobileRenderFilters.maxMagnitude
+              && !(mobileRenderFilters.showMessierAll && isMessierObject(object))
             || !(isGal && mobileRenderFilters.showGalaxies)
               && !(isNeb && mobileRenderFilters.showNebulae)
               && !(isAmas && mobileRenderFilters.showClusters)
               && !(isStar && mobileRenderFilters.showStars)) continue;
         } else if (!matchesFilter(object)) continue;`,
       "suppression des recherches DOM par étoile"
-    ],
-    [
-      '      viewReadout.textContent = \`Offset AZ \${Math.round(currentHeading)}° · ALT \${Math.round(currentElevation)}°\`;\n\n      // Éléments réutilisés entre les frames pour éviter le clignotement\n      const labelPool = labelsElement.labelPool || (labelsElement.labelPool = []);\n      let labelUsed = 0;',
-      `      viewReadout.textContent = \`Offset AZ \${Math.round(currentHeading)}° · ALT \${Math.round(currentElevation)}°\`;
-      if (window.__dobsonMobileApp) {
-        const now = performance.now();
-        if (now - mobileLastLabelUpdate < 80) return;
-        mobileLastLabelUpdate = now;
-      }
-
-      // Éléments réutilisés entre les frames pour éviter le clignotement
-      const labelPool = labelsElement.labelPool || (labelsElement.labelPool = []);
-      let labelUsed = 0;`,
-      "découplage des étiquettes du rendu fluide"
-    ],
-    [
-      '      const placedLabels = [];',
-      '      const placedLabelGrid = new Map();\n      let mobileLabelCount = 0;',
-      "index spatial des étiquettes du ciel"
-    ],
-    [
-      '        let leftPct = (item.screenX + 1) * 50;\n        let topPct = (1 - item.screenY) * 50;\n\n        // V5.73.0 Seuil de collision dynamique selon FOV et mode\n        let collisionPanFactor = (projectionMode !== \'actuel\') ? (60 / fieldOfView) : (34 / fieldOfView);\n        const thresholdX = Math.max(1.0, 6.5 / collisionPanFactor);\n        const thresholdY = Math.max(0.8, 4.0 / collisionPanFactor);\n        const overlap = placedLabels.some(p => Math.abs(p.left - leftPct) < thresholdX && Math.abs(p.top - topPct) < thresholdY);\n        if (overlap) continue;\n\n        placedLabels.push({ left: leftPct, top: topPct });',
-      '        if (window.__dobsonMobileApp && mobileLabelCount >= 250) continue;\n        const leftPct = (item.screenX + 1) * 50;\n        const topPct = (1 - item.screenY) * 50;\n\n        // V5.73.0 Seuil de collision dynamique selon FOV et mode\n        const collisionPanFactor = (projectionMode !== \'actuel\') ? (60 / fieldOfView) : (34 / fieldOfView);\n        const thresholdX = Math.max(1.0, 6.5 / collisionPanFactor);\n        const thresholdY = Math.max(0.8, 4.0 / collisionPanFactor);\n        const cellX = Math.floor(leftPct / thresholdX);\n        const cellY = Math.floor(topPct / thresholdY);\n        let overlap = false;\n        for (let x = cellX - 1; x <= cellX + 1 && !overlap; x++) {\n          for (let y = cellY - 1; y <= cellY + 1 && !overlap; y++) {\n            const cell = placedLabelGrid.get(x + \':\' + y);\n            overlap = Boolean(cell && cell.some(p => Math.abs(p.left - leftPct) < thresholdX && Math.abs(p.top - topPct) < thresholdY));\n          }\n        }\n        if (overlap) continue;\n        const cellKey = cellX + \':\' + cellY;\n        if (!placedLabelGrid.has(cellKey)) placedLabelGrid.set(cellKey, []);\n        placedLabelGrid.get(cellKey).push({ left: leftPct, top: topPct });',
-      "optimisation des collisions d'étiquettes"
-    ],
-    [
-      '        else label.textContent = item.object.name ? item.object.name : item.object.commonName;\n        \n      }\n      for (let i = labelUsed; i < labelPool.length; i++) labelPool[i].style.display = \'none\';',
-      '        else label.textContent = item.object.name ? item.object.name : item.object.commonName;\n        mobileLabelCount++;\n        \n      }\n      for (let i = labelUsed; i < labelPool.length; i++) labelPool[i].style.display = \'none\';',
-      "limitation des étiquettes mobiles"
     ]
   ];
 
@@ -525,6 +498,9 @@ function makeMobileHtml(html, output) {
   }
   if (html.includes('id="skyCanvas"')) {
     html = makeMobileSkyRendererResponsive(html);
+    html = html.replace('</head>', `<script>if (window.Capacitor?.isNativePlatform?.()) document.documentElement.classList.add('dobson-sky-startup');</script>
+<style>html.dobson-sky-startup body{min-height:100dvh;padding:0 0 calc(58px + env(safe-area-inset-bottom)) !important;background:#080a10 !important}html.dobson-sky-startup .sky-card{width:100%;max-width:none;margin:0;padding:0}html.dobson-sky-startup .sky-heading,html.dobson-sky-startup .sky-status,html.dobson-sky-startup .scene-label.telescope{display:none}html.dobson-sky-startup .scene{width:100%;height:calc(100dvh - 58px - env(safe-area-inset-bottom));min-height:0;max-height:none;border:0;border-radius:0;box-shadow:none;transition:background .5s}</style>
+</head>`);
     html = html.replace('</head>', '  <script src="/sky-webgl.js"></script>\n</head>');
     html = html.replace(
       '<div class="scene-zoom-controls">',

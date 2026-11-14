@@ -5,10 +5,10 @@ const test = require("node:test");
 const vm = require("node:vm");
 const { makeMobileHtml, pages, prepare, readCatalog, readMobileCatalog } = require("../scripts/prepare-web.cjs");
 
-test("extrait les huit écrans et enrichit le catalogue mobile sans modifier celui du firmware", () => {
+test("extrait les huit écrans et enrichit le catalogue mobile depuis les données firmware", () => {
   const result = prepare();
   assert.equal(result.pageCount, 8);
-  assert.equal(readCatalog().length, 445);
+  assert.equal(readCatalog().length, 947);
   assert.equal(result.objectCount, readMobileCatalog().length);
   assert.ok(result.objectCount > 8000);
   const mobileCatalog = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../public/mobile-catalog.json"), "utf8"));
@@ -22,12 +22,15 @@ test("extrait les huit écrans et enrichit le catalogue mobile sans modifier cel
     assert.match(html, /<html lang="fr">/);
     if (page.output === "beta_sky.html") {
       assert.match(html, /dobson-ar-toggle/);
-      assert.match(html, /Caméra en réalité augmentée \(les capteurs se commandent séparément\)/);
+      assert.match(html, /Caméra en réalité augmentée et pointage automatique/);
       assert.match(html, /dobson-ar-video/);
       assert.match(html, /mobileHorizontalFrame/);
-      assert.match(html, /mobileLastLabelUpdate < 16/);
+      assert.match(html, /now - lastObjectLabelLayout >= 80/);
+      assert.match(html, /updateObjectLabels\(lastScreenObjects, width, height, labelTime\)/);
       assert.match(html, /mobileRenderFilters/);
-      assert.match(html, /const cameraElevation = elevation \+ touchElevation \+ alignOffsetElevation/);
+      assert.match(html, /showMessierAll/);
+      assert.match(html, /isMessierObject\(object\)/);
+      assert.match(html, /const cameraElevation = elevation \+ touchElevation \+ alignOffsetElevation \+ cameraCalibrationElevation/);
       assert.match(html, /normalizeSkyAngles\(cameraHeading, cameraElevation\)/);
       assert.match(html, /skyCameraBasis\(cameraHeading, cameraElevation\)/);
       assert.match(html, /const right = \[Math\.cos\(azimuthRadians\), 0, -Math\.sin\(azimuthRadians\)\]/);
@@ -41,9 +44,13 @@ test("extrait les huit écrans et enrichit le catalogue mobile sans modifier cel
       assert.match(html, /window\.__dobsonEspConnected \? 100 : 33/);
       assert.match(html, /window\.setInterval\(pollEncoderStatus, 100\)/);
       assert.doesNotMatch(html, /mobileLastFrameTime/);
-      assert.match(html, /mobileLabelCount >= 250/);
+      assert.match(html, /selected\.size >= 250/);
       assert.match(html, /placedLabelGrid/);
       assert.doesNotMatch(html, /placedLabels\.some/);
+      assert.match(html, /constellationLabelStates = new Map\(\)/);
+      assert.doesNotMatch(html, /replaceChildren\(constLabels\)/);
+      assert.match(html, /window\.__dobsonSetTelescopeMarker/);
+      assert.match(html, /window\.__dobsonApplyPhotoCalibration/);
     }
     if (page.output === "index.html") {
       assert.match(html, /dobson-catalog-more-button/);
@@ -104,7 +111,11 @@ test("la caméra descend sous l’horizon quand le geste tactile descend", () =>
       set heading(value) { touchHeading = value; },
       set elevation(value) { touchElevation = value; }
     };
-  })()`);
+  })()`, {
+    reverseTouchAzimuth: false,
+    reverseTouchAltitude: false,
+    window: { __dobsonMobileApp: true }
+  });
 
   panState.elevation = 1;
   panState.pan(0, 8, 1);
@@ -123,7 +134,7 @@ test("la caméra descend sous l’horizon quand le geste tactile descend", () =>
 
   panState.heading = 42;
   panState.pan(10, 0, 1);
-  assert.equal(panState.heading, 45.5);
+  assert.equal(panState.heading, 38.5);
   panState.pan(-10, 0, 1);
   assert.equal(panState.heading, 42);
 

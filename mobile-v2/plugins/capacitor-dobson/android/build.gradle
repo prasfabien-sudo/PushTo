@@ -40,5 +40,5 @@ repositories {
 
 dependencies {
     implementation project(':capacitor-android')
-    implementation files('libs/zwocamera.jar')
+    implementation "androidx.appcompat:appcompat:${project.hasProperty('androidxAppCompatVersion') ? rootProject.ext.androidxAppCompatVersion : '1.7.1'}"
 }

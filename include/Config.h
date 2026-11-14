@@ -7,6 +7,10 @@
 // Ports
 #define SKYSAFARI_PORT 4030
 
+// LED interne de nombreuses cartes ESP32 DevKit ; adapter selon la carte.
+#define ENCODER_LED_PIN 2
+#define ENCODER_LED_ON HIGH
+
 // Broches Encodeurs (ESP32)
 // 🌀 Encodeur Azimut (AZ) :
 // Fil Marron  5V de l'ESP32   

@@ -143,6 +143,42 @@ Lorsque l'ESP32 est démarré, il est accessible sur :
 
 Le protocole renvoie les compteurs d'encodeurs pour `Q`/`R` et leur résolution pour `a`/`q`. L'ESP32 ne sert plus de pages web et n'accepte plus de commandes de configuration ou d'alignement ; ces réglages sont conservés dans l'application mobile.
 
+### Diagnostic TCP de l'ESP32
+
+Connecter le PC au Wi-Fi `Dobson_PushTo`, même s'il n'offre pas d'accès Internet. Fermer SkySafari et l'application mobile : le firmware ne permet qu'un client TCP simultané. Vérifier dans le moniteur série à 115200 bauds l'adresse IP et le démarrage du serveur sur le port 4030. Par défaut, l'adresse du point d'accès est `192.168.4.1`.
+
+Dans PowerShell, exécuter ce diagnostic manuel, qui envoie les commandes sans retour à la ligne et affiche leurs réponses terminées par un retour chariot :
+
+```powershell
+$client = [System.Net.Sockets.TcpClient]::new()
+try {
+    $connection = $client.ConnectAsync("192.168.4.1", 4030)
+    if (-not $connection.Wait(2000)) { throw "Délai de connexion TCP dépassé." }
+    $stream = $client.GetStream()
+    $stream.ReadTimeout = 2000
+    foreach ($command in @("Q", "a")) {
+        $bytes = [System.Text.Encoding]::ASCII.GetBytes($command)
+        $stream.Write($bytes, 0, $bytes.Length)
+        $response = [System.Text.StringBuilder]::new()
+        do {
+            $value = $stream.ReadByte()
+            if ($value -lt 0) { throw "Connexion fermée pendant la réponse à $command." }
+            if ($value -ne 13) { [void]$response.Append([char]$value) }
+            if ($response.Length -gt 64) { throw "Réponse trop longue à $command." }
+        } while ($value -ne 13)
+        Write-Host "${command}: $response"
+    }
+} finally {
+    $client.Dispose()
+}
+```
+
+`Q` renvoie deux compteurs signés AZ et ALT, séparés par une tabulation ; `a` renvoie deux résolutions positives. Par exemple, au démarrage, `Q` peut répondre `+00000	+00000` et `a` `+10000	+10000`. Relancer après avoir déplacé chaque axe pour vérifier que son compteur change. Si TCP ou les réponses échouent, noter le message, vérifier le bon réseau, l'adresse série et l'absence d'autre client, puis redémarrer l'ESP32. Si TCP répond mais que les compteurs ne changent pas, contrôler séparément l'alimentation et le câblage des encodeurs. Une résolution incorrecte peut fausser les angles sans empêcher la connexion.
+
+La LED interne clignote lorsqu'une impulsion est détectée sur la phase A de l'un des deux encodeurs, même sans connexion Wi-Fi. Tester les deux axes séparément. Cela confirme la détection d'impulsions, mais pas le bon sens de rotation ni la lecture TCP. Le projet configure par défaut une LED active à l'état haut sur GPIO 2, présente sur de nombreuses cartes ESP32 DevKit ; certaines cartes n'ont pas cette LED ou utilisent une autre broche ou polarité. Adapter `ENCODER_LED_PIN` et `ENCODER_LED_ON` dans `include/Config.h` à la carte, et ne pas utiliser une broche déjà affectée à un autre périphérique.
+
+Le moniteur série à 115200 bauds affiche au démarrage les broches, les niveaux initiaux, l'activation des interruptions et la LED configurée. Ensuite, il affiche toutes les deux secondes les compteurs AZ/ALT et les niveaux instantanés des phases A/B. Déplacer lentement un axe à la fois et vérifier que son compteur varie. Les niveaux affichés sont des instantanés et peuvent rester identiques même en présence d'impulsions entre deux relevés ; des entrées en pull-up peuvent aussi être à 1 lorsqu'elles ne sont pas raccordées. Ces messages ne suffisent donc pas à valider le câblage ou la tension des signaux.
+
 ## Calibration
 
 La calibration est gérée par l'application mobile et conservée localement.

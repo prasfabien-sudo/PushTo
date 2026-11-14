@@ -28,13 +28,40 @@ function createMobileWindow(pathname = "/beta_sky.html", session = new Map()) {
   };
   const sessionStorage = {
     getItem: (key) => session.get(key) ?? null,
-    setItem: (key, value) => session.set(key, String(value))
+    setItem: (key, value) => session.set(key, String(value)),
+    removeItem: (key) => session.delete(key)
   };
   const context = vm.createContext({ window, localStorage, sessionStorage, URL, Request, Response, Promise, console });
   const source = fs.readFileSync(path.resolve(__dirname, "../public/mobile-bootstrap.js"), "utf8");
   vm.runInContext(source, context);
   return { window, localStorage, sessionStorage, requests, redirects };
 }
+
+test("la simulation locale est explicite, isolée et partagée entre écrans", async () => {
+  const session = new Map();
+  const first = createMobileWindow("/simu.html", session);
+  first.localStorage.setItem("dobson-mobile-device-config", JSON.stringify({ ticksAZ: 3600, ticksALT: 1800, offsetAZ: 10 }));
+  first.window.__dobsonEspConnected = true;
+  assert.equal((await first.window.fetch("/simstep?axis=az&delta=10")).status, 409);
+
+  first.window.__dobsonStartSimulation();
+  assert.equal((await first.window.fetch("/simstep?axis=az&delta=10")).status, 200);
+  assert.equal((await first.window.fetch("/simstep?axis=alt&delta=-5")).status, 200);
+  assert.equal((await first.window.fetch("/simstep?axis=az&delta=1.5")).status, 400);
+  const status = await (await first.window.fetch("/status")).json();
+  assert.equal(status.rawAZ, 10);
+  assert.equal(status.rawALT, -5);
+  assert.equal(status.ticksAZ, 3600);
+  assert.deepEqual(first.requests, []);
+  await first.window.fetch("/cmd?action=align");
+  assert.equal(JSON.parse(first.localStorage.getItem("dobson-mobile-device-config")).offsetAZ, 10);
+
+  const second = createMobileWindow("/index.html", session);
+  assert.equal((await (await second.window.fetch("/status")).json()).rawALT, -5);
+  second.window.__dobsonStopSimulation();
+  assert.equal(second.window.__dobsonSimulationActive(), false);
+  assert.equal((await second.window.fetch("/simstep?axis=reset&delta=0")).status, 409);
+});
 
 test("l’application mobile ouvre la vue 3D comme écran de démarrage", () => {
   const { redirects, window, sessionStorage } = createMobileWindow("/");

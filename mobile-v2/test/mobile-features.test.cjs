@@ -4,7 +4,17 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
-test("la navigation mobile ouvre chaque page HTML et marque la page active", () => {
+test("le diagnostic TCP est accessible depuis les paramètres et compare les compteurs", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/mobile.js"), "utf8");
+  assert.match(source, /id="dobson-test-connection"/);
+  assert.match(source, /technicalContent\.appendChild\(connectionPanel\)/);
+  assert.match(source, /await DobsonNative\.getEncoderStatus\(\)/);
+  assert.match(source, /rawAZ - previousEncoderTest\.rawAZ/);
+  assert.match(source, /rawALT - previousEncoderTest\.rawALT/);
+  assert.match(source, /if \(!state\.connected\) \{\s*previousEncoderTest = undefined/);
+});
+
+test("la navigation mobile garde trois piliers et marque la page active", () => {
   const source = fs.readFileSync(path.resolve(__dirname, "../src/mobile.js"), "utf8");
   const navigationFunction = source.match(/function installNativeNavigation\(\) \{[\s\S]*?\r?\n\}/);
   assert.ok(navigationFunction);
@@ -13,9 +23,12 @@ test("la navigation mobile ouvre chaque page HTML et marque la page active", () 
     ["/", "/beta_sky.html", "page"],
     ["/beta_sky.html", "/beta_sky.html", "page"],
     ["/index.html", "/index.html", "page"],
-    ["/station.html", "/station.html", "page"],
+    ["/station.html", "/index.html", "page"],
+    ["/calib_page.html", "/index.html", "page"],
+    ["/simu.html", "/index.html", "page"],
     ["/config.html", "/config.html", "page"],
-    ["/help.html", "/help.html", "page"]
+    ["/help.html", "/config.html", "page"],
+    ["/releasenotes.html", "/config.html", "page"]
   ];
 
   for (const [pathname, expectedHref, expectedCurrent] of expectedPages) {
@@ -45,7 +58,9 @@ test("la navigation mobile ouvre chaque page HTML et marque la page active", () 
       querySelector: () => navigation,
       createElement: () => ({
         attributes: {},
-        setAttribute(name, value) { this.attributes[name] = value; }
+        children: [],
+        setAttribute(name, value) { this.attributes[name] = value; },
+        appendChild(element) { this.children.push(element); }
       }),
       getElementById: (id) => id === "nightModeToggle" && nightModeToggle.parentNode ? nightModeToggle : null,
       body
@@ -57,9 +72,7 @@ test("la navigation mobile ouvre chaque page HTML et marque la page active", () 
     assert.deepEqual(navigation.links.map((link) => link.href), [
       "/beta_sky.html",
       "/index.html",
-      "/station.html",
-      "/config.html",
-      "/help.html"
+      "/config.html"
     ]);
     assert.equal(navigation.links.find((link) => link.href === expectedHref).attributes["aria-current"] || null, expectedCurrent);
     assert.equal(nightModeToggle.parentNode, body);

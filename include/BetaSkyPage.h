@@ -41,9 +41,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .zoom-btn { width: 32px; height: 32px; background: rgba(21, 27, 37, 0.85); border: 1px solid #344256; border-radius: 6px; color: #ffb74d; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); padding: 0; }
     .zoom-btn:active { background: rgba(37, 50, 71, 0.95); transform: scale(0.95); }
 
-    .object-label { position: absolute; z-index: 2; padding: 1px 3px; border-radius: 4px; background: transparent; font-size: 0.65rem; white-space: nowrap; text-shadow: 0 1px 3px #000, 0 0 3px #000, 0 0 5px #000; pointer-events: none; transition: transform 0.1s ease-out; }
+    .object-label { position: absolute; left: 0; top: 0; z-index: 2; padding: 1px 3px; border-radius: 4px; background: transparent; font-size: 0.65rem; white-space: nowrap; text-shadow: 0 1px 3px #000, 0 0 3px #000, 0 0 5px #000; pointer-events: none; transition: opacity 0.15s ease-out; }
     .object-label.polaris { color: #ffb74d !important; font-weight: bold; z-index: 3; }
-    .constellation-label { position: absolute; z-index: 2; color: #ffb366; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.9; }
+    .constellation-label { position: absolute; left: 0; top: 0; z-index: 2; color: #ffb366; font-size: .75rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 1px 5px #000; pointer-events: none; opacity: 0; transition: opacity 0.15s ease-out; }
 
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-top: 8px; }
     
@@ -129,6 +129,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     .settings-modal-body input[type="checkbox"] { width: 17px; height: 17px; accent-color: #ffb74d; cursor: pointer; }
     .settings-modal-body input[type="checkbox"]:disabled { opacity: 0.3; cursor: not-allowed; }
     .modal-close { width: 100%; background: #263238; border: 1px solid #455a64; color: #fff; font-weight: bold; margin-top: 14px; }
+    #objectModal { inset: auto 0 0; display: flex; justify-content: center; padding: 8px; background: transparent; backdrop-filter: none; pointer-events: none; }
+    #objectModal[hidden] { display: none; }
+    #objectModal .modal-content { width: min(100%, 620px); max-height: 45vh; padding: 14px; border-radius: 14px 14px 0 0; pointer-events: auto; }
+    #objectModal .modal-object-preview { height: 72px; }
+    .sky-quick-controls { position: absolute; z-index: 6; top: 10px; left: 50%; display: flex; gap: 6px; align-items: center; transform: translateX(-50%); }
+    .sky-quick-controls button, .sky-quick-controls output { padding: 7px 9px; border: 1px solid #344256; border-radius: 8px; background: rgba(8,20,38,.9); color: #f2c877; font: inherit; white-space: nowrap; }
 
     html[data-night-mode="true"]::after { content: ""; position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; background: rgba(255, 0, 0, 0.82); mix-blend-mode: multiply; filter: brightness(0.45); }
     
@@ -174,6 +180,10 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       </div>
 
       <canvas id="skyCanvas" aria-label="Carte interactive du ciel"></canvas>
+      <div class="sky-quick-controls">
+        <button id="toggleSkyNames" type="button" aria-pressed="true">Noms : oui</button>
+        <output id="skyDirection" aria-label="Direction de la vue">N · 0°</output>
+      </div>
       <span class="scene-label cardinal" id="labelN" style="display:none">N</span>
       <span class="scene-label cardinal" id="labelS" style="display:none">S</span>
       <span class="scene-label cardinal" id="labelE" style="display:none">E</span>
@@ -291,6 +301,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         </div>
 
         <div class="settings-section-title">Catalogue céleste</div>
+        <label><input type="checkbox" id="showMessierAll"> Afficher les objets Messier indépendamment de la magnitude</label>
         <div class="settings-headers">
           <div style="text-align: left;">Type d'objet</div>
           <div>Objet</div>
@@ -331,7 +342,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
   </div>
 
   <!-- POP-UP FICHE OBJET -->
-  <div class="object-modal" id="objectModal" hidden>
+  <div class="object-modal" id="objectModal" role="region" aria-labelledby="modalTitle" hidden>
     <div class="modal-content">
       <h2 id="modalTitle">Nom de l'objet</h2>
       <div class="modal-sub" id="modalSub">Constellation · Type</div>
@@ -383,11 +394,23 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let baseObjects = [];
     let objects = [];
     const objectsByName = new Map();
+    let constellationLinesValidated = false;
     function setObjects(nextObjects) {
       objects = nextObjects;
       objectsByName.clear();
       for (const object of objects) {
         if (!objectsByName.has(object.name)) objectsByName.set(object.name, object);
+      }
+      if (!constellationLinesValidated) {
+        const missing = new Set();
+        for (const [starA, starB] of CONSTELLATION_LINES) {
+          if (!objectsByName.has(starA)) missing.add(starA);
+          if (!objectsByName.has(starB)) missing.add(starB);
+        }
+        if (missing.size) {
+          throw new Error(`Étoiles de constellation absentes du catalogue : ${[...missing].join(', ')}`);
+        }
+        constellationLinesValidated = true;
       }
     }
     let latitude = 45.89;
@@ -403,6 +426,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     
     let alignOffsetHeading = 0;
     let alignOffsetElevation = 0;
+    let cameraCalibrationHeading = 0;
+    let cameraCalibrationElevation = 0;
+    let telescopeCameraDirection = [0, 0, 1];
 
     let fieldOfView = 34;
     let encoderRequestInFlight = false;
@@ -411,7 +437,20 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     let currentSkyDate = new Date();
     
     let activeTargetObject = null;
+    let showSkyNames = localStorage.getItem('dobson-sky-names') !== 'false';
     let projectionMode = 'actuel'; // V5.73.0 Mode par défaut
+
+    const namesButton = document.getElementById('toggleSkyNames');
+    function updateNamesButton() {
+      namesButton.textContent = showSkyNames ? 'Noms : oui' : 'Noms : non';
+      namesButton.setAttribute('aria-pressed', String(showSkyNames));
+    }
+    namesButton.addEventListener('click', () => {
+      showSkyNames = !showSkyNames;
+      localStorage.setItem('dobson-sky-names', String(showSkyNames));
+      updateNamesButton();
+    });
+    updateNamesButton();
 
     let wakeLock = null;
     async function requestWakeLock() {
@@ -684,6 +723,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           if (p.showAmas !== undefined) document.getElementById('showAmas').checked = p.showAmas;
           if (p.showStars !== undefined) document.getElementById('showStars').checked = p.showStars;
           if (p.showConst !== undefined) document.getElementById('showConstellations').checked = p.showConst;
+          if (p.showMessierAll !== undefined) document.getElementById('showMessierAll').checked = Boolean(Number(p.showMessierAll));
           
           if (p.labelGal !== undefined) document.getElementById('labelGal').checked = p.labelGal;
           if (p.labelNeb !== undefined) document.getElementById('labelNeb').checked = p.labelNeb;
@@ -709,6 +749,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
           showAmas: document.getElementById('showAmas').checked ? 1 : 0,
           showStars: document.getElementById('showStars').checked ? 1 : 0,
           showConst: document.getElementById('showConstellations').checked ? 1 : 0,
+          showMessierAll: document.getElementById('showMessierAll').checked ? 1 : 0,
           labelGal: document.getElementById('labelGal').checked ? 1 : 0,
           labelNeb: document.getElementById('labelNeb').checked ? 1 : 0,
           labelAmas: document.getElementById('labelAmas').checked ? 1 : 0,
@@ -887,100 +928,849 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     window.addEventListener('resize', checkOrientation);
     window.addEventListener('orientationchange', checkOrientation);
 
+    // Adapted from ConstellationLines by Marc van der Sluys, CC BY 4.0.
     const CONSTELLATION_LINES = [
-      ["Tarazed", "Altair"], ["Altair", "Alshain"], ["Altair", "Deneb el Okab"], ["Altair", "Eta Aql"], ["Eta Aql", "Theta Aql"],
-      ["Alpheratz", "Delta And"], ["Delta And", "Mirach"], ["Mirach", "Almach"], ["Alpheratz", "Adhil"], ["Mirach", "51 And"],
-      ["Zubenelgenubi", "Zubeneschamali"], ["Zubeneschamali", "Zubenelhakrabi"], ["Zubenelhakrabi", "Zubenelgenubi"],
-      ["Hamal", "Sheratan"], ["Sheratan", "Mesarthim"], ["Hamal", "Botein"],
-      ["Arcturus", "Muphrid"], ["Muphrid", "Izar"], ["Izar", "Seginus"], ["Seginus", "Nekkar"], ["Nekkar", "Hozian"], ["Hozian", "Izar"], ["Seginus", "Alkalurops"],
-      ["Tarf", "Asellus Australis"], ["Asellus Australis", "Asellus Borealis"], ["Asellus Australis", "Acubens"], ["Asellus Borealis", "Iota Cnc"],
-      ["Sadalmelik", "Sadalsuud"], ["Sadalmelik", "Sadachbia"], ["Sadachbia", "Skat"], ["Skat", "Ancha"],
-      ["Caph", "Shedar"], ["Shedar", "Achird"], ["Shedar", "Navi"], ["Navi", "Ruchbah"], ["Ruchbah", "Segin"],
-      ["Alderamin", "Alfirk"], ["Alfirk", "Errai"], ["Alderamin", "Zeta Cep"], ["Zeta Cep", "Delta Cep"], ["Delta Cep", "Iota Cep"], ["Iota Cep", "Errai"], ["Alderamin", "Kurhah"],
-      ["Cor Caroli", "Chara"],
-      ["Diadem", "Beta Com"], ["Beta Com", "Gamma Com"],
-      ["Capella", "Menkalinan"], ["Menkalinan", "Mahasim"], ["Mahasim", "Hassaleh"], ["Capella", "Almaaz"], ["Almaaz", "Haedus"], ["Haedus", "Hassaleh"],
-      ["Nusakan", "Alphecca"], ["Alphecca", "Gamma CrB"], ["Gamma CrB", "Epsilon CrB"],
-      ["Deneb", "Sadr"], ["Sadr", "Albireo"], ["Fawaris", "Sadr"], ["Sadr", "Gienah"], ["Gienah", "Zeta Cyg"], ["Fawaris", "Iota Cyg"],
-      ["Rotanev", "Sualocin"], ["Sualocin", "Gamma Del"], ["Gamma Del", "Delta Del"], ["Delta Del", "Rotanev"],
-      ["Rastaban", "Eltanin"], ["Eltanin", "Grumium"], ["Grumium", "Kuma"], ["Kuma", "Rastaban"],
-      ["Grumium", "Altais"], ["Altais", "Alsafi"], ["Alsafi", "Chi Dra"], ["Chi Dra", "Aldhibah"],
-      ["Aldhibah", "Edasich"], ["Edasich", "Thuban"],
-      ["Sham", "Beta Sge"], ["Beta Sge", "Gamma Sge"],
-      ["Castor", "Pollux"], ["Castor", "Propus"], ["Propus", "Tejat"], ["Tejat", "Mebsuta"], ["Mebsuta", "Castor"],
-      ["Pollux", "Wasat"], ["Wasat", "Mekbuda"], ["Mekbuda", "Alhena"], ["Wasat", "Alhena"],
-      ["Beta Cam", "Alpha Cam"], ["Alpha Cam", "Gamma Cam"],
-      ["Dubhe", "Merak"], ["Merak", "Phecda"], ["Phecda", "Megrez"], ["Megrez", "Dubhe"],
-      ["Megrez", "Alioth"], ["Alioth", "Mizar"], ["Mizar", "Alkaid"],
-      ["Kornephoros", "Rutilicus"], ["Rutilicus", "Eta Her"], ["Eta Her", "Pi Her"], ["Pi Her", "Epsilon Her"], ["Epsilon Her", "Rutilicus"],
-      ["Epsilon Her", "Sujata"], ["Sujata", "Marfik"], ["Kornephoros", "Rasalgethi"],
-      ["Alpha Lacertae", "Beta Lacertae"],
-      ["Regulus", "Algieba"], ["Algieba", "Adhafera"], ["Adhafera", "Ras Elased Australis"], ["Ras Elased Australis", "Regulus"],
-      ["Algieba", "Zosma"], ["Zosma", "Denebola"], ["Denebola", "Chertan"], ["Chertan", "Regulus"],
-      ["Praecipua", "Beta LMi"],
-      ["Alpha Lyncis", "38 Lyncis"],
-      ["Vega", "Epsilon Lyr"], ["Vega", "Zeta Lyr"], ["Zeta Lyr", "Sheliak"], ["Sheliak", "Sulafat"], ["Sulafat", "Zeta Lyr"],
-      ["Rasalhague", "Cebalrai"], ["Rasalhague", "Yed Prior"], ["Yed Prior", "Yed Posterior"], ["Yed Posterior", "Sabik"],
-      ["Betelgeuse", "Bellatrix"], ["Betelgeuse", "Meissa"], ["Bellatrix", "Meissa"],
-      ["Betelgeuse", "Alnitak"], ["Bellatrix", "Mintaka"],
-      ["Mintaka", "Alnilam"], ["Alnilam", "Alnitak"],
-      ["Alnitak", "Saiph"], ["Mintaka", "Rigel"], ["Rigel", "Saiph"], ["Alnilam", "Hatysa"],
-      ["Betelgeuse", "μ Ori"], ["μ Ori", "ξ Ori"], ["ξ Ori", "ν Ori"], ["μ Ori", "χ² Ori"],
-      ["Bellatrix", "π³ Ori"], ["π¹ Ori", "π² Ori"], ["π² Ori", "π³ Ori"], ["π³ Ori", "π⁴ Ori"], ["π⁴ Ori", "π⁵ Ori"], ["π⁵ Ori", "π⁶ Ori"],
-      ["Markab", "Scheat"], ["Scheat", "Alpheratz"], ["Alpheratz", "Algenib"], ["Algenib", "Markab"],
-      ["Markab", "Homam"], ["Homam", "Enif"], ["Scheat", "Matar"], ["Matar", "Sadalbari"],
-      ["Mirfak", "Algol"], ["Algol", "Atik"], ["Atik", "Menkib"], ["Mirfak", "Delta Per"], ["Delta Per", "Epsilon Per"], ["Mirfak", "Gamma Per"],
-      ["Kitalpha", "Beta Equ"],
-      ["Polaris", "Yildun"], ["Yildun", "Zeta UMi"], ["Zeta UMi", "Epsilon UMi"],
-      ["Epsilon UMi", "Pherkad"], ["Pherkad", "Kochab"], ["Kochab", "Zeta UMi"], ["Kochab", "Eta UMi"],
-      ["Alpherg", "Gamma Piscium"], ["Gamma Piscium", "Iota Psc"], ["Iota Psc", "Omega Psc"], ["Omega Psc", "Alrescha"],
-      ["Unukalhai", "Chow"],
-      ["Aldebaran", "Ain"], ["Ain", "Elnath"], ["Aldebaran", "Gamma Tau"], ["Aldebaran", "Tianguis"], ["Aldebaran", "Alcyone"],
-      ["Beta Trianguli", "Mothallah"], ["Mothallah", "Gamma Tri"], ["Gamma Tri", "Beta Trianguli"],
-      ["Spica", "Heze"], ["Heze", "Vindemiatrix"], ["Vindemiatrix", "Porrima"], ["Porrima", "Zavijava"], ["Porrima", "Spica"],
-      ["Sirius", "Mirzam"], ["Sirius", "Adhara"], ["Adhara", "Wezen"], ["Wezen", "Sirius"]
+      ["Udkadua","Kaffalmusalsala"],
+      ["Kaffalmusalsala","Rasalnaqa"],
+      ["Rasalnaqa","Alfarasalkamil"],
+      ["Alfarasalkamil","Rasalnaqa"],
+      ["Rasalnaqa","HIP 1473"],
+      ["HIP 1473","Delta And"],
+      ["Delta And","Alpheratz"],
+      ["Alpheratz","Delta And"],
+      ["Delta And","HIP 3031"],
+      ["HIP 3031","Shimu"],
+      ["Shimu","HIP 3031"],
+      ["HIP 3031","Delta And"],
+      ["Delta And","Mirach"],
+      ["Mirach","Almach"],
+      ["Almach","Mirach"],
+      ["Mirach","51 And"],
+      ["51 And","Mirach"],
+      ["Mirach","HIP 4436"],
+      ["HIP 4436","HIP 3881"],
+      ["HIP 53502","HIP 51172"],
+      ["HIP 51172","HIP 47758"],
+      ["HIP 47758","HIP 46515"],
+      ["Paradys","HIP 80047"],
+      ["HIP 80047","HIP 81065"],
+      ["HIP 81065","HIP 81852"],
+      ["Alshain","Altair"],
+      ["Altair","Tarazed"],
+      ["Tarazed","HIP 95501"],
+      ["HIP 95501","Deneb el Okab"],
+      ["Deneb el Okab","HIP 95501"],
+      ["HIP 95501","Eta Aql"],
+      ["Eta Aql","Theta Aql"],
+      ["Theta Aql","Eta Aql"],
+      ["Eta Aql","HIP 95501"],
+      ["HIP 95501","HIP 93805"],
+      ["HIP 93805","HIP 93429"],
+      ["Safina","HIP 114855"],
+      ["HIP 114855","HIP 114724"],
+      ["HIP 114724","HIP 111497"],
+      ["HIP 111497","Sadachbia"],
+      ["Sadachbia","Shatabhisha"],
+      ["Shatabhisha","Skat"],
+      ["Skat","Shatabhisha"],
+      ["Shatabhisha","Sadachbia"],
+      ["Sadachbia","Ancha"],
+      ["Ancha","HIP 109139"],
+      ["HIP 109139","Ancha"],
+      ["Ancha","Sadachbia"],
+      ["Sadachbia","Sadalmelik"],
+      ["Sadalmelik","Sadalsuud"],
+      ["HIP 88714","HIP 85792"],
+      ["HIP 85792","HIP 85258"],
+      ["HIP 85258","HIP 85267"],
+      ["HIP 85267","HIP 85727"],
+      ["HIP 85727","HIP 85267"],
+      ["HIP 85267","HIP 83081"],
+      ["HIP 83081","HIP 82363"],
+      ["HIP 82363","HIP 83081"],
+      ["HIP 83081","HIP 83153"],
+      ["HIP 83153","HIP 85792"],
+      ["Botein","HR 888"],
+      ["HR 888","Bharani"],
+      ["Bharani","Hamal"],
+      ["Hamal","Sheratan"],
+      ["Sheratan","Mesarthim"],
+      ["Capella","Menkalinan"],
+      ["Menkalinan","Mahasim"],
+      ["Mahasim","Elnath"],
+      ["Elnath","Hassaleh"],
+      ["Hassaleh","Saclateni"],
+      ["Saclateni","Haedus"],
+      ["Haedus","Almaaz"],
+      ["Almaaz","Capella"],
+      ["Seginus","Kalasungsang"],
+      ["Kalasungsang","Arcturus"],
+      ["Arcturus","Izar"],
+      ["Izar","Hozian"],
+      ["Hozian","Nekkar"],
+      ["Nekkar","Seginus"],
+      ["Seginus","Xuange"],
+      ["Xuange","HIP 70497"],
+      ["HIP 70497","HIP 69483"],
+      ["HIP 69483","Xuange"],
+      ["HIP 33347","HIP 33160"],
+      ["HIP 33160","Muliphein"],
+      ["Muliphein","HIP 33347"],
+      ["HIP 33347","Sirius"],
+      ["Sirius","Mirzam"],
+      ["Mirzam","HIP 31592"],
+      ["HIP 31592","HIP 33152"],
+      ["HIP 33152","Adhara"],
+      ["Adhara","Nganurganity"],
+      ["Nganurganity","Wezen"],
+      ["Wezen","Aludra"],
+      ["Aludra","Wezen"],
+      ["Wezen","HIP 33977"],
+      ["HIP 33977","Sirius"],
+      ["Procyon","Gomeisa"],
+      ["Cor Caroli","Chara"],
+      ["HIP 21060","HIP 21770"],
+      ["HIP 21770","HIP 21861"],
+      ["HIP 16281","HIP 16228"],
+      ["HIP 16228","Custos"],
+      ["Custos","Gamma Cam"],
+      ["Gamma Cam","Alpha Cam"],
+      ["Alpha Cam","Beta Cam"],
+      ["Beta Cam","HIP 23040"],
+      ["Algedi","Dabih"],
+      ["Dabih","HIP 102485"],
+      ["HIP 102485","HIP 102978"],
+      ["HIP 102978","HIP 105881"],
+      ["HIP 105881","Nashira"],
+      ["Nashira","Deneb Algedi"],
+      ["Deneb Algedi","Nashira"],
+      ["Nashira","HIP 105515"],
+      ["HIP 105515","Udang"],
+      ["Udang","Dabih"],
+      ["Canopus","HIP 32761"],
+      ["HIP 32761","HIP 38827"],
+      ["HIP 38827","Avior"],
+      ["Avior","Aspidiske"],
+      ["Aspidiske","HIP 50371"],
+      ["HIP 50371","HIP 51576"],
+      ["HIP 51576","HIP 52419"],
+      ["HIP 52419","HIP 50099"],
+      ["HIP 50099","Miaplacidus"],
+      ["Miaplacidus","HIP 48002"],
+      ["Segin","Ruchbah"],
+      ["Ruchbah","Navi"],
+      ["Navi","Shedar"],
+      ["Shedar","Caph"],
+      ["HIP 56561","HIP 57439"],
+      ["HIP 57439","HIP 55425"],
+      ["HIP 55425","HIP 59449"],
+      ["HIP 59449","HIP 59196"],
+      ["HIP 59196","HIP 60823"],
+      ["HIP 60823","HIP 61622"],
+      ["HIP 61622","HIP 61932"],
+      ["HIP 61932","HIP 66657"],
+      ["HIP 66657","Hadar"],
+      ["Hadar","HIP 66657"],
+      ["HIP 66657","Rigil Kentaurus"],
+      ["Rigil Kentaurus","HIP 66657"],
+      ["HIP 66657","Leepwal"],
+      ["Leepwal","HIP 67472"],
+      ["HIP 67472","Heng"],
+      ["Heng","Kulou"],
+      ["Kulou","Heng"],
+      ["Heng","Menkent"],
+      ["Menkent","Heng"],
+      ["Heng","HIP 68245"],
+      ["HIP 68245","HIP 71352"],
+      ["HIP 71352","HIP 73334"],
+      ["Errai","Alfirk"],
+      ["Alfirk","Alderamin"],
+      ["Alderamin","Zeta Cep"],
+      ["Zeta Cep","Iota Cep"],
+      ["Iota Cep","Errai"],
+      ["Kaffaljidhma","HIP 11484"],
+      ["HIP 11484","HIP 12828"],
+      ["HIP 12828","HIP 13954"],
+      ["HIP 13954","Menkar"],
+      ["Menkar","Kaffaljidhma"],
+      ["Kaffaljidhma","HIP 12387"],
+      ["HIP 12387","Mira"],
+      ["Mira","Baten Kaitos"],
+      ["Baten Kaitos","HIP 6537"],
+      ["HIP 6537","HIP 5364"],
+      ["HIP 5364","Diphda"],
+      ["Diphda","HIP 6960"],
+      ["HIP 6960","HIP 9347"],
+      ["HIP 9347","Baten Kaitos"],
+      ["HIP 40702","HIP 40888"],
+      ["HIP 40888","HIP 52595"],
+      ["HIP 52595","HIP 60000"],
+      ["HIP 60000","HIP 51839"],
+      ["HIP 51839","HIP 40702"],
+      ["HIP 74824","Xami"],
+      ["Xami","HIP 75323"],
+      ["Acubens","Asellus Australis"],
+      ["Asellus Australis","Tarf"],
+      ["Tarf","Asellus Australis"],
+      ["Asellus Australis","Asellus Borealis"],
+      ["Asellus Borealis","Iota Cnc"],
+      ["HIP 30277","HIP 29807"],
+      ["HIP 29807","HIP 28199"],
+      ["HIP 28199","Wazn"],
+      ["Wazn","HIP 28328"],
+      ["HIP 28328","Wazn"],
+      ["Wazn","Phact"],
+      ["Phact","HIP 24659"],
+      ["Diadem","Beta Com"],
+      ["Beta Com","Gamma Com"],
+      ["HIP 93174","HIP 93825"],
+      ["HIP 93825","Meridiana"],
+      ["Meridiana","HIP 94160"],
+      ["HIP 94160","HIP 94005"],
+      ["HIP 94005","HIP 93542"],
+      ["Aurwandilsta","Epsilon CrB"],
+      ["Epsilon CrB","Matrchakre"],
+      ["Matrchakre","Gamma CrB"],
+      ["Gamma CrB","Alphecca"],
+      ["Alphecca","Nusakan"],
+      ["Nusakan","Guansuo"],
+      ["HIP 58188","HIP 57283"],
+      ["HIP 57283","HIP 55705"],
+      ["HIP 55705","HIP 54682"],
+      ["HIP 54682","Alkes"],
+      ["Alkes","HIP 55282"],
+      ["HIP 55282","HIP 55705"],
+      ["HIP 55705","HIP 55282"],
+      ["HIP 55282","HIP 55687"],
+      ["HIP 55687","HIP 56633"],
+      ["Mimosa","Imai"],
+      ["Acrux","Gacrux"],
+      ["Alchiba","HIP 59316"],
+      ["HIP 59316","HIP 59803"],
+      ["HIP 59803","Algorab"],
+      ["Algorab","Kraz"],
+      ["Kraz","HIP 59316"],
+      ["Albireo","HIP 98110"],
+      ["HIP 98110","Sadr"],
+      ["Sadr","Gienah"],
+      ["Gienah","Zeta Cyg"],
+      ["Zeta Cyg","Gienah"],
+      ["Gienah","Sadr"],
+      ["Sadr","Deneb"],
+      ["Deneb","Sadr"],
+      ["Sadr","Fawaris"],
+      ["Fawaris","Iota Cyg"],
+      ["Aldulfin","Rotanev"],
+      ["Rotanev","Sualocin"],
+      ["Sualocin","Gamma Del"],
+      ["Gamma Del","Delta Del"],
+      ["Delta Del","Rotanev"],
+      ["HIP 19893","HIP 21281"],
+      ["HIP 21281","HIP 23693"],
+      ["HIP 23693","HIP 26069"],
+      ["HIP 26069","HIP 27100"],
+      ["HIP 27100","HIP 26069"],
+      ["HIP 26069","HIP 27890"],
+      ["Grumium","Eltanin"],
+      ["Eltanin","Rastaban"],
+      ["Rastaban","Kuma"],
+      ["Kuma","Grumium"],
+      ["Grumium","Altais"],
+      ["Altais","HIP 97433"],
+      ["HIP 97433","Chi Dra"],
+      ["Chi Dra","Dziban"],
+      ["Dziban","Aldhibah"],
+      ["Aldhibah","Athebyne"],
+      ["Athebyne","HIP 78527"],
+      ["HIP 78527","Edasich"],
+      ["Edasich","Thuban"],
+      ["Thuban","HIP 61281"],
+      ["HIP 61281","Giausar"],
+      ["Giausar","HIP 47193"],
+      ["Kitalpha","Beta Equ"],
+      ["Beta Equ","HIP 104858"],
+      ["HIP 104858","HIP 104521"],
+      ["Cursa","HIP 22701"],
+      ["HIP 22701","HIP 22109"],
+      ["HIP 22109","HIP 21444"],
+      ["HIP 21444","Beid"],
+      ["Beid","Zaurak"],
+      ["Zaurak","Rana"],
+      ["Rana","Ran"],
+      ["Ran","Azha"],
+      ["Azha","HIP 12770"],
+      ["HIP 12770","HIP 12843"],
+      ["HIP 12843","HIP 14146"],
+      ["HIP 14146","HIP 15474"],
+      ["HIP 15474","HIP 16611"],
+      ["HIP 16611","HIP 17651"],
+      ["HIP 17651","HIP 18216"],
+      ["HIP 18216","HIP 18673"],
+      ["HIP 18673","Theemin"],
+      ["Theemin","Beemim"],
+      ["Beemim","HIP 20042"],
+      ["HIP 20042","HIP 17874"],
+      ["HIP 17874","HR 1190"],
+      ["HR 1190","HIP 16870"],
+      ["HIP 16870","82 G. Eri"],
+      ["82 G. Eri","HR 898"],
+      ["HR 898","HIP 12486"],
+      ["HIP 12486","HIP 12413"],
+      ["HIP 12413","HIP 11407"],
+      ["HIP 11407","HIP 10602"],
+      ["HIP 10602","HIP 9007"],
+      ["HIP 9007","Achernar"],
+      ["Dalim","HIP 13147"],
+      ["HIP 13147","HIP 9677"],
+      ["HIP 28734","Propus"],
+      ["Propus","Tejat"],
+      ["Tejat","Mebsuta"],
+      ["Mebsuta","HIP 30883"],
+      ["HIP 30883","Mebsuta"],
+      ["Mebsuta","HIP 34693"],
+      ["HIP 34693","HIP 36366"],
+      ["HIP 36366","Castor"],
+      ["Castor","HIP 36366"],
+      ["HIP 36366","HIP 34693"],
+      ["HIP 34693","HIP 33018"],
+      ["HIP 33018","HIP 34693"],
+      ["HIP 34693","HIP 36046"],
+      ["HIP 36046","HIP 36962"],
+      ["HIP 36962","Pollux"],
+      ["Pollux","HIP 36962"],
+      ["HIP 36962","HIP 37740"],
+      ["HIP 37740","HIP 36962"],
+      ["HIP 36962","Wasat"],
+      ["Wasat","Mekbuda"],
+      ["Mekbuda","Alhena"],
+      ["Alhena","Mekbuda"],
+      ["Mekbuda","Wasat"],
+      ["Wasat","HIP 35350"],
+      ["HIP 35350","Alzirr"],
+      ["Aldhanab","HIP 109111"],
+      ["HIP 109111","HIP 110997"],
+      ["HIP 110997","Tiaki"],
+      ["Tiaki","Alnair"],
+      ["Alnair","Tiaki"],
+      ["Tiaki","HIP 112623"],
+      ["HIP 112623","HIP 113638"],
+      ["HIP 113638","HIP 112623"],
+      ["HIP 112623","HIP 114421"],
+      ["HIP 114421","HIP 114131"],
+      ["Epsilon Her","Pi Her"],
+      ["Pi Her","HIP 87808"],
+      ["HIP 87808","HIP 86414"],
+      ["HIP 86414","HIP 87808"],
+      ["HIP 87808","Pi Her"],
+      ["Pi Her","Eta Her"],
+      ["Eta Her","HIP 81126"],
+      ["HIP 81126","Asuusiha"],
+      ["Asuusiha","HIP 81126"],
+      ["HIP 81126","Eta Her"],
+      ["Eta Her","Rutilicus"],
+      ["Rutilicus","Kornephoros"],
+      ["Kornephoros","Rutilicus"],
+      ["Rutilicus","Epsilon Her"],
+      ["Epsilon Her","Sujata"],
+      ["Sujata","HIP 86974"],
+      ["HIP 86974","HIP 87933"],
+      ["HIP 87933","HIP 88794"],
+      ["HIP 13884","HIP 14240"],
+      ["HIP 14240","HIP 12484"],
+      ["HIP 12484","HIP 12225"],
+      ["HIP 12225","HIP 12653"],
+      ["HIP 12653","HIP 13502"],
+      ["HIP 13502","HIP 19747"],
+      ["HIP 19747","HIP 19515"],
+      ["HIP 43234","Ashlesha"],
+      ["Ashlesha","HIP 42313"],
+      ["HIP 42313","Minchir"],
+      ["Minchir","HIP 42799"],
+      ["HIP 42799","HIP 43234"],
+      ["HIP 43234","HIP 43813"],
+      ["HIP 43813","HIP 45336"],
+      ["HIP 45336","Ukdah"],
+      ["Ukdah","Alphard"],
+      ["Alphard","Zhang"],
+      ["Zhang","HIP 49841"],
+      ["HIP 49841","HIP 51069"],
+      ["HIP 51069","HIP 52943"],
+      ["HIP 52943","HIP 56343"],
+      ["HIP 56343","HIP 57936"],
+      ["HIP 57936","Naja"],
+      ["Naja","HIP 68895"],
+      ["HIP 9236","HIP 12394"],
+      ["HIP 12394","HIP 17678"],
+      ["HIP 17678","HIP 2021"],
+      ["HIP 2021","HIP 9236"],
+      ["HIP 101772","HIP 105319"],
+      ["HIP 105319","HIP 108431"],
+      ["HIP 108431","HIP 108870"],
+      ["HIP 108870","HIP 108431"],
+      ["HIP 108431","HIP 105319"],
+      ["HIP 105319","HIP 104085"],
+      ["HIP 104085","HIP 103227"],
+      ["Praecipua","Beta LMi"],
+      ["Beta LMi","HIP 49593"],
+      ["HIP 109937","HIP 109754"],
+      ["HIP 109754","HIP 111104"],
+      ["HIP 111104","HIP 111944"],
+      ["HIP 111944","HIP 111104"],
+      ["HIP 111104","HIP 110351"],
+      ["HIP 110351","HIP 111104"],
+      ["HIP 111104","HIP 111022"],
+      ["HIP 111022","HIP 110609"],
+      ["HIP 110609","Beta Lacertae"],
+      ["Beta Lacertae","Alpha Lacertae"],
+      ["Alpha Lacertae","HIP 111022"],
+      ["Ras Elased Australis","Rasalas"],
+      ["Rasalas","Adhafera"],
+      ["Adhafera","Algieba"],
+      ["Algieba","HIP 49583"],
+      ["HIP 49583","Regulus"],
+      ["Regulus","Subra"],
+      ["Subra","Regulus"],
+      ["Regulus","Chertan"],
+      ["Chertan","HIP 55642"],
+      ["HIP 55642","HIP 55434"],
+      ["HIP 55434","HIP 55642"],
+      ["HIP 55642","Chertan"],
+      ["Chertan","Denebola"],
+      ["Denebola","Zosma"],
+      ["Zosma","Algieba"],
+      ["Ping","Nihal"],
+      ["Nihal","Arneb"],
+      ["Arneb","Bade"],
+      ["Bade","Arneb"],
+      ["Arneb","Darlugal"],
+      ["Darlugal","HIP 28103"],
+      ["HIP 77853","Zubenelhakrabi"],
+      ["Zubenelhakrabi","Zubeneschamali"],
+      ["Zubeneschamali","Zubenelgenubi"],
+      ["Zubenelgenubi","Brachium"],
+      ["Brachium","Zubeneschamali"],
+      ["Zubeneschamali","Brachium"],
+      ["Brachium","HIP 76470"],
+      ["HIP 76470","HIP 76600"],
+      ["HIP 78918","HIP 78384"],
+      ["HIP 78384","HIP 76297"],
+      ["HIP 76297","HIP 75264"],
+      ["HIP 75264","HIP 74376"],
+      ["HIP 74376","HIP 74395"],
+      ["HIP 74395","Uridim"],
+      ["Uridim","HIP 73273"],
+      ["HIP 73273","HIP 75141"],
+      ["HIP 75141","HIP 76297"],
+      ["HIP 76297","HIP 75141"],
+      ["HIP 75141","HIP 75177"],
+      ["HIP 75177","HIP 77634"],
+      ["Alpha Lyncis","38 Lyncis"],
+      ["38 Lyncis","HIP 44700"],
+      ["HIP 44700","HIP 44248"],
+      ["HIP 44248","Alsciaukat"],
+      ["Alsciaukat","HIP 36145"],
+      ["HIP 36145","HIP 33449"],
+      ["HIP 33449","HIP 30060"],
+      ["Vega","Zeta Lyr"],
+      ["Zeta Lyr","Sheliak"],
+      ["Sheliak","Sulafat"],
+      ["Sulafat","HIP 92791"],
+      ["HIP 92791","Zeta Lyr"],
+      ["Hoerikwaggo","HIP 25918"],
+      ["HIP 25918","HIP 22871"],
+      ["HIP 22871","HIP 23467"],
+      ["HIP 105382","HIP 105140"],
+      ["HIP 105140","HIP 103738"],
+      ["HIP 103738","HIP 102831"],
+      ["HIP 31216","HIP 30419"],
+      ["HIP 30419","HIP 32578"],
+      ["HIP 32578","HIP 34769"],
+      ["HIP 34769","HIP 30867"],
+      ["HIP 30867","HIP 29651"],
+      ["HIP 29651","HIP 30867"],
+      ["HIP 30867","HIP 34769"],
+      ["HIP 34769","HIP 37447"],
+      ["HIP 37447","HIP 39863"],
+      ["HIP 62322","HIP 61585"],
+      ["HIP 61585","HIP 63613"],
+      ["HIP 63613","HIP 61585"],
+      ["HIP 61585","HIP 61199"],
+      ["HIP 61199","HIP 61585"],
+      ["HIP 61585","HIP 59929"],
+      ["HIP 59929","HIP 57363"],
+      ["HIP 80582","HIP 80000"],
+      ["HIP 80000","HIP 78639"],
+      ["HIP 112405","HIP 70638"],
+      ["HIP 70638","HIP 107089"],
+      ["HIP 107089","HIP 112405"],
+      ["Rasalhague","HIP 83000"],
+      ["HIP 83000","HIP 80883"],
+      ["HIP 80883","Yed Prior"],
+      ["Yed Prior","Yed Posterior"],
+      ["Yed Posterior","HIP 81377"],
+      ["HIP 81377","Sabik"],
+      ["Sabik","Cebalrai"],
+      ["Cebalrai","Rasalhague"],
+      ["Alnitak","Saiph"],
+      ["Saiph","Rigel"],
+      ["Rigel","Mintaka"],
+      ["Mintaka","Bellatrix"],
+      ["Bellatrix","Meissa"],
+      ["Meissa","Betelgeuse"],
+      ["Betelgeuse","μ Ori"],
+      ["μ Ori","ξ Ori"],
+      ["ξ Ori","ν Ori"],
+      ["ν Ori","HIP 27913"],
+      ["HIP 27913","χ² Ori"],
+      ["χ² Ori","ξ Ori"],
+      ["ξ Ori","μ Ori"],
+      ["μ Ori","Betelgeuse"],
+      ["Betelgeuse","Alnitak"],
+      ["Alnitak","Alnilam"],
+      ["Alnilam","Mintaka"],
+      ["Mintaka","Bellatrix"],
+      ["Bellatrix","π³ Ori"],
+      ["π³ Ori","π⁴ Ori"],
+      ["π⁴ Ori","π⁵ Ori"],
+      ["π⁵ Ori","π⁶ Ori"],
+      ["π⁶ Ori","π⁵ Ori"],
+      ["π⁵ Ori","π⁴ Ori"],
+      ["π⁴ Ori","π³ Ori"],
+      ["π³ Ori","π² Ori"],
+      ["π² Ori","HIP 22957"],
+      ["HIP 22957","HIP 23607"],
+      ["HIP 23607","HIP 24010"],
+      ["Peacock","HIP 102395"],
+      ["HIP 102395","HIP 105858"],
+      ["HIP 105858","HIP 102395"],
+      ["HIP 102395","HIP 98495"],
+      ["HIP 98495","HIP 91792"],
+      ["HIP 91792","HIP 86929"],
+      ["HIP 86929","HIP 88866"],
+      ["HIP 88866","HIP 90098"],
+      ["HIP 90098","HIP 92609"],
+      ["HIP 92609","HIP 99240"],
+      ["HIP 99240","HIP 102395"],
+      ["HIP 109410","Matar"],
+      ["Matar","Scheat"],
+      ["Scheat","Alpheratz"],
+      ["Alpheratz","Scheat"],
+      ["Scheat","Markab"],
+      ["Markab","Algenib"],
+      ["Algenib","Alpheratz"],
+      ["Alpheratz","Algenib"],
+      ["Algenib","Markab"],
+      ["Markab","Homam"],
+      ["Homam","Biham"],
+      ["Biham","Enif"],
+      ["Algol","Misam"],
+      ["Misam","Mirfak"],
+      ["Mirfak","Gamma Per"],
+      ["Gamma Per","Mirfak"],
+      ["Mirfak","Delta Per"],
+      ["Delta Per","Epsilon Per"],
+      ["Epsilon Per","HIP 18614"],
+      ["HIP 18614","Menkib"],
+      ["Ankaa","HIP 5165"],
+      ["HIP 5165","HIP 6867"],
+      ["HIP 6867","HIP 7083"],
+      ["HIP 7083","HIP 6867"],
+      ["HIP 6867","HIP 5165"],
+      ["HIP 5165","Wurren"],
+      ["Wurren","HIP 3405"],
+      ["HIP 3405","HIP 765"],
+      ["HIP 765","Ankaa"],
+      ["HIP 32607","HIP 27530"],
+      ["HIP 27530","HIP 27321"],
+      ["Fomalhaut","HIP 111954"],
+      ["HIP 111954","HIP 109789"],
+      ["HIP 109789","HIP 108661"],
+      ["HIP 108661","HIP 107608"],
+      ["HIP 107608","HIP 107380"],
+      ["HIP 107380","HIP 109285"],
+      ["HIP 109285","HIP 111188"],
+      ["HIP 111188","HIP 112948"],
+      ["HIP 112948","HIP 113246"],
+      ["HIP 113246","Fomalhaut"],
+      ["HIP 5742","HIP 6193"],
+      ["HIP 6193","HIP 5586"],
+      ["HIP 5586","HIP 5742"],
+      ["HIP 5742","Alpherg"],
+      ["Alpherg","Torcular"],
+      ["Torcular","Alrescha"],
+      ["Alrescha","HIP 7884"],
+      ["HIP 7884","HIP 4906"],
+      ["HIP 4906","HIP 3786"],
+      ["HIP 3786","Omega Psc"],
+      ["Omega Psc","Iota Psc"],
+      ["Iota Psc","HIP 115830"],
+      ["HIP 115830","HIP 115227"],
+      ["HIP 115227","Gamma Piscium"],
+      ["Gamma Piscium","HIP 115738"],
+      ["HIP 115738","HIP 116928"],
+      ["HIP 116928","HIP 117245"],
+      ["HIP 117245","Iota Psc"],
+      ["Tureis","Azmidi"],
+      ["Azmidi","HIP 37229"],
+      ["HIP 37229","HIP 36917"],
+      ["HIP 36917","HIP 35264"],
+      ["HIP 35264","Pipit"],
+      ["Pipit","HIP 32768"],
+      ["HIP 32768","HIP 36377"],
+      ["HIP 36377","Naos"],
+      ["Naos","Tureis"],
+      ["HIP 42515","HIP 42828"],
+      ["HIP 42828","HIP 43409"],
+      ["Rhombus","HIP 19921"],
+      ["HIP 19921","HIP 18597"],
+      ["HIP 18597","HIP 18744"],
+      ["HIP 18744","HIP 17440"],
+      ["HIP 17440","Rhombus"],
+      ["HIP 4577","HIP 117452"],
+      ["HIP 117452","HIP 115102"],
+      ["HIP 115102","HIP 116231"],
+      ["Acrab B","Alniyat"],
+      ["Alniyat","Dschubba"],
+      ["Dschubba","Alniyat"],
+      ["Alniyat","Fang"],
+      ["Fang","Alniyat"],
+      ["Alniyat","Antares"],
+      ["Antares","Paikauhale"],
+      ["Paikauhale","Larawag"],
+      ["Larawag","Xamidimura"],
+      ["Xamidimura","HIP 82729"],
+      ["HIP 82729","HIP 84143"],
+      ["HIP 84143","Sargas"],
+      ["Sargas","HIP 87073"],
+      ["HIP 87073","HIP 86670"],
+      ["HIP 86670","Shaula"],
+      ["Shaula","Lesath"],
+      ["HIP 92175","HIP 91117"],
+      ["HIP 91117","HIP 90595"],
+      ["HIP 90595","HIP 91117"],
+      ["HIP 91117","HIP 90135"],
+      ["HIP 84880","HIP 86263"],
+      ["HIP 86263","HIP 86565"],
+      ["HIP 86565","HIP 89962"],
+      ["HIP 89962","Alya"],
+      ["Chow","Gudja"],
+      ["Gudja","HIP 78072"],
+      ["HIP 78072","Chow"],
+      ["Chow","HIP 76276"],
+      ["HIP 76276","Unukalhai"],
+      ["Unukalhai","HIP 77622"],
+      ["HIP 77622","HIP 77516"],
+      ["HIP 77516","HIP 84880"],
+      ["HIP 51437","HIP 49641"],
+      ["HIP 49641","HIP 48437"],
+      ["Gamma Sge","HIP 97365"],
+      ["HIP 97365","Sham"],
+      ["Sham","HIP 97365"],
+      ["HIP 97365","Beta Sge"],
+      ["Rukbat","HIP 98032"],
+      ["HIP 98032","Arkab Prior"],
+      ["Arkab Prior","HIP 98032"],
+      ["HIP 98032","HIP 98412"],
+      ["HIP 98412","HIP 98688"],
+      ["HIP 98688","HIP 98162"],
+      ["HIP 98162","HIP 96465"],
+      ["HIP 96465","HIP 93864"],
+      ["HIP 93864","Nunki"],
+      ["Nunki","HIP 93683"],
+      ["HIP 93683","Albaldah"],
+      ["Albaldah","HIP 95168"],
+      ["HIP 95168","HIP 95176"],
+      ["HIP 95176","HIP 95168"],
+      ["HIP 95168","Albaldah"],
+      ["Albaldah","HIP 93683"],
+      ["HIP 93683","HIP 93085"],
+      ["HIP 93085","HIP 93683"],
+      ["HIP 93683","Nunki"],
+      ["Nunki","HIP 92041"],
+      ["HIP 92041","Ascella"],
+      ["Ascella","HIP 93864"],
+      ["HIP 93864","Ascella"],
+      ["Ascella","HIP 92041"],
+      ["HIP 92041","Kaus Borealis"],
+      ["Kaus Borealis","Kaus Media"],
+      ["Kaus Media","Alnasl"],
+      ["Alnasl","Kaus Media"],
+      ["Kaus Media","Kaus Australis"],
+      ["Kaus Australis","HIP 89642"],
+      ["Tianguis","Aldebaran"],
+      ["Aldebaran","Gamma Tau"],
+      ["Gamma Tau","Bibing"],
+      ["Bibing","HIP 15900"],
+      ["HIP 15900","Bibing"],
+      ["Bibing","Gamma Tau"],
+      ["Gamma Tau","Secunda Hyadum"],
+      ["Secunda Hyadum","Ain"],
+      ["Ain","Elnath"],
+      ["HIP 89112","HIP 90422"],
+      ["HIP 90422","HIP 90568"],
+      ["Atria","HIP 74946"],
+      ["HIP 74946","HIP 76440"],
+      ["HIP 76440","HIP 77952"],
+      ["HIP 77952","Atria"],
+      ["Beta Trianguli","Gamma Tri"],
+      ["Gamma Tri","Mothallah"],
+      ["Mothallah","Beta Trianguli"],
+      ["HIP 110838","Lang-Exster"],
+      ["Lang-Exster","HIP 114996"],
+      ["HIP 114996","HIP 118322"],
+      ["HIP 118322","HIP 1599"],
+      ["HIP 1599","HIP 2484"],
+      ["HIP 2484","HIP 114996"],
+      ["Alkaid","Mizar"],
+      ["Mizar","Alioth"],
+      ["Alioth","Megrez"],
+      ["Megrez","Phecda"],
+      ["Phecda","Taiyangshou"],
+      ["Taiyangshou","Alula Borealis"],
+      ["Alula Borealis","Alula Australis"],
+      ["Alula Australis","Alula Borealis"],
+      ["Alula Borealis","Taiyangshou"],
+      ["Taiyangshou","HIP 54539"],
+      ["HIP 54539","Tania Australis"],
+      ["Tania Australis","Tania Borealis"],
+      ["Tania Borealis","Tania Australis"],
+      ["Tania Australis","HIP 54539"],
+      ["HIP 54539","Taiyangshou"],
+      ["Taiyangshou","Phecda"],
+      ["Phecda","Merak"],
+      ["Merak","Dubhe"],
+      ["Dubhe","Megrez"],
+      ["Megrez","Dubhe"],
+      ["Dubhe","HIP 46733"],
+      ["HIP 46733","Muscida"],
+      ["Muscida","HIP 48319"],
+      ["HIP 48319","Merak"],
+      ["Merak","HIP 48319"],
+      ["HIP 48319","HIP 46853"],
+      ["HIP 46853","Alkaphrah"],
+      ["Alkaphrah","Talitha"],
+      ["Polaris","Yildun"],
+      ["Yildun","Epsilon UMi"],
+      ["Epsilon UMi","Zeta UMi"],
+      ["Zeta UMi","Kochab"],
+      ["Kochab","Pherkad"],
+      ["Pherkad","Eta UMi"],
+      ["Eta UMi","Zeta UMi"],
+      ["HR 3206","Alsephina"],
+      ["Alsephina","Markeb"],
+      ["Markeb","HIP 48774"],
+      ["HIP 48774","HIP 52727"],
+      ["HIP 52727","HIP 51986"],
+      ["HIP 51986","HIP 50191"],
+      ["HIP 50191","HIP 46651"],
+      ["HIP 46651","Suhail"],
+      ["Suhail","HIP 42884"],
+      ["HIP 42884","HIP 42312"],
+      ["HIP 42312","HR 3206"],
+      ["Spica","HIP 64238"],
+      ["HIP 64238","Porrima"],
+      ["Porrima","Minelauva"],
+      ["Minelauva","Heze"],
+      ["Heze","Spica"],
+      ["HIP 44382","HIP 41312"],
+      ["HIP 41312","HIP 39794"],
+      ["HIP 39794","HIP 35228"],
+      ["HIP 35228","HIP 34481"],
+      ["HIP 34481","HIP 37504"],
+      ["HIP 37504","HIP 39794"],
+      ["HIP 94703","Anser"],
+      ["Anser","HIP 97886"]
     ];
 
     const CONSTELLATION_CENTERS = [
-      { name: "Aigle", refStar: "Altair" },
-      { name: "Andromède", refStar: "Mirach" },
-      { name: "Balance", refStar: "Zubenelgenubi" },
-      { name: "Bélier", refStar: "Hamal" },
-      { name: "Bouvier", refStar: "Arcturus" },
-      { name: "Cancer", refStar: "Acubens" },
-      { name: "Verseau", refStar: "Sadalmelik" },
-      { name: "Cassiopée", refStar: "Navi" },
-      { name: "Céphée", refStar: "Alderamin" },
-      { name: "Chevelure de Bérénice", refStar: "Diadem" },
-      { name: "Chiens de chasse", refStar: "Cor Caroli" },
-      { name: "Cocher", refStar: "Capella" },
-      { name: "Couronne boréale", refStar: "Alphecca" },
-      { name: "Cygne", refStar: "Sadr" },
-      { name: "Dauphin", refStar: "Rotanev" },
-      { name: "Dragon", refStar: "Eltanin" },
-      { name: "Flèche", refStar: "Sham" },
-      { name: "Gémeaux", refStar: "Pollux" },
-      { name: "Girafe", refStar: "Beta Cam" },
-      { name: "Grande Ourse", refStar: "Alioth" },
-      { name: "Hercule", refStar: "Kornephoros" },
-      { name: "Lézard", refStar: "Alpha Lacertae" },
-      { name: "Lion", refStar: "Regulus" },
-      { name: "Petit Lion", refStar: "Praecipua" },
-      { name: "Lyre", refStar: "Vega" },
-      { name: "Lynx", refStar: "Alpha Lyncis" },
-      { name: "Ophiuchus", refStar: "Rasalhague" },
-      { name: "Orion", refStar: "Betelgeuse" },
-      { name: "Pégase", refStar: "Markab" },
-      { name: "Persée", refStar: "Mirfak" },
-      { name: "Petit Cheval", refStar: "Kitalpha" },
-      { name: "Petite Ourse", refStar: "Polaris" },
-      { name: "Poissons", refStar: "Alpherg" },
-      { name: "Serpent", refStar: "Unukalhai" },
-      { name: "Taureau", refStar: "Aldebaran" },
-      { name: "Triangle", refStar: "Mothallah" },
-      { name: "Vierge", refStar: "Spica" },
-      { name: "Petit Chien", refStar: "Procyon" },
-      { name: "Grand Chien", refStar: "Sirius" }
+      { name: "Andromède", ra: 0.5168022, dec: 38.651635 },
+      { name: "Machine pneumatique", ra: 10.1468648, dec: -33.275426 },
+      { name: "Oiseau de paradis", ra: 16.1320551, dec: -78.756571 },
+      { name: "Aigle", ra: 19.5845857, dec: 3.623183 },
+      { name: "Verseau", ra: 22.5791568, dec: -8.139784 },
+      { name: "Autel", ra: 17.3666807, dec: -55.236071 },
+      { name: "Bélier", ra: 2.4871119, dec: 22.175671 },
+      { name: "Cocher", ra: 5.3523901, dec: 39.665044 },
+      { name: "Bouvier", ra: 14.6013015, dec: 37.716583 },
+      { name: "Grand Chien", ra: 6.9231974, dec: -21.648527 },
+      { name: "Petit Chien", ra: 7.5540849, dec: 6.759575 },
+      { name: "Chiens de chasse", ra: 12.752197, dec: 39.871232 },
+      { name: "Burin", ra: 4.6338731, dec: -41.327694 },
+      { name: "Girafe", ra: 4.2486959, dec: 62.689433 },
+      { name: "Capricorne", ra: 21.072337, dec: -18.909866 },
+      { name: "Carène", ra: 8.8729772, dec: -62.758344 },
+      { name: "Cassiopée", ra: 0.9898305, dec: 60.362506 },
+      { name: "Centaure", ra: 13.3393012, dec: -50.270689 },
+      { name: "Céphée", ra: 22.1480391, dec: 67.447285 },
+      { name: "Baleine", ra: 2.1325646, dec: -4.464876 },
+      { name: "Caméléon", ra: 9.9170763, dec: -79.460404 },
+      { name: "Compas", ra: 15.1564319, dec: -61.101656 },
+      { name: "Cancer", ra: 8.6960359, dec: 17.912149 },
+      { name: "Colombe", ra: 5.9127255, dec: -36.022716 },
+      { name: "Chevelure de Bérénice", ra: 12.9445573, dec: 24.65061 },
+      { name: "Couronne australe", ra: 19.1001113, dec: -39.005475 },
+      { name: "Couronne boréale", ra: 15.7312899, dec: 28.070588 },
+      { name: "Coupe", ra: 11.4551146, dec: -16.261251 },
+      { name: "Croix du Sud", ra: 12.5027004, dec: -59.695044 },
+      { name: "Corbeau", ra: 12.3298251, dec: -20.981135 },
+      { name: "Cygne", ra: 20.2398079, dec: 39.052473 },
+      { name: "Dauphin", ra: 20.6679143, dec: 14.605033 },
+      { name: "Dorade", ra: 5.1043399, dec: -59.547562 },
+      { name: "Dragon", ra: 16.6868213, dec: 67.958937 },
+      { name: "Petit Cheval", ra: 21.2649945, dec: 8.051015 },
+      { name: "Éridan", ra: 3.6152468, dec: -27.092233 },
+      { name: "Fourneau", ra: 2.6977165, dec: -30.41916 },
+      { name: "Gémeaux", ra: 7.027206, dec: 24.477801 },
+      { name: "Grue", ra: 22.5836247, dec: -45.434269 },
+      { name: "Hercule", ra: 17.2260833, dec: 34.349786 },
+      { name: "Horloge", ra: 3.2320671, dec: -52.393084 },
+      { name: "Hydre", ra: 10.0499159, dec: -9.713464 },
+      { name: "Hydre mâle", ra: 2.2829737, dec: -71.011294 },
+      { name: "Indien", ra: 21.3087613, dec: -54.546622 },
+      { name: "Petit Lion", ra: 10.4941463, dec: 35.480578 },
+      { name: "Lézard", ra: 22.423463, dec: 45.696462 },
+      { name: "Lion", ra: 10.6123594, dec: 16.843199 },
+      { name: "Lièvre", ra: 5.5112915, dec: -17.740653 },
+      { name: "Balance", ra: 15.4184526, dec: -20.093198 },
+      { name: "Loup", ra: 15.4539713, dec: -42.249762 },
+      { name: "Lynx", ra: 8.4224904, dec: 46.198649 },
+      { name: "Lyre", ra: 18.8204651, dec: 35.883198 },
+      { name: "Table", ra: 5.3947294, dec: -74.459584 },
+      { name: "Microscope", ra: 21.1201958, dec: -34.792523 },
+      { name: "Licorne", ra: 6.9351455, dec: -1.521712 },
+      { name: "Mouche", ra: 12.4800017, dec: -69.377935 },
+      { name: "Règle", ra: 16.2807436, dec: -49.00745 },
+      { name: "Octant", ra: 20.9660718, dec: -83.57822 },
+      { name: "Ophiuchus", ra: 16.8865419, dec: -0.776595 },
+      { name: "Orion", ra: 5.4584502, dec: 7.279544 },
+      { name: "Paon", ra: 19.4531059, dec: -66.15351 },
+      { name: "Pégase", ra: 22.8763317, dec: 20.173329 },
+      { name: "Persée", ra: 3.5699962, dec: 43.216562 },
+      { name: "Phénix", ra: 0.9312856, dec: -48.783047 },
+      { name: "Peintre", ra: 6.0897498, dec: -56.573744 },
+      { name: "Poisson austral", ra: 22.3911922, dec: -30.923963 },
+      { name: "Poissons", ra: 0.5286577, dec: 9.920307 },
+      { name: "Poupe", ra: 7.5369253, dec: -35.590585 },
+      { name: "Boussole", ra: 8.7481777, dec: -32.073712 },
+      { name: "Réticule", ra: 4.058144, dec: -62.058726 },
+      { name: "Sculpteur", ra: 23.9247807, dec: -32.324655 },
+      { name: "Scorpion", ra: 16.8562783, dec: -33.912243 },
+      { name: "Écu", ra: 18.5643693, dec: -9.128561 },
+      { name: "Serpent", ra: 16.6987561, dec: 2.408354 },
+      { name: "Sextant", ra: 10.171698, dec: -3.043167 },
+      { name: "Flèche", ra: 19.7798447, dec: 18.388095 },
+      { name: "Sagittaire", ra: 19.1234443, dec: -29.180182 },
+      { name: "Taureau", ra: 4.5152631, dec: 17.766542 },
+      { name: "Télescope", ra: 18.3703074, dec: -47.014825 },
+      { name: "Triangle austral", ra: 15.902661, dec: -67.069058 },
+      { name: "Triangle", ra: 2.1070694, dec: 32.830588 },
+      { name: "Toucan", ra: 23.4586119, dec: -63.412813 },
+      { name: "Grande Ourse", ra: 10.9617629, dec: 52.511244 },
+      { name: "Petite Ourse", ra: 15.7632489, dec: 80.018759 },
+      { name: "Voiles", ra: 9.4334444, dec: -48.022395 },
+      { name: "Vierge", ra: 13.1561384, dec: -3.077846 },
+      { name: "Poisson volant", ra: 7.9959181, dec: -69.000029 },
+      { name: "Petit Renard", ra: 19.5447817, dec: 23.426191 }
     ];
 
     function setStatus(message, type = '') {
@@ -1027,7 +1817,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       
       targetHeading = azimuth;
       targetElevation = altitudeCircle > 180 ? altitudeCircle - 360 : altitudeCircle;
-      const phone = window.__dobsonAutoFollow && window.__dobsonPhoneOrientation;
+      const phone = !window.__dobsonSimulationActive?.() && window.__dobsonAutoFollow && window.__dobsonPhoneOrientation;
       if (phone && Number.isFinite(phone.azimuth) && Number.isFinite(phone.altitude)) {
         targetHeading = ((phone.azimuth % 360) + 360) % 360;
         targetElevation = phone.altitude;
@@ -1069,7 +1859,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     setNightMode(localStorage.getItem('dobson-night-mode') === 'true');
 
     function objectColorHex(object) {
-      const type = (object.type || '').toUpperCase();
+      const type = (object.type || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
       const name = (object.name || '').toUpperCase();
 
       if (name === 'POLARIS') return '#ffedcc';
@@ -1095,7 +1885,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     }
 
     function getObjectType(object) {
-      const type = (object.type || '').toLowerCase();
+      const type = (object.type || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       const isGal = type.includes('gal');
       const isNeb = type.includes('neb');
       const isAmas = type.includes('amas') || type.includes('glob');
@@ -1106,7 +1896,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     function matchesFilter(object) {
       const userMaxMag = getSelectedMagnitude();
 
-      if (object.mag > userMaxMag) return false;
+      if (object.mag > userMaxMag && !(document.getElementById('showMessierAll').checked && isMessierObject(object))) return false;
 
       const { isGal, isNeb, isAmas, isStar } = getObjectType(object);
       
@@ -1123,8 +1913,12 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return false;
     }
 
+    function isMessierObject(object) {
+      return /^M(?:[1-9]|[1-9]\d|10\d|110)$/i.test((object.name || '').trim());
+    }
+
     // V5.73.0 Refactoring de la fonction pour supporter les projections mathématiques
-    function horizontalPosition(object, siderealDegrees, latRadians) {
+    function horizontalPosition(object, siderealDegrees, latRadians, useMobileCache = true) {
       const dec = object.dec * Math.PI / 180;
       const hourAngle = (siderealDegrees - object.ra * 15) * Math.PI / 180;
       const latRad = latRadians;
@@ -1156,13 +1950,66 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       };
     }
 
-    function siderealDegrees(date) {
+    function siderealDegrees(date, observerLongitude = longitude) {
       const julianDate = date.getTime() / 86400000 + 2440587.5;
       const centuries = (julianDate - 2451545.0) / 36525;
       const greenwich = 280.46061837 + 360.98564736629 * (julianDate - 2451545.0)
         + 0.000387933 * centuries * centuries - centuries * centuries * centuries / 38710000;
-      return ((greenwich + longitude) % 360 + 360) % 360;
+      return ((greenwich + observerLongitude) % 360 + 360) % 360;
     }
+
+    window.__dobsonCaptureCalibration = () => {
+      const phone = window.__dobsonPhoneOrientation;
+      if (!useSystemTime || !window.__dobsonAutoFollow || !phone || !phone.headingAvailable
+        || !Number.isFinite(phone.azimuth) || !Number.isFinite(phone.altitude)
+        || !Number.isFinite(phone.receivedAt) || Date.now() - phone.receivedAt > 2000) return null;
+      return { azimuth: phone.azimuth, altitude: phone.altitude, latitude, longitude, time: Date.now() };
+    };
+
+    window.__dobsonApplyPhotoCalibration = (solution, capture) => {
+      if (!capture) throw new Error('Photo résolue, mais réalignement impossible : utilisez les capteurs et la date réelle avant la prise de vue.');
+      if (!window.__dobsonAutoFollow || !useSystemTime || !sceneDiv.classList.contains('dobson-ar-active')) {
+        throw new Error('Photo résolue, mais réactivez la caméra AR, les capteurs et la date réelle pour réaligner la vue.');
+      }
+      if (Math.abs(latitude - capture.latitude) > 0.0001 || Math.abs(longitude - capture.longitude) > 0.0001) {
+        throw new Error('Photo résolue, mais le lieu a changé depuis la prise de vue ; prenez une nouvelle photo.');
+      }
+      const sidereal = siderealDegrees(new Date(capture.time), capture.longitude);
+      const position = horizontalPosition(solution, sidereal, capture.latitude * Math.PI / 180, false);
+      if (Math.abs(capture.altitude) > 89 || Math.abs(position.altitude) > 89) {
+        throw new Error('Photo résolue, mais le réalignement près du zénith ou du nadir est imprécis ; inclinez le téléphone.');
+      }
+      cameraCalibrationHeading = ((position.azimuth - capture.azimuth + 540) % 360) - 180;
+      cameraCalibrationElevation = position.altitude - capture.altitude;
+      touchHeading = 0;
+      touchElevation = 0;
+      alignOffsetHeading = 0;
+      alignOffsetElevation = 0;
+      window.dispatchEvent(new Event('dobson:resetTouchOffset'));
+    };
+
+    window.__dobsonSetTelescopeMarker = (x, y) => {
+      const aspect = canvas.clientWidth / canvas.clientHeight;
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(aspect) || aspect <= 0) return false;
+      const fov = fieldOfView * Math.PI / 180;
+      let right, up, forward;
+      if (projectionMode === 'stéréo') {
+        const px = x * fov * aspect;
+        const py = y * fov;
+        const scale = 1 + (px * px + py * py) / 4;
+        right = px / scale;
+        up = py / scale;
+        forward = (2 - scale) / scale;
+        if (forward <= 0) return false;
+      } else {
+        right = x * Math.tan(fov / 2) * aspect;
+        up = y * Math.tan(fov / 2);
+        forward = 1;
+      }
+      const length = Math.hypot(right, up, forward);
+      telescopeCameraDirection = [right / length, up / length, forward / length];
+      return true;
+    };
 
     function resizeCanvas() {
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -1205,6 +2052,119 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       return { forward, right, up };
     }
 
+    const objectLabelStates = new Map();
+    const constellationLabelStates = new Map();
+    let lastObjectLabelLayout = -Infinity;
+    let lastObjectLabelLayoutKey = '';
+
+    function updateObjectLabels(screenObjects, width, height, now) {
+      const labelGal = document.getElementById('labelGal').checked;
+      const labelNeb = document.getElementById('labelNeb').checked;
+      const labelAmas = document.getElementById('labelAmas').checked;
+      const labelStars = document.getElementById('labelStars').checked;
+      const layoutKey = [projectionMode, fieldOfView, showSkyNames, labelGal, labelNeb, labelAmas, labelStars].join('|');
+      const updateLayout = !window.__dobsonMobileApp || layoutKey !== lastObjectLabelLayoutKey
+        || now - lastObjectLabelLayout >= 80;
+
+      if (updateLayout) {
+        lastObjectLabelLayout = now;
+        lastObjectLabelLayoutKey = layoutKey;
+        const labelMagLimit = fieldOfView > 40 ? 2.5
+          : fieldOfView > 25 ? 5.0 : fieldOfView > 15 ? 8.5 : 13.0;
+        const candidates = screenObjects.filter(item => {
+          if (!showSkyNames) return false;
+          const object = item.object;
+          if (object.name === 'Polaris' || object.type === 'Planète'
+            || object.name === 'Lune' || object.name === 'Soleil') return true;
+          const { isGal, isNeb, isAmas, isStar } = getObjectType(object);
+          return ((isGal && labelGal) || (isNeb && labelNeb) || (isAmas && labelAmas))
+            && (fieldOfView < 60 || object.mag <= labelMagLimit)
+            || isStar && labelStars && object.mag <= labelMagLimit;
+        });
+        candidates.sort((a, b) => {
+          const aSelected = objectLabelStates.get(a.object)?.selected ? 1 : 0;
+          const bSelected = objectLabelStates.get(b.object)?.selected ? 1 : 0;
+          if (aSelected !== bSelected) return bSelected - aSelected;
+          return projectionMode !== 'actuel' ? b.depth - a.depth : a.object.mag - b.object.mag;
+        });
+
+        const selected = new Set();
+        const placedLabelGrid = new Map();
+        const collisionPanFactor = projectionMode !== 'actuel' ? 60 / fieldOfView : 34 / fieldOfView;
+        const thresholdX = Math.max(1.0, 6.5 / collisionPanFactor);
+        const thresholdY = Math.max(0.8, 4.0 / collisionPanFactor);
+        const cellWidth = thresholdX * 1.2;
+        const cellHeight = thresholdY * 1.2;
+
+        for (const item of candidates) {
+          if (window.__dobsonMobileApp && selected.size >= 250) break;
+          const left = (item.screenX + 1) * 50;
+          const top = (1 - item.screenY) * 50;
+          const cellX = Math.floor(left / cellWidth);
+          const cellY = Math.floor(top / cellHeight);
+          const margin = objectLabelStates.get(item.object)?.selected ? 1 : 1.2;
+          let overlap = false;
+          for (let x = cellX - 1; x <= cellX + 1 && !overlap; x++) {
+            for (let y = cellY - 1; y <= cellY + 1 && !overlap; y++) {
+              const cell = placedLabelGrid.get(x + ':' + y);
+              overlap = Boolean(cell && cell.some(p =>
+                Math.abs(p.left - left) < thresholdX * margin && Math.abs(p.top - top) < thresholdY * margin));
+            }
+          }
+          if (overlap) continue;
+
+          const cellKey = cellX + ':' + cellY;
+          if (!placedLabelGrid.has(cellKey)) placedLabelGrid.set(cellKey, []);
+          placedLabelGrid.get(cellKey).push({ left, top });
+          selected.add(item.object);
+
+          if (!objectLabelStates.has(item.object)) {
+            const object = item.object;
+            const isPolaris = object.name === 'Polaris';
+            const isPlanetOrBody = object.type === 'Planète' || object.name === 'Lune' || object.name === 'Soleil';
+            const { isGal, isNeb, isAmas } = getObjectType(object);
+            const label = document.createElement('span');
+            label.className = isPolaris ? 'object-label polaris' : 'object-label';
+            label.style.color = isPolaris ? '#ffedcc' : isPlanetOrBody ? '#80d8ff'
+              : isGal ? '#e0b8ff' : isNeb ? '#ff9e84' : isAmas ? '#ffe066' : '#c2dcff';
+            label.textContent = /^(?:HIP|HR)\s/.test(object.name)
+              ? object.commonName || object.name
+              : !isPlanetOrBody && !isPolaris
+              && (object.name.startsWith('M') || object.name.startsWith('NGC'))
+              ? `${object.name}${object.commonName ? ' (' + object.commonName + ')' : ''}`
+              : object.name || object.commonName;
+            label.style.opacity = '0';
+            labelsElement.appendChild(label);
+            objectLabelStates.set(object, { label, selected: false, retiredAt: now });
+          }
+        }
+
+        for (const [object, state] of objectLabelStates) {
+          const wasSelected = state.selected;
+          state.selected = selected.has(object);
+          if (wasSelected && !state.selected) state.retiredAt = now;
+        }
+      }
+
+      const onScreen = new Set();
+      for (const item of screenObjects) {
+        const state = objectLabelStates.get(item.object);
+        if (!state) continue;
+        onScreen.add(item.object);
+        const x = (item.screenX + 1) * width / 2;
+        const y = (1 - item.screenY) * height / 2 - 16;
+        state.label.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      }
+      for (const [object, state] of objectLabelStates) {
+        state.label.style.opacity = state.selected && onScreen.has(object) ? '1' : '0';
+        if (!state.selected && now - state.retiredAt >= 150) {
+          state.label.remove();
+          objectLabelStates.delete(object);
+        }
+      }
+      return updateLayout;
+    }
+
     // --- MOTEUR DE RENDU V5.73.0 (SUPPORTE LES PROJECTIONS) ---
     function render() {
       requestAnimationFrame(render);
@@ -1223,8 +2183,8 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       elevation += (targetElevation - elevation) * 0.4;
 
       // Calcul de l'orientation finale de la caméra
-      const cameraHeading = (heading + touchHeading + alignOffsetHeading + 360) % 360;
-      const cameraElevation = elevation + touchElevation + alignOffsetElevation;
+      const cameraHeading = (heading + touchHeading + alignOffsetHeading + cameraCalibrationHeading + 360) % 360;
+      const cameraElevation = elevation + touchElevation + alignOffsetElevation + cameraCalibrationElevation;
       const normalizedCamera = normalizeSkyAngles(cameraHeading, cameraElevation);
       const currentHeading = normalizedCamera.azimuth;
       const currentElevation = normalizedCamera.altitude;
@@ -1312,16 +2272,37 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         return { x: sx, y: sy, depth: depth };
       };
 
+      let pointingHeading = currentHeading;
+      let pointingElevation = currentElevation;
+      const telescopeMarker = document.getElementById('dobson-telescope-marker');
+      if (telescopeMarker && sceneDiv.classList.contains('dobson-ar-active')) {
+        const [localRight, localUp, localForward] = telescopeCameraDirection;
+        const direction = forward.map((value, index) =>
+          value * localForward + right[index] * localRight + up[index] * localUp);
+        const altitude = Math.asin(Math.max(-1, Math.min(1, direction[1])));
+        const azimuth = Math.atan2(direction[0], direction[2]);
+        pointingHeading = (azimuth * 180 / Math.PI + 360) % 360;
+        pointingElevation = altitude * 180 / Math.PI;
+        const markerProjection = projectPoint(direction, { alt: altitude, az: azimuth });
+        if (markerProjection) {
+          telescopeMarker.style.left = `${(markerProjection.x + 1) * width / 2}px`;
+          telescopeMarker.style.top = `${(1 - markerProjection.y) * height / 2}px`;
+          telescopeMarker.hidden = false;
+        } else {
+          telescopeMarker.hidden = true;
+        }
+      }
+
       // --- GUIDAGE CIBLE FUSIONNÉ ---
       if (activeTargetObject) {
         const targetHoriz = horizontalPosition(activeTargetObject, sidereal, latRadians);
         
-        let dAz = targetHoriz.azimuth - currentHeading;
+        let dAz = targetHoriz.azimuth - pointingHeading;
         if (dAz > 180) dAz -= 360;
         if (dAz < -180) dAz += 360;
         
-        let dEl = targetHoriz.altitude - currentElevation;
-        const angularDistance = Math.hypot(dAz * Math.cos(currentElevation * Math.PI / 180), dEl);
+        let dEl = targetHoriz.altitude - pointingElevation;
+        const angularDistance = Math.hypot(dAz * Math.cos(pointingElevation * Math.PI / 180), dEl);
 
         const targetNameLabel = document.getElementById('targetNameLabel');
         const compassContainer = document.getElementById('compassArrowContainer');
@@ -1358,22 +2339,36 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
         { id: 'labelN', az: 0 }, { id: 'labelE', az: 90 },
         { id: 'labelS', az: 180 }, { id: 'labelW', az: 270 }
       ];
+      const directionNames = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+      document.getElementById('skyDirection').textContent = `${directionNames[Math.round(currentHeading / 45) % 8]} · ${Math.round(currentHeading) % 360}°`;
       cardinalPoints.forEach(cp => {
         const azRad = cp.az * Math.PI / 180;
-        // Position 3D cardinale brute
         const pos3D = [Math.sin(azRad), 0, Math.cos(azRad)];
-        
-        // V5.73.0 Cardinales projetées selon le mode
         const proj = projectPoint(pos3D, { alt: 0, az: azRad });
         const elEl = document.getElementById(cp.id);
-        
-        if (proj && Math.abs(proj.x) <= 1.1 && Math.abs(proj.y) <= 1.1) {
-            elEl.style.left = `${(proj.x + 1) * 50}%`;
-            elEl.style.top = `${(1 - proj.y) * 50}%`;
-            elEl.style.display = 'block';
+        let x;
+        let y;
+        if (proj) {
+          x = proj.x;
+          y = proj.y;
         } else {
-            elEl.style.display = 'none';
+          const relativeAzimuth = ((cp.az - currentHeading + 540) % 360 - 180) * Math.PI / 180;
+          x = Math.sin(relativeAzimuth);
+          y = -Math.cos(relativeAzimuth) * Math.sin(currentElevation * Math.PI / 180);
         }
+        if (Math.hypot(x, y) < 1e-6) {
+          x = 0;
+          y = 1;
+        }
+        const maxX = Math.max(0.2, 1 - 48 / Math.max(width, 48));
+        const maxY = Math.max(0.2, 1 - 48 / Math.max(height, 48));
+        const scale = 1 / Math.max(Math.abs(x) / maxX, Math.abs(y) / maxY, 1e-6);
+        x = Math.max(-maxX, Math.min(maxX, x * scale));
+        y = Math.max(-maxY, Math.min(maxY, y * scale));
+        elEl.style.left = `${(x + 1) * 50}%`;
+        elEl.style.top = `${(1 - y) * 50}%`;
+        elEl.style.transform = 'translate(-50%, -50%)';
+        elEl.style.display = 'block';
       });
 
       ctx2d.clearRect(0, 0, width, height);
@@ -1458,7 +2453,7 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       const showConstellations = document.getElementById('showConstellations').checked;
       if (showConstellations) {
         ctx2d.strokeStyle = "rgba(255, 165, 80, 0.45)";
-        ctx2d.lineWidth = 1.7;
+        ctx2d.lineWidth = 1;
         for (const [starA, starB] of CONSTELLATION_LINES) {
           const sA = objectsByName.get(starA);
           const sB = objectsByName.get(starB);
@@ -1590,106 +2585,42 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
 
       viewReadout.textContent = `Offset AZ ${Math.round(currentHeading)}° · ALT ${Math.round(currentElevation)}°`;
 
-      // Éléments réutilisés entre les frames pour éviter le clignotement
-      const labelPool = labelsElement.labelPool || (labelsElement.labelPool = []);
-      let labelUsed = 0;
-      const labelGal = document.getElementById('labelGal').checked;
-      const labelNeb = document.getElementById('labelNeb').checked;
-      const labelAmas = document.getElementById('labelAmas').checked;
-      const labelStars = document.getElementById('labelStars').checked;
-
-      const placedLabels = [];
-      // V5.73.0 Tri par profondeur mathématique (depth) avant magnitude pour les projections
-      const sortedScreenObjects = [...lastScreenObjects].sort((a, b) => {
-          if (projectionMode !== 'actuel') return b.depth - a.depth; // Math mathématiques : devant
-          return a.object.mag - b.object.mag; // Perspective : magnitude
-      });
-
-      for (const item of sortedScreenObjects) {
-        const isPolaris = (item.object.name === "Polaris");
-        const isPlanetOrBody = (item.object.type === "Planète" || item.object.name === "Lune" || item.object.name === "Soleil");
-        const { isGal, isNeb, isAmas, isStar } = getObjectType(item.object);
-
-        let showThisLabel = false;
-        
-        let labelMagLimit = 12.0;
-        if (fieldOfView > 40) labelMagLimit = 2.5;
-        else if (fieldOfView > 25) labelMagLimit = 5.0;
-        else if (fieldOfView > 15) labelMagLimit = 8.5;
-        else labelMagLimit = 13.0;
-
-        if (isPolaris || isPlanetOrBody) showThisLabel = true;
-        else if (isGal && labelGal) showThisLabel = (fieldOfView < 60) || item.object.mag <= labelMagLimit;
-        else if (isNeb && labelNeb) showThisLabel = (fieldOfView < 60) || item.object.mag <= labelMagLimit;
-        else if (isAmas && labelAmas) showThisLabel = (fieldOfView < 60) || item.object.mag <= labelMagLimit;
-        else if (isStar && labelStars && item.object.mag <= labelMagLimit) showThisLabel = true;
-
-        if (!showThisLabel) continue;
-
-        let leftPct = (item.screenX + 1) * 50;
-        let topPct = (1 - item.screenY) * 50;
-
-        // V5.73.0 Seuil de collision dynamique selon FOV et mode
-        let collisionPanFactor = (projectionMode !== 'actuel') ? (60 / fieldOfView) : (34 / fieldOfView);
-        const thresholdX = Math.max(1.0, 6.5 / collisionPanFactor);
-        const thresholdY = Math.max(0.8, 4.0 / collisionPanFactor);
-        const overlap = placedLabels.some(p => Math.abs(p.left - leftPct) < thresholdX && Math.abs(p.top - topPct) < thresholdY);
-        if (overlap) continue;
-
-        placedLabels.push({ left: leftPct, top: topPct });
-
-        let label = labelPool[labelUsed];
-        if (!label) {
-          label = document.createElement('span');
-          labelPool.push(label);
-          labelsElement.appendChild(label);
-        }
-        labelUsed++;
-        label.style.display = '';
-        label.className = isPolaris ? 'object-label polaris' : 'object-label';
-
-        
-        if (isPolaris) label.style.color = '#ffedcc';
-        else if (isPlanetOrBody) label.style.color = '#80d8ff';
-        else if (isGal) label.style.color = '#e0b8ff';
-        else if (isNeb) label.style.color = '#ff9e84';
-        else if (isAmas) label.style.color = '#ffe066';
-        else label.style.color = '#c2dcff';
-
-        label.style.left = `${leftPct}%`;
-        label.style.top = `${topPct}%`;
-        label.style.transform = `translate(0px, -16px)`;
-        
-        if (isPolaris) label.textContent = `★ Polaris`;
-        else if (isPlanetOrBody) label.textContent = `🪐 ${item.object.name}`;
-        else if (item.object.name.startsWith("M") || item.object.name.startsWith("NGC")) {
-          label.textContent = `${item.object.name}${item.object.commonName ? ' (' + item.object.commonName + ')' : ''}`;
-        }         else label.textContent = item.object.name ? item.object.name : item.object.commonName;
-        
-      }
-      for (let i = labelUsed; i < labelPool.length; i++) labelPool[i].style.display = 'none';
+      const labelTime = performance.now();
+      updateObjectLabels(lastScreenObjects, width, height, labelTime);
 
       // Étiquettes constellations
-      const constLabels = document.createDocumentFragment();
-      const labelConstellations = document.getElementById('labelConstellations').checked;
+      const visibleConstellations = new Set();
+      const labelConstellations = showSkyNames && document.getElementById('labelConstellations').checked;
       if (labelConstellations) {
         for (const c of CONSTELLATION_CENTERS) {
-          const s = objectsByName.get(c.refStar);
-          if (s) {
-            const horiz = horizontalPosition(s, sidereal, latRadians);
-            const proj = projectPoint(horiz.position, horiz.raw);
-            if (proj && Math.abs(proj.x) <= 1 && Math.abs(proj.y) <= 1) {
-                const cl = document.createElement('span');
-                cl.className = 'constellation-label';
-                cl.style.left = `${(proj.x + 1) * 50}%`;
-                cl.style.top = `${(1 - proj.y) * 50}%`;
-                cl.textContent = c.name;
-                constLabels.appendChild(cl);
+          const horiz = horizontalPosition(c, sidereal, latRadians);
+          const proj = projectPoint(horiz.position, horiz.raw);
+          if (proj && Math.abs(proj.x) <= 1 && Math.abs(proj.y) <= 1) {
+            let state = constellationLabelStates.get(c);
+            if (!state) {
+              const label = document.createElement('span');
+              label.className = 'constellation-label';
+              label.textContent = c.name;
+              constLabelsElement.appendChild(label);
+              state = { label, hiddenAt: null };
+              constellationLabelStates.set(c, state);
             }
+            visibleConstellations.add(c);
+            state.hiddenAt = null;
+            state.label.style.transform = `translate3d(${(proj.x + 1) * width / 2}px, ${(1 - proj.y) * height / 2}px, 0) translate(-50%, -50%)`;
+            state.label.style.opacity = '0.9';
           }
         }
       }
-      constLabelsElement.replaceChildren(constLabels);
+      for (const [constellation, state] of constellationLabelStates) {
+        if (visibleConstellations.has(constellation)) continue;
+        if (state.hiddenAt === null) state.hiddenAt = labelTime;
+        state.label.style.opacity = '0';
+        if (labelTime - state.hiddenAt >= 150) {
+          state.label.remove();
+          constellationLabelStates.delete(constellation);
+        }
+      }
     }
 
     async function initialize() {
@@ -1810,6 +2741,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
     }
 
     function closeModal() { document.getElementById('objectModal').hidden = true; }
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !document.getElementById('objectModal').hidden) closeModal();
+    });
 
     let dragPoint = null;
     const activePointers = new Map();
@@ -1872,6 +2806,9 @@ const char HTTP_BETA_SKY_PAGE[] PROGMEM = R"rawliteral(
       touchElevation = 0;
       alignOffsetHeading = 0;
       alignOffsetElevation = 0;
+      cameraCalibrationHeading = 0;
+      cameraCalibrationElevation = 0;
+      telescopeCameraDirection = [0, 0, 1];
       if (projectionMode === 'actuel') fieldOfView = 34;
       else if (projectionMode === 'stéréo') fieldOfView = 60;
       else fieldOfView = 45;
